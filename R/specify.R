@@ -1,15 +1,31 @@
 #' Specify a Small Area Estimation Model
 #'
-#' @param formula Formula for a model of type 'model = "custom"'. This should be 
-#' the standard form of R mixed effect models. e.g., y ~ x1 + (1 | id) + (x2 | county)
-#' @param level Character string denoting type of model fit. Value "unit" denotes 
-#' unit-level (e.g., predictions on the scale of observations in auxiliary data).
-#' Value "area" denotes aggregate data (e.g., predicting values of direct estimators)
-#' @param model a
-#' @param obs_variability a
+#' @param formula Formula object describing the model design. Required when `model = "custom"`. Defaults to `NULL`.
 #'
-#' @return a
-#' @export a
+#' @param level Character string denoting the target spatial level. Available values are `"unit"` and `"area"`.
+#'
+#' @param model Character string targeting either user-defined structures or preset SAE models. Available choices include
+#'        `"custom"`, `"FH"` (Fay-Herriot), and `"BHF"` (Battese-Harter-Fuller).  Defaults to `"custom"`.
+#'
+#' @param obs_variability Conditional parameter for the variances. When set to `"__auto_aggregation"` for area-level models,
+#'        fit() automatically computes the variances.
+#'
+#' @param domain_level Character string for stratification variable representing the small areas (e.g., `"county"`).
+#'
+#' @param response Character string specifying the column name of the target forest attribute (e.g., `"obs_biomass"`).
+#'        Required for preset frameworks.
+#'
+#' @param auxiliary_variables Character vector tracking prediction covariates.
+#'        Defaults to `"__everything"` for all the other variables if unspecified for presets.
+#'
+#' @return An object of class `lacroix_spec` containing the outputs.
+#'
+#' @examples
+#' plot_spec <- specify(
+#'   formula = obs_biomass ~ evc + evt + (1 | county),
+#'   level = "unit",
+#'   model = "custom"
+#' )
 #'
 specify <- function(formula = NULL,
                     level = c("area", "unit"),
@@ -18,12 +34,12 @@ specify <- function(formula = NULL,
                     domain_name = NULL,
                     response_name = NULL,
                     auxiliary_variables = NULL) {
-  
+
   func_call <- match.call()
   check_inherits("logical", auto_aggregate)
-  
+
   default_model_data <- NULL # default value. Get's overwritten if not using custom model
-  
+
   # we should make model lose caps before this
   if (!(model %in% c("custom", "FH", "BHF"))) {
     stop("Provided model not a listed option")
@@ -33,7 +49,7 @@ specify <- function(formula = NULL,
       stop("Must provide a formula with a custom model.")
     } else if (is.vector(level) || !(level == "area" || level == "unit")) {
       stop("Level must be a single value either equal to 'area' or 'unit'.")
-    } 
+    }
     if (level == "unit") {
       if (!is.null(domain_name)) {
         message("Supplied a domain name for a unit-level custom model.",
@@ -62,11 +78,11 @@ specify <- function(formula = NULL,
           stop("Must supply 'obs_variability' if not using auto aggregation.")
         }
       }
-    } 
+    }
   } else { # model != "custom"
     if (!is.null(formula)) {
       warning("Ignoring supplied formula for pre-set models. Please use custom model",
-              "if you want to use a formula, or use 
+              "if you want to use a formula, or use
                 'response', 'domain_name', and 'auxiliary_variables' for preset models")
       formula <- NULL
     }
@@ -95,7 +111,7 @@ specify <- function(formula = NULL,
       )
     }
   }
-  
+
   out <- list(
     call = func_call,
     formula = formula,
@@ -106,7 +122,7 @@ specify <- function(formula = NULL,
     auto_aggregate = auto_agg,
     default_model_data = default_model_data
   )
-  
+
   return(
     structure(out, class = "lacroix_spec")
   )
