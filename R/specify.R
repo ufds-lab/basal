@@ -1,6 +1,6 @@
 #' Specify a Small Area Estimation Model
 #'
-#' @param formula Formula object describing the model design. Required when `model = "custom"`. Defaults to `NULL`.
+#' @param formula A formula object describing the model design. Required when `model = "custom"`. Defaults to `NULL`.
 #'
 #' @param level Character string denoting the target spatial level. Available values are `"unit"` and `"area"`.
 #'

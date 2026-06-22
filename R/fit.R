@@ -8,9 +8,9 @@
 #'
 #' @param chains Numeric integer. Number of MCMC chains. Defaults to 3.
 #'
-#' @param iter Numeric integer. Total number of iterations per chain. Defaults to 5000.
+#' @param iter Numeric integer. Total number of iterations per chain. Defaults to 6000.
 #'
-#' @param warmup Numeric integer. Number of burn-in/warmup iterations per chain. Defaults to 2000.
+#' @param burn_in Numeric integer. Number of burn-in/warmup iterations per chain. Defaults to 2000.
 #'
 #' @param seed Numeric integer. Seed for random number generation. Defaults to 1.
 #'
@@ -23,8 +23,8 @@ fit.lacroix_spec <- function(object,
                              data,
                              priors = NULL,
                              chains = 3,
-                             iter = 5000,
-                             warmup = 2000,
+                             iter = 6000,
+                             burn_in = 2000,
                              seed = 1,
                              ...) {
 
@@ -42,14 +42,14 @@ fit.lacroix_spec <- function(object,
   # 1. Unit-level BHF
   if (model_type == "BHF") {
 
-    # Extract the variables metadata container block bundled during specify stage
+    # Extract the variables from bhf specify
     bhf_spec <- object$default_model_data
     resp  <- bhf_spec$response
     dom   <- bhf_spec$domain_name
     auxes <- bhf_spec$auxiliary_variables
 
     if (auxes == "__everything") {
-      # If no predictors are supplied, grab all variables excluding target response and domain id
+      # If no predictors are supplied, grab all variables excluding response and domain
       all_cols <- names(working_data)
       auxes <- all_cols[!(all_cols %in% c(resp, dom))]
     }
@@ -67,7 +67,7 @@ fit.lacroix_spec <- function(object,
     priors <- brms::set_prior("normal(0, 1)", class = "b")
   }
 
-  raw_mcmc_fit <- suppressMessages(
+  raw_model <- suppressMessages(
     brms::brm(
       formula = final_formula,
       data    = working_data,
@@ -85,7 +85,7 @@ fit.lacroix_spec <- function(object,
     spec         = object,
     formula      = final_formula,
     data         = working_data,
-    raw_model    = raw_mcmc_fit
+    model    = raw_model
   )
 
   return(
