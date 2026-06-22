@@ -29,3 +29,9 @@ agg_stat <- function(vals, nms, .f) {
   out <- data.frame(nms = names(agg), vals = agg)
   out
 }
+
+#' Extract variables (i.e., resposne and covariates) from model formula
+#' @noRd
+extract_variables <- function(formula) {
+  # extract the variables
+} 

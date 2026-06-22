@@ -1,11 +1,11 @@
 #' Fit a Specified Small Area Estimation Model
 #'
-#' @param object a
+#' @param object: object of class lacroix_spec
 #' @param data a
 #' @param priors a
 #' @param chains a
 #' @param iter a
-#' @param warmup a
+#' @param burn_in a
 #' @param seed a
 #' @param ... a
 #'
@@ -16,24 +16,36 @@ fit.lacroix_spec <- function(object,
                              data,
                              priors = NULL,
                              chains = 3,
-                             iter = 5000,
-                             warmup = 3000,
-                             seed = 1,
+                             iter = 6000,
+                             burn_in = 2000,
+                             thin = 2,
+                             seed = NULL,
+                             engine = "brms", # could be c("brms")
                              ...) {
 
   func_call <- match.call()
+  
+  if (!is.null(seed)) {
+    set.seed(seed)
+  }
 
   check_inherits("data.frame", data)
-  check_inherits("numeric", chains, iter, warmup, seed)
+  check_inherits("numeric", chains, iter, burn_in, thin, seed)
 
-  response_var <- object$response_var
-  fixed_effects <- object$fixed_effects
-  domain_level <- object$domain_level
-  model_type <- object$model_type
-  data <- data
-  final_formula <- object$formula
+#  {
+#    response_var <- object$response_var
+#    fixed_effects <- object$fixed_effects
+#    domain_level <- object$domain_level
+#    model_type <- object$model_type
+#    data <- data
+#    final_formula <- object$formula
+#  } # out-dated, pulling relevant variables from lacroix_spec objects
 
-  # bhf
+  # bhf model
+  if (engine == "brms") {
+    
+  }
+  
   if (model_type == "bhf") {
 
     if (is.null(domain_level)) {
@@ -47,6 +59,8 @@ fit.lacroix_spec <- function(object,
   }
 
   # A weakly informative default prior
+  # LR - Is a standard normal weakly informative? I feel like the default priors might
+  # be less informative
   if (is.null(priors)) {
     priors <- brms::prior(normal(0, 1))
   }
@@ -59,7 +73,7 @@ fit.lacroix_spec <- function(object,
       prior = priors,
       chains = chains,
       iter = iter,
-      warmup = warmup,
+      burn_in = burn_in,
       seed = seed,
       ...
     )
