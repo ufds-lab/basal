@@ -31,7 +31,7 @@ fit.lacroix_spec <- function(object,
   func_call <- match.call()
 
   check_inherits("data.frame", data)
-  check_inherits("numeric", chains, iter, warmup, seed)
+  check_inherits("numeric", chains, iter, burn_in, seed)
 
   model_type <- object$model_type
   level      <- object$level
@@ -44,8 +44,8 @@ fit.lacroix_spec <- function(object,
 
     # Extract the variables from bhf specify
     bhf_spec <- object$default_model_data
-    resp  <- bhf_spec$response
-    dom   <- bhf_spec$domain_name
+    resp <- bhf_spec$response
+    dom <- bhf_spec$domain_name
     auxes <- bhf_spec$auxiliary_variables
 
     if (auxes == "__everything") {
@@ -53,6 +53,7 @@ fit.lacroix_spec <- function(object,
       all_cols <- names(working_data)
       auxes <- all_cols[!(all_cols %in% c(resp, dom))]
     }
+
 
     # The standard BHF representation
     # e.g., resp ~ aux1 + aux2 + (1 | domain)
@@ -62,7 +63,7 @@ fit.lacroix_spec <- function(object,
   }
 
   # We might want to find a better way to set the default prior.
-  # For now, we just set a weakly informative prior if 'prior' remain empty.
+  # For now, we just set a weakly informative prior if 'prior' remains empty.
   if (is.null(priors)) {
     priors <- brms::set_prior("normal(0, 1)", class = "b")
   }
@@ -70,22 +71,22 @@ fit.lacroix_spec <- function(object,
   raw_model <- suppressMessages(
     brms::brm(
       formula = final_formula,
-      data    = working_data,
-      prior   = priors,
-      chains  = chains,
-      iter    = iter,
-      warmup  = warmup,
-      seed    = seed,
+      data = working_data,
+      prior = priors,
+      chains = chains,
+      iter = iter,
+      warmup = warmup,
+      seed = seed,
       ...
     )
   )
 
   out <- list(
-    call         = func_call,
-    spec         = object,
-    formula      = final_formula,
-    data         = working_data,
-    model    = raw_model
+    call = func_call,
+    spec = object,
+    formula = final_formula,
+    data = working_data,
+    model = raw_model
   )
 
   return(
