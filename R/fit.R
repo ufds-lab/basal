@@ -1,34 +1,39 @@
-#' Fit a Specified Small Area Estimation Model
+#' Fit a Specified Small Area Estimation Model Object
 #'
-#' @param object: object of class lacroix_spec
-#' @param data a
-#' @param priors a
-#' @param chains a
-#' @param iter a
-#' @param burn_in a
-#' @param seed a
-#' @param ... a
+#' @param object An object of class `basal_spec` containing initialized metadata states.
 #'
-#' @return a
+#' @param data A data.frame containing the response variable and all predictor covariates.
+#'
+#' @param priors Optional prior specification. If NULL, default priors are supplied.
+#'
+#' @param chains Numeric integer. Number of MCMC chains. Defaults to 3.
+#'
+#' @param iter Numeric integer. Total number of iterations per chain. Defaults to 6000.
+#'
+#' @param burn_in Numeric integer. Number of burn-in/warmup iterations per chain. Defaults to 2000.
+#'
+#' @param seed Numeric integer. Seed for random number generation. Defaults to 1.
+#'
+#' @param ... Additional arguments passed to the model fitting engine.
+#'
+#' @return An object of class `basal_fit` containing the results.
+#'
 #' @export
-#'
-fit.lacroix_spec <- function(object,
-                             data,
-                             priors = NULL,
-                             chains = 3,
-                             iter = 6000,
-                             burn_in = 2000,
-                             thin = 2,
-                             seed = NULL,
-                             engine = "brms", # could be c("brms")
-                             ...) {
+fit.basal_spec <- function(object,
+                           data,
+                           priors = NULL,
+                           chains = 3,
+                           iter = 6000,
+                           burn_in = 2000,
+                           seed = NULL,
+                           ...) {
 
   func_call <- match.call()
   
 
   check_inherits("data.frame", data)
   check_inherits("numeric", chains, iter, burn_in, thin, seed)
-  check_inherits("lacroix_spec", object)
+  check_inherits("basal_spec", object)
   
   if (!is.null(seed)) {
     set.seed(seed)
@@ -67,29 +72,42 @@ fit.lacroix_spec <- function(object,
     }
   }
   
-   v = validate_prior(
-      prior("(flat)", class = "sd"),
-      valid_formula,
-      data
-  )
-   
-  validate_prior(
-    prior("(flat)", class = ),
+  # set la-croix default priors
+  # we don't want improper priors on the random effect variances
+  # so we can over-estimate these variances by multiplying the total variability
+  # of the data by some number (>1). We know that the variability of random effects
+  # should be less than the variability of the data, so this shouldn't be 
+  # too informative
+  
+  prior_sd = sd(data[[object$default_model_data$response_name]]) # compute sd
+  
+  # we modify default priors from brms
+  priors = default_prior(
     valid_formula,
     data
   )
   
-}
-
-  # Fit the model.
-  raw_fit <- suppressMessages(
+  #### This isn't the best practice below. Discuss with Wystan
+  
+  # we want most things to have flat priors to do this, we change default priors 
+  # to do this we change every prior which has a nonempty entry to empty (flat)
+  priors$prior[priors$prior != "" & priors$source != "user"] = 
+    rep("", sum(priors$prior != "" & priors$source != "user"))
+  # we also set sd default parameters to half-cauchy priors
+  priors$prior[which(priors$class == "sd" & priors$source == "default" & priors$group == "")] = 
+    paste0("student_t(3,0,", prior_sd * 3.5, ")")
+  
+  # then this is just for a user-facing front
+  priors$source[which(v$source != "(vectorized)")] = "default (basal)"
+  
+  raw_model <- suppressMessages(
     brms::brm(
-      formula = final_formula,
+      formula = valid_formula,
       data = data,
       prior = priors,
       chains = chains,
       iter = iter,
-      burn_in = burn_in,
+      warmup = warmup,
       seed = seed,
       ...
     )
@@ -99,9 +117,11 @@ fit.lacroix_spec <- function(object,
     call = func_call,
     spec = object,
     formula = final_formula,
-    data = data,
-    raw_model = raw_fit
+    data = working_data,
+    model = raw_model
   )
 
-  structure(out, class = "lacroix_fit")
+  return(
+    structure(out, class = "basal_fit")
+  )
 }

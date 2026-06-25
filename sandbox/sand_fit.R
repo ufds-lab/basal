@@ -12,7 +12,7 @@
 #' @return a
 #' @export
 #'
-fit.lacroix_spec <- function(object,
+fit.basal_spec <- function(object,
                              data,
                              priors = NULL,
                              chains = 3,
@@ -73,5 +73,5 @@ fit.lacroix_spec <- function(object,
     raw_model = raw_fit
   )
 
-  structure(out, class = "lacroix_fit")
+  structure(out, class = "basal_fit")
 }

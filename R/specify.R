@@ -1,30 +1,57 @@
 #' Specify a Small Area Estimation Model
 #'
-#' @param formula Formula for a model of type 'model = "custom"'. This should be 
-#' the standard form of R mixed effect models. e.g., y ~ x1 + (1 | id) + (x2 | county).
-#' Or if you intend to use `brms` as an engine, a formula of type `brmsformula`
-#' @param level Character string denoting type of model fit. Value "unit" denotes 
-#' unit-level (e.g., predictions on the scale of observations in auxiliary data).
-#' Value "area" denotes aggregate data (e.g., predicting values of direct estimators)
-#' @param model Character string denoting the method of fitting model. Selecting 
-#' "Custom" allows for the specification of a formula and level, while selecting
-#' FH or BHF does not. If FH or BHF are selected, domain, response, and auxiliary
-#' variable names must be provided
+#' @param formula Formula for a model of type `model = "custom"`. This should be 
+#' the standard form of R mixed effect models. e.g., `y ~ x1 + (1 | id) + (x2 | county)`.
+#' Or if you intend to use `brms` as an engine, a formula of type `brmsformula`.
+#' Defaults to `NULL`.
+#' 
+#' @param level Character string of value `"unit"` or `"area"` denoting type of 
+#' model fit. Value `"unit"` denotes unit-level (e.g., predictions on the scale 
+#' of observations in auxiliary data). Value `"area`" denotes aggregate data 
+#' (e.g., predicting values of direct estimators).
+#' 
+#' @param model Character string targeting either user-defined structures or 
+#' preset SAE models. Available choices include `"custom"`, `"FH"` (Fay-Herriot),
+#' and `"BHF"` (Battese-Harter-Fuller).  Defaults to `"custom"`. If `"FH"` or 
+#' `"BHF"` are selected, `domain_name`, `response_name`, and `auxiliary_variable`
+#' must be provided for the respective parts of the model.
+#' 
 #' @param obs_variability The name of a column containing the variance estimates
-#' of direct estimates. If left NULL, then the the direct estimator of the response
+#' of direct estimates. If left `NULL`, then the the direct estimator of the response
 #' variable in `response_name` will be estimated across the domain in `domain_name`
-#' and the model will estimate these estimates
-#' @param domain_name The name of a column containing the different domains of
-#' observations. 
-#' @param response_name The name of the variate to model as the response
-#' @param auxiliary_variable Vector containing character vectors with the name of 
-#' covariates for the response. Or __everything to use every other variable
-#' @return Object of type lacroix_spec
-#' @export a
+#' and the model will estimate these estimates.
+#' 
+#' @param domain_name Character string for stratification, representing
+#' the areas corresponding to random effects (e.g., `"county"`).
+#' 
+#' @param response_name Character string specifying the column name of the target
+#' response. Only required for preset framework.
+#' 
+#' @param auxiliary_variable Character vector containing names of covariates for 
+#' the response. Defaults to using all other variables if unspecified in preset models.
+#' 
+#' @return Object of type basal_spec.
+#' 
+#' @examples
+#' plot_spec <- specify(
+#'   formula = obs_biomass ~ evc + evt + (1 | county),
+#'   level = "unit",
+#'   model = "custom"
+#' )
+#' 
+#' # gives equivalent specification to above
+#' # this is not the same object though
+#' plot_spec_bhf <- specify(
+#'   model = "BHF",
+#'   domain_name = "county",
+#'   response_name = "obs_biomass",
+#'   auxiliary_variables = c("evc", "evt")
+#' )
 #'
+#' @export a
 specify <- function(formula = NULL,
-                    level = NULL, #should be one of c("area", "unit"),
-                    model = "custom", # model should be in c("custom", "FH", "BHF")
+                    level = NULL, 
+                    model = "custom", 
                     obs_variability = NULL,
                     domain_name = NULL,
                     response_name = NULL,
@@ -40,10 +67,11 @@ specify <- function(formula = NULL,
     check_inherits("formula", formula)
     if (is.null(formula)) {
       stop("Must provide a formula with a custom model.")
-    } else if (is.vector(level) || !(level == "area" || level == "unit")) {
+    } else if ((length(level) > 1) || !(level == "area" || level == "unit")) {
       stop("Level must be a single value either equal to 'area' or 'unit'.")
-    } 
+    }
     if (level == "unit") {
+      auto_agg = FALSE
       if (!is.null(domain_name)) {
         message("Supplied a domain name for a unit-level custom model.",
                 "Domain name will be ignored.")
@@ -64,11 +92,11 @@ specify <- function(formula = NULL,
       } else {
         auto_agg = FALSE
       }
-    } 
+    }
   } else { # model != "custom"
     if (!is.null(formula)) {
       warning("Ignoring supplied formula for pre-set models. Please use custom model",
-              "if you want to use a formula, or use 
+              "if you want to use a formula, or use
                 'response', 'domain_name', and 'auxiliary_variables' for preset models")
       formula <- NULL
     }
@@ -90,7 +118,7 @@ specify <- function(formula = NULL,
         stop("Must supply a domain. name for BHF.")
       } else if (is.null(auxiliary_variables)) {
         warning("No auxiliary variables supplied. Using all other variables.")
-        auxiliary_variables <- "__everything"
+        auxiliary_variables <- paste0(". - ", domain_name - response_name)
       }
       default_model_data = list(
         response_name = response_name,
@@ -101,7 +129,7 @@ specify <- function(formula = NULL,
       stop("Do this later.")
     }
   }
-  
+
   out <- list(
     call = func_call,
     formula = formula,
@@ -112,9 +140,9 @@ specify <- function(formula = NULL,
     auto_aggregate = auto_agg,
     default_model_data = default_model_data
   )
-  
+
   return(
-    structure(out, class = "lacroix_spec")
+    structure(out, class = "basal_spec")
   )
 }
 

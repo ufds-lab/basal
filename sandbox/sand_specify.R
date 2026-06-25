@@ -86,5 +86,5 @@ specify <- function(formula,
     auto_aggregate = auto_aggregate
   )
 
-  structure(out, class = "lacroix_spec")
+  structure(out, class = "basal_spec")
 }
