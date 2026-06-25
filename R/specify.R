@@ -1,18 +1,29 @@
 #' Specify a Small Area Estimation Model
 #'
 #' @param formula Formula for a model of type 'model = "custom"'. This should be 
-#' the standard form of R mixed effect models. e.g., y ~ x1 + (1 | id) + (x2 | county)
+#' the standard form of R mixed effect models. e.g., y ~ x1 + (1 | id) + (x2 | county).
+#' Or if you intend to use `brms` as an engine, a formula of type `brmsformula`
 #' @param level Character string denoting type of model fit. Value "unit" denotes 
 #' unit-level (e.g., predictions on the scale of observations in auxiliary data).
 #' Value "area" denotes aggregate data (e.g., predicting values of direct estimators)
-#' @param model a
-#' @param obs_variability a
-#'
-#' @return a
+#' @param model Character string denoting the method of fitting model. Selecting 
+#' "Custom" allows for the specification of a formula and level, while selecting
+#' FH or BHF does not. If FH or BHF are selected, domain, response, and auxiliary
+#' variable names must be provided
+#' @param obs_variability The name of a column containing the variance estimates
+#' of direct estimates. If left NULL, then the the direct estimator of the response
+#' variable in `response_name` will be estimated across the domain in `domain_name`
+#' and the model will estimate these estimates
+#' @param domain_name The name of a column containing the different domains of
+#' observations. 
+#' @param response_name The name of the variate to model as the response
+#' @param auxiliary_variable Vector containing character vectors with the name of 
+#' covariates for the response. Or __everything to use every other variable
+#' @return Object of type lacroix_spec
 #' @export a
 #'
 specify <- function(formula = NULL,
-                    level = c("area", "unit"),
+                    level = NULL, #should be one of c("area", "unit"),
                     model = "custom", # model should be in c("custom", "FH", "BHF")
                     obs_variability = NULL,
                     domain_name = NULL,
@@ -20,8 +31,6 @@ specify <- function(formula = NULL,
                     auxiliary_variables = NULL) {
   
   func_call <- match.call()
-  check_inherits("logical", auto_aggregate)
-  
   default_model_data <- NULL # default value. Get's overwritten if not using custom model
   
   # we should make model lose caps before this
@@ -47,20 +56,13 @@ specify <- function(formula = NULL,
         obs_variability = NULL
       }
     } else if (level == "area") {
-      if (obs_variability == "__auto_aggregation") {
+      if (is.null(obs_variability)) { 
         auto_agg = TRUE
         if (is.null(domain_name)) {
           stop("Must supply a domain name for auto aggregation.")
         }
       } else {
         auto_agg = FALSE
-        if (!is.null(domain_name)) {
-          message("Not using domain name because obs_variability has been provided.")
-          domain_name = NULL
-        }
-        if (is.null(obs_variability)) {
-          stop("Must supply 'obs_variability' if not using auto aggregation.")
-        }
       }
     } 
   } else { # model != "custom"
@@ -74,13 +76,15 @@ specify <- function(formula = NULL,
       stop("Other default models not currently supported.")
     }
     if (model == "BHF") {
-      if (level != "unit") {
+      if (is.null(level)) {
+        level <- "unit"
+      } else if (level != "unit") {
         warning("Specified is not equal to \"unit\" on a BHF model. Setting 'level = \"unit\"'.")
         level <- "unit"
       }
-      auto_agg <- NULL
+      auto_agg <- FALSE
       obs_variability <- NULL
-      if (is.null(response)) {
+      if (is.null(response_name)) {
         stop("Must supply a response variable.")
       } else if (is.null(domain_name)) {
         stop("Must supply a domain. name for BHF.")
@@ -89,10 +93,12 @@ specify <- function(formula = NULL,
         auxiliary_variables <- "__everything"
       }
       default_model_data = list(
-        response = response,
+        response_name = response_name,
         domain_name = domain_name,
         auxiliary_variables = auxiliary_variables
       )
+    } else if (model == "FH") {
+      stop("Do this later.")
     }
   }
   

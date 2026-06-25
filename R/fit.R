@@ -25,45 +25,61 @@ fit.lacroix_spec <- function(object,
 
   func_call <- match.call()
   
-  if (!is.null(seed)) {
-    set.seed(seed)
-  }
 
   check_inherits("data.frame", data)
   check_inherits("numeric", chains, iter, burn_in, thin, seed)
-
-#  {
-#    response_var <- object$response_var
-#    fixed_effects <- object$fixed_effects
-#    domain_level <- object$domain_level
-#    model_type <- object$model_type
-#    data <- data
-#    final_formula <- object$formula
-#  } # out-dated, pulling relevant variables from lacroix_spec objects
-
-  # bhf model
-  if (engine == "brms") {
-    
+  check_inherits("lacroix_spec", object)
+  
+  if (!is.null(seed)) {
+    set.seed(seed)
   }
   
-  if (model_type == "bhf") {
-
-    if (is.null(domain_level)) {
-      stop("BHF models require a random intercept.")
+  
+  if (object$auto_aggregate) {
+    stop("Compute HT estimates and variances. Add to data and object$model_type")
+  }
+  if (level == "area") {
+    stop("Add area-level models")
+  }
+  
+  if (object$model_type == "custom") {
+    if (engine == "brms") {
+      valid_formula = brmsformula(object$formula)
     }
-
-    if (!grepl("\\|", deparse(final_formula[[3]]))) {
-      random_intercept <- paste0("(1 | ", domain_level, ")")
-      final_formula <- reformulate(termlabs = c(fixed_effects, random_intercept), response = response_var)
+  } else if (object$model_type == "BHF") {
+    valid_formula = 
+      formula(paste0(
+        object$default_model_data$response_name, " ~ ",
+        paste0(object$default_model_data$auxiliary_variables, collapse = " + "), " + ",
+        "(1 | ",  object$default_model_data$domain_name, ")"
+      ))
+  } else if (object$model_type == "FH") {
+    stop("Can't fit this type of model right now.")
+  }
+  
+  vars = all.vars(valid_formula)
+  if (length((missing = setdiff(vars, colnames(data)))) != 0) {
+    if (length(missing) == 1) {
+      stop(paste0("Variable ", missing, " missing from your data."))
+    } else {
+      stop(paste0("Variables ", paste0(missing, collapse = ", "), 
+                  " missing from your data."))
     }
   }
-
-  # A weakly informative default prior
-  # LR - Is a standard normal weakly informative? I feel like the default priors might
-  # be less informative
-  if (is.null(priors)) {
-    priors <- brms::prior(normal(0, 1))
-  }
+  
+   v = validate_prior(
+      prior("(flat)", class = "sd"),
+      valid_formula,
+      data
+  )
+   
+  validate_prior(
+    prior("(flat)", class = ),
+    valid_formula,
+    data
+  )
+  
+}
 
   # Fit the model.
   raw_fit <- suppressMessages(
