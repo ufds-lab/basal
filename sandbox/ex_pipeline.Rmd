@@ -1,0 +1,44 @@
+---
+title: "ex_pipeline"
+output: html_document
+---
+
+```{r}
+source("../../bsae/data_wrangling.R")
+files = list.files("../R/")
+for (file in files) {
+  source(paste0("../R/", file))
+}
+
+rm(file, files)
+```
+
+```{r}
+spec_BHF = specify(
+  model = "BHF",
+  domain = "county",
+  response = "obs_biomass",
+  auxiliary_variables = c("tcc", "ppt"),
+  variable_transform = list(
+    transform = function (y) {y^(1/3)},
+    inv_transform = function (y) {y^3}
+  )
+)
+
+fit_BHF = fit.basal_spec(
+  spec_BHF, 
+  idaho_obs_full
+)
+
+check_BHF = check.basal_fit(
+  fit = fit_BHF
+)
+
+estimates_BHF = estimate.basal_fit(
+  fit = fit_BHF,
+  newdata = idaho_aux_full,
+  domain = "county"
+)
+```
+
+

@@ -30,13 +30,21 @@
 #' @param auxiliary_variable Character vector containing names of covariates for 
 #' the response. Defaults to using all other variables if unspecified in preset models.
 #' 
+#' @param variable_transform a list specifying a variable transformation 
+#' `transform` and inverse variable transformation `inv_transform`. These will be
+#' evaluated at points c(0,1) to ensure they work correctly. 
+#' 
 #' @return Object of type basal_spec.
 #' 
 #' @examples
 #' plot_spec <- specify(
 #'   formula = obs_biomass ~ evc + evt + (1 | county),
 #'   level = "unit",
-#'   model = "custom"
+#'   model = "custom",
+#'   variable_transform = list(
+#'     transform = function (y) {y^(1/3)},
+#'     inv_transform = function (y) {y^3}
+#'   )
 #' )
 #' 
 #' # gives equivalent specification to above
@@ -55,7 +63,8 @@ specify <- function(formula = NULL,
                     obs_variability = NULL,
                     domain_name = NULL,
                     response_name = NULL,
-                    auxiliary_variables = NULL) {
+                    auxiliary_variables = NULL,
+                    variable_transform = NULL) {
   
   func_call <- match.call()
   default_model_data <- NULL # default value. Get's overwritten if not using custom model
@@ -129,6 +138,25 @@ specify <- function(formula = NULL,
       stop("Do this later.")
     }
   }
+  
+  # check variable transformation
+  if (!is.null(variable_transform)) {
+    if (!is.list(variable_transform)) {
+      stop("variable_transform must be a list.")
+    } else if (!is.function(variable_transform$transform)) {
+      stop("variable_transform$transform must be a function")
+    } else if (!is.function(variable_transform$inv_transform)) {
+      stop("variable_transform$inv_transform must be a function")
+    } else if (
+      variable_transform$inv_transform(variable_transform$transform(0)) != 0 ||
+      variable_transform$inv_transform(variable_transform$transform(1)) != 1
+    ) {
+      stop(paste0(
+        "variable_transform$inv_transform isn't a right-inverse of",
+        " variable_transform$transform on c(0,1)."
+        ))
+    }
+  }
 
   out <- list(
     call = func_call,
@@ -138,7 +166,8 @@ specify <- function(formula = NULL,
     domain_name = domain_name,
     obs_variability = obs_variability,
     auto_aggregate = auto_agg,
-    default_model_data = default_model_data
+    default_model_data = default_model_data,
+    variable_transform = variable_transform
   )
 
   return(

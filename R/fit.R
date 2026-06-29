@@ -10,7 +10,7 @@
 #'
 #' @param iter Numeric integer. Total number of iterations per chain. Defaults to 6000.
 #'
-#' @param burn_in Numeric integer. Number of burn-in/warmup iterations per chain. Defaults to 2000.
+#' @param burn_in Numeric integer. Number of burn-in/burn_in iterations per chain. Defaults to 2000.
 #'
 #' @param seed Numeric integer. Seed for random number generation. Defaults to 1.
 #'
@@ -23,27 +23,23 @@ fit.basal_spec <- function(object,
                            data,
                            priors = NULL,
                            chains = 3,
-                           iter = 6000,
-                           burn_in = 2000,
+                           iter = 5000,
+                           burn_in = 1000,
                            seed = NULL,
+                           thin = 2,
                            ...) {
-
+  
   func_call <- match.call()
   
-
-  check_inherits("data.frame", data)
-  check_inherits("numeric", chains, iter, burn_in, thin, seed)
+  
+#  check_inherits("data.frame", data)
+  check_inherits("numeric", chains, iter, burn_in, thin)
   check_inherits("basal_spec", object)
-  
-  if (!is.null(seed)) {
-    set.seed(seed)
-  }
-  
   
   if (object$auto_aggregate) {
     stop("Compute HT estimates and variances. Add to data and object$model_type")
   }
-  if (level == "area") {
+  if (object$level == "area") {
     stop("Add area-level models")
   }
   
@@ -72,7 +68,7 @@ fit.basal_spec <- function(object,
     }
   }
   
-  # set la-croix default priors
+  # set basal default priors
   # we don't want improper priors on the random effect variances
   # so we can over-estimate these variances by multiplying the total variability
   # of the data by some number (>1). We know that the variability of random effects
@@ -91,33 +87,61 @@ fit.basal_spec <- function(object,
   
   # we want most things to have flat priors to do this, we change default priors 
   # to do this we change every prior which has a nonempty entry to empty (flat)
-  priors$prior[priors$prior != "" & priors$source != "user"] = 
-    rep("", sum(priors$prior != "" & priors$source != "user"))
+  prior_replace_mask = priors$prior != "" & priors$source != "user" & priors$source != "(vectorized)"
+  priors$prior[prior_replace_mask] = 
+    rep("", sum(prior_replace_mask))
   # we also set sd default parameters to half-cauchy priors
   priors$prior[which(priors$class == "sd" & priors$source == "default" & priors$group == "")] = 
     paste0("student_t(3,0,", prior_sd * 3.5, ")")
   
   # then this is just for a user-facing front
-  priors$source[which(v$source != "(vectorized)")] = "default (basal)"
+  priors$source[which(priors$source != "(vectorized)")] = "default (basal)"
   
-  raw_model <- suppressMessages(
-    brms::brm(
-      formula = valid_formula,
-      data = data,
-      prior = priors,
-      chains = chains,
-      iter = iter,
-      warmup = warmup,
-      seed = seed,
-      ...
+  if (!is.null(object$variable_transform)) {
+    trans = object$variable_transform$transform
+    if (!is.null(object$default_model_data)) {
+      res = object$default_model_data$response_name
+      data[[res]] = trans(data[[res]])
+    } else {
+      res = object$formula[[2]]
+      data[[res]] = trans(data[[res]])
+    }
+  }
+  
+  if (is.null(seed)) {
+    raw_model <- suppressMessages(
+      brms::brm(
+        formula = valid_formula,
+        data = data,
+        prior = priors,
+        chains = chains,
+        iter = iter,
+        thin = thin,
+        warmup = burn_in,
+        ...
+      )
     )
-  )
+  } else {
+    raw_model <- suppressMessages(
+      brms::brm(
+        formula = valid_formula,
+        data = data,
+        prior = priors,
+        chains = chains,
+        iter = iter,
+        thin = thin,
+        warmup = burn_in,
+        seed = seed#,
+        #...
+      )
+    )
+  }
 
   out <- list(
     call = func_call,
     spec = object,
-    formula = final_formula,
-    data = working_data,
+    formula = valid_formula,
+    data = data,
     model = raw_model
   )
 
