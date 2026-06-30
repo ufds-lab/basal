@@ -80,7 +80,6 @@ specify <- function(formula = NULL,
       stop("Level must be a single value either equal to 'area' or 'unit'.")
     }
     if (level == "unit") {
-      auto_agg = FALSE
       if (!is.null(domain_name)) {
         message("Supplied a domain name for a unit-level custom model.",
                 "Domain name will be ignored.")
@@ -94,12 +93,9 @@ specify <- function(formula = NULL,
       }
     } else if (level == "area") {
       if (is.null(obs_variability)) { 
-        auto_agg = TRUE
         if (is.null(domain_name)) {
           stop("Must supply a domain name for auto aggregation.")
         }
-      } else {
-        auto_agg = FALSE
       }
     }
   } else { # model != "custom"
@@ -109,34 +105,37 @@ specify <- function(formula = NULL,
                 'response', 'domain_name', and 'auxiliary_variables' for preset models")
       formula <- NULL
     }
-    if (model != "BHF") {
-      stop("Other default models not currently supported.")
+    if (is.null(response_name)) {
+      stop("Must supply a response variable.")
+    } else if (is.null(domain_name)) {
+      stop("Must supply a domain. name for BHF.")
+    } else if (is.null(auxiliary_variables)) {
+      warning("No auxiliary variables supplied. Using all other variables.")
+      auxiliary_variables <- paste0(". - ", domain_name - response_name)
     }
+    
     if (model == "BHF") {
       if (is.null(level)) {
         level <- "unit"
       } else if (level != "unit") {
-        warning("Specified is not equal to \"unit\" on a BHF model. Setting 'level = \"unit\"'.")
+        warning("Specified level is not equal to \"unit\" on a BHF model. Setting 'level = \"unit\"'.")
         level <- "unit"
       }
-      auto_agg <- FALSE
       obs_variability <- NULL
-      if (is.null(response_name)) {
-        stop("Must supply a response variable.")
-      } else if (is.null(domain_name)) {
-        stop("Must supply a domain. name for BHF.")
-      } else if (is.null(auxiliary_variables)) {
-        warning("No auxiliary variables supplied. Using all other variables.")
-        auxiliary_variables <- paste0(". - ", domain_name - response_name)
-      }
-      default_model_data = list(
-        response_name = response_name,
-        domain_name = domain_name,
-        auxiliary_variables = auxiliary_variables
-      )
+      
     } else if (model == "FH") {
-      stop("Do this later.")
+      if (is.null(level)) {
+        level <- "area"
+      } else if (level != "area") {
+        warning("Specified level is not equal to `\"area`\" on a FH model. Seeding 'level = \"unit\"'.")
+        level <- "area"
+      }   
     }
+    default_model_data <- list(
+      response_name = response_name,
+      domain_name = domain_name,
+      auxiliary_variables = auxiliary_variables
+    )
   }
   
   # check variable transformation
@@ -165,7 +164,6 @@ specify <- function(formula = NULL,
     model_type = model,
     domain_name = domain_name,
     obs_variability = obs_variability,
-    auto_aggregate = auto_agg,
     default_model_data = default_model_data,
     variable_transform = variable_transform
   )

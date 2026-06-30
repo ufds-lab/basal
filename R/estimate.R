@@ -39,11 +39,13 @@ estimate.basal_fit = function(
       .[sample.int(nrow(.), size = min(nrow(.), max_preds)),]
   }
   
-  post_preds = t(posterior_epred(fit$model, newdata = nd_subset, ndraws = ndraws))
+  post_preds = t(posterior_epred(fit$model, 
+                                 newdata = nd_subset, 
+                                 ndraws = ndraws,
+                                 allow_new_levels = TRUE))
   
   if (!is.null(fit$spec$variable_transform)) {
-    object = fit$spec
-    inv_trans = object$variable_transformation$inv_transform
+    inv_trans = fit$spec$variable_transform$inv_transform
     post_preds = inv_trans(post_preds)
   }
   
@@ -78,9 +80,3 @@ estimate.basal_fit = function(
   
   return (ret)
 }
-
-
-
-
-
-

@@ -46,13 +46,13 @@ check.basal_fit = function(
   }
   
   ret$convergence$rhat = brms::rhat(fit$model)
-  if (sum(ret$convergence$rhat > 1.1)) {
+  if (sum(ret$convergence$rhat > 1.1, na.rm = T)) {
     warning(
       "Possible issue in convergence. Check rhat values and pairs()."
       )
   }
   ret$convergence$neff = brms::neff_ratio(fit$model) * nrow(as.data.frame(fit$model))
-  if (sum(ret$convergence$neff < 200)) {
+  if (sum(ret$convergence$neff < 200, na.rm = T)) {
     warning(
       "Possible issue in convergence. Check neff values and pairs()."
     )
@@ -79,7 +79,7 @@ custom_pp_check = function(
     draws,
     stat
 ) {
-  y = object$data[[object$formula[[2]]]]
+  y = object$data[[object$params$response]]
   y_stats = sapply(stat, function(fun) {fun(y)})
   pp = posterior_predict(object$model, ndraws = draws)
   post_checks = sapply(stat, function(fun) {
@@ -94,7 +94,8 @@ custom_pp_check = function(
         ggplot() +
         geom_density(aes(x = post_data, color = "y_rep"), linewidth = 0.5) +
         geom_vline(aes(color = "y", xintercept = y_stat)) +
-        xlim(quantile(post_data, 0.01), quantile(post_data, 0.99)) 
+        xlim(min(quantile(post_data, 0.01), y_stat), 
+             max(quantile(post_data, 0.99), y_stat)) 
       )
     } else if (is.function(post_data)) {
       plot = ggplot() 
