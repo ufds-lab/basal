@@ -48,7 +48,7 @@ fit.basal_spec <- function(spec,
     }
     # if the user specifies an area-level model and they want auto-aggregation
     # then we need to compute HT estimators and replace their response with the
-    # HT estimates and fix the MSE to be the SE of HT estimators. This is 
+    # HT estimates and fix the MSE to be the SE of HT estimators. This is
     # regardless of if they have a custom model or something like a FH
     if (is.null(spec$obs_variability)) {
       if (is.null(population_size)) {
@@ -83,28 +83,29 @@ fit.basal_spec <- function(spec,
   }
 
   if (spec$model_type == "custom") {
-    if (level == "unit") {
-      formula = spec$formula
-      valid_formula = brmsformula(formula)
-    } else if (level == "area") {
-      formula = spec$formula
+    # Debug: level and tmp_formula.
+    if (spec$level == "unit") {
+      formula <- spec$formula
+      valid_formula <- brmsformula(formula)
+    } else if (spec$level == "area") {
+      formula <- spec$formula
+      tmp_formula <- formula(paste0(
+        res, " | se(BASAL_HT_SE) ~ 1"
+      ))
+      # Now do the addition terms  check
       if (length(all.vars(tmp_formula[[2]])) > 1) {
-        # I'm unsure if we can allow the user to specify addition terms in an 
+        # I'm unsure if we can allow the user to specify addition terms in an
         # area level model. I'm going to make this illegal.
         stop(paste0(
           "Cannot fit area-levels with pre-specified brms addition terms.",
           " If you want addition terms, you should pre-aggregate data and fit ",
           "a unit-level model with the addition terms."
-          ))
+        ))
       }
-      # in order to re-set the response, we create a temporary formula to 
-      # get it in the right format
-      tmp_formula = formula(paste0(
-        res, " | se(BASAL_HT_SE) ~ 1"
-      ))
-      
-      formula[[2]] = tmp_formula[[2]]
-      valid_formula = brmsformula(formula)
+
+      # Inject the synthesized measurement error LHS back into the user's custom formula
+      formula[[2]] <- tmp_formula[[2]]
+      valid_formula <- brmsformula(formula)
     }
   } else if (spec$model_type == "BHF") {
     formula =
@@ -136,7 +137,7 @@ fit.basal_spec <- function(spec,
                   " missing from your data."))
     }
   }
-  
+
   if (!("res" %in% ls())) {
     res <- formula[[2]]
   }
