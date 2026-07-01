@@ -4,6 +4,7 @@ output: html_document
 ---
 
 ```{r}
+library(brms)
 source("../../bsae/data_wrangling.R")
 ```
 
@@ -41,7 +42,8 @@ check_BHF = check.basal_fit(
 estimates_BHF = estimate.basal_fit(
   fit = fit_BHF,
   newdata = idaho_aux_full,
-  domain = "county"
+  domain = "county",
+  ndraws = 200
 ); estimates_BHF$preds
 ```
 
@@ -67,7 +69,8 @@ check_custom = check.basal_fit(
 estimates_custom = estimate.basal_fit(
   fit = fit_custom,
   newdata = idaho_aux_full,
-  domain = "county"
+  domain = "county",
+  ndraws = 200
 ); estimates_custom$preds
 ```
 
@@ -85,7 +88,7 @@ spec_FH = specify(
 
 fit_FH = fit.basal_spec(
   spec_FH,
-  idaho_obs_full,
+  idaho_obs_full %>% filter(obs_biomass > 0),
   population_size = nrow(idaho_aux_full)
 )
 
@@ -100,4 +103,11 @@ estimates_FH = estimate.basal_fit(
 ); estimates_custom$preds
 ```
 
+To do:
+1. Compare BHFs to each other and to `hbsae`
+2. Fix FH models
+3. Allow user to specify priors
+4. (maybe) implement generics like `predict()`, `posterior_predict()`, or `post_epred()`
+  - would make things like posterior predictive checks for two-stage models and similar things much much easier
+  - While we're at it, we could extend `summary()` to `fit.basal` class
 

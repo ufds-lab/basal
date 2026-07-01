@@ -31,7 +31,7 @@ estimate.basal_fit = function(
   
   effects = unique(fit$model$prior$group)
   effects = effects[effects != ""]
-  predictors = names(coef(fit$model))
+  predictors = names(coef(fit$model)) # can be updated
   if (is.null(max_preds)) {
     nd_subset = newdata
   } else {

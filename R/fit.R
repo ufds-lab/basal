@@ -43,7 +43,13 @@ fit.basal_spec <- function(spec,
   check_inherits("basal_spec", spec)
 
   if (spec$level == "area") {
-    stopifnot(spec$model_type == "FH")
+    if (spec$model_type != "FH") {
+      warning("This may not work correctly.")
+    }
+    # if the user specifies an area-level model and they want auto-aggregation
+    # then we need to compute HT estimators and replace their response with the
+    # HT estimates and fix the MSE to be the SE of HT estimators. This is 
+    # regardless of if they have a custom model or something like a FH
     if (is.null(spec$obs_variability)) {
       if (is.null(population_size)) {
         stop(paste0(
@@ -73,20 +79,31 @@ fit.basal_spec <- function(spec,
 
       res = spec$default_model_data$response_name
     }
-    formula =
-      formula(paste0(
-        res, "| se(BASAL_HT_SE) ~ ",
-        paste0(spec$default_model_data$auxiliary_variables, collapse = " + "), " + ",
-        "(1 | ",  spec$default_model_data$domain_name, ")"
-      ))
-    valid_formula = brmsformula(formula)
-
-    data = data[(data$BASAL_HT_SE != 0 & !is.nan(data$BASAL_HT_SE)),]
+  data = data[(data$BASAL_HT_SE != 0 & !is.nan(data$BASAL_HT_SE)),]
   }
 
   if (spec$model_type == "custom") {
-    if (engine == "brms") {
+    if (level == "unit") {
       formula = spec$formula
+      valid_formula = brmsformula(formula)
+    } else if (level == "area") {
+      formula = spec$formula
+      if (length(all.vars(tmp_formula[[2]])) > 1) {
+        # I'm unsure if we can allow the user to specify addition terms in an 
+        # area level model. I'm going to make this illegal.
+        stop(paste0(
+          "Cannot fit area-levels with pre-specified brms addition terms.",
+          " If you want addition terms, you should pre-aggregate data and fit ",
+          "a unit-level model with the addition terms."
+          ))
+      }
+      # in order to re-set the response, we create a temporary formula to 
+      # get it in the right format
+      tmp_formula = formula(paste0(
+        res, " | se(BASAL_HT_SE) ~ 1"
+      ))
+      
+      formula[[2]] = tmp_formula[[2]]
       valid_formula = brmsformula(formula)
     }
   } else if (spec$model_type == "BHF") {
@@ -98,13 +115,15 @@ fit.basal_spec <- function(spec,
       ))
     valid_formula = brmsformula(formula)
   } else if (spec$model_type == "FH") {
-    formula <-
+    formula =
       formula(paste0(
-        res, " | se(BASAL_HT_SE) ~ ",
+        res, "| se(BASAL_HT_SE) ~ ",
         paste0(spec$default_model_data$auxiliary_variables, collapse = " + "), " + ",
         "(1 | ",  spec$default_model_data$domain_name, ")"
       ))
-    valid_formula <- brms::brmsformula(formula)
+    valid_formula = brmsformula(formula)
+
+    data = data[(data$BASAL_HT_SE != 0 & !is.nan(data$BASAL_HT_SE)),]
   }
 
   vars = all.vars(formula)
@@ -117,7 +136,7 @@ fit.basal_spec <- function(spec,
                   " missing from your data."))
     }
   }
-  3
+  
   if (!("res" %in% ls())) {
     res <- formula[[2]]
   }
@@ -184,8 +203,8 @@ fit.basal_spec <- function(spec,
         chains = chains,
         iter = iter,
         thin = thin,
-        warmup = burn_in#,
-        #...
+        warmup = burn_in,
+        ...
       )
     )
   } else {
