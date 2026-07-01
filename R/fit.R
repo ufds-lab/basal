@@ -154,9 +154,6 @@ fit.basal_spec <- function(spec,
                   " missing from your data."))
     }
   }
-<<<<<<< HEAD
-  
-=======
 
   if (!("res" %in% ls())) {
     res <- formula[[2]]
@@ -174,7 +171,6 @@ fit.basal_spec <- function(spec,
     }
   }
 
->>>>>>> db133b722b31585a31e2fd75a6948993a5becb49
   # set basal default priors
   # we don't want improper priors on the random effect variances
   # so we can over-estimate these variances by multiplying the total variability
