@@ -21,8 +21,8 @@ estimate.basal_fit = function(
     domain = NULL,
     stat = c(mean = mean, 
              var = var),
-    ndraws = 50,
-    max_preds = 1e6,
+    ndraws = 1000,
+    max_preds = 1e5,
     seed = NULL
 ) {
   if (!is.null(seed)) {
@@ -37,6 +37,21 @@ estimate.basal_fit = function(
   } else {
     nd_subset = newdata %>%
       .[sample.int(nrow(.), size = min(nrow(.), max_preds)),]
+  }
+  
+  if (fit$spec$level == "area") {
+    setdiff = setdiff(unique(nd_subset[[domain]]), unique(fit$data[[domain]]))
+    if (length(setdiff) != 0) {
+      warning(paste0(
+        "Domains not present in training data detected. These cannot be reliably",
+        " estimated on and will be excluded."
+      ))
+      nd_subset = nd_subset[!c(nd_subset[[domain]] %in% setdiff),]
+    }
+    
+    training_se = fit$data$BASAL_HT_SE
+    names(training_se) = fit$data[[domain]]
+    nd_subset$`BASAL_HT_SE` = training_se[nd_subset[[domain]]]
   }
   
   post_preds = t(posterior_epred(fit$model, 

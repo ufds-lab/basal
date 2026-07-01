@@ -89,7 +89,7 @@ custom_pp_check = function(
   plot_list = sapply(1:length(stat), function(i) {
     post_data = unlist(post_checks[,i])
     y_stat = unlist(y_stats[i])
-    if (is.numeric(post_data)) { 
+    if (is.numeric(y_stat)) { 
       plot = (
         ggplot() +
         geom_density(aes(x = post_data, color = "y_rep"), linewidth = 0.5) +
@@ -97,12 +97,12 @@ custom_pp_check = function(
         xlim(min(quantile(post_data, 0.01), y_stat), 
              max(quantile(post_data, 0.99), y_stat)) 
       )
-    } else if (is.function(post_data)) {
+    } else if (is.list(y_stat) && is.function(y_stat[[1]])) {
       plot = ggplot() 
       for (j in 1:length(post_data)) {
         plot = plot + 
           stat_function(fun = post_data[[j]], aes(color = "y_rep"), 
-                        color = "skyblue", linewidth = 0.5, alpha = 5/log(length(post_data))) 
+                        linewidth = 0.5, alpha = 5/log(length(post_data))) 
       }
       plot = plot +
         stat_function(fun = y_stat[[1]], aes(color = "y")) +      
@@ -124,7 +124,10 @@ custom_pp_check = function(
           y = expression(y),
           y_rep = expression(y[rep])
         )
-      )
+      ) +
+      labs(title = paste0(
+        "Posterior predictive distribution for ", names(stat)[i], "."
+      ))
   })
   
   names(plot_list) = names(stat)

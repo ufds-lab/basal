@@ -42,6 +42,25 @@ fit.basal_spec <- function(spec,
   check_inherits("numeric", chains, iter, burn_in, thin)
   check_inherits("basal_spec", spec)
 
+  if (!is.null(spec$formula)) {
+    res = formula[[2]]
+  } else {
+    res = spec$default_model_data$response_name
+  }
+  if (!is.null(spec$variable_transform)) {
+    trans = spec$variable_transform$transform
+    # weird as.numeric() calls because
+    # data[[res]] seems to sometimes produce character vectors
+    # (try with FH and auto-aggregation)
+    if (!is.null(spec$default_model_data)) {
+      data[[res]] = trans(data[[res]])
+    } else {
+      data[[res]] = trans(data[[res]])
+    }
+  }
+
+ 
+  
   if (spec$level == "area") {
     if (spec$model_type != "FH") {
       warning("This may not work correctly.")
@@ -76,17 +95,15 @@ fit.basal_spec <- function(spec,
         }
         colnames(data)[colnames(data) == obs_var] = "BASAL_HT_SE"
       }
-
-      res = spec$default_model_data$response_name
     }
   data = data[(data$BASAL_HT_SE != 0 & !is.nan(data$BASAL_HT_SE)),]
   }
 
   if (spec$model_type == "custom") {
-    if (level == "unit") {
+    if (spec$level == "unit") {
       formula = spec$formula
       valid_formula = brmsformula(formula)
-    } else if (level == "area") {
+    } else if (spec$level == "area") {
       formula = spec$formula
       if (length(all.vars(tmp_formula[[2]])) > 1) {
         # I'm unsure if we can allow the user to specify addition terms in an 
@@ -137,22 +154,6 @@ fit.basal_spec <- function(spec,
     }
   }
   
-  if (!("res" %in% ls())) {
-    res <- formula[[2]]
-  }
-
-  if (!is.null(spec$variable_transform)) {
-    trans = spec$variable_transform$transform
-    # weird as.numeric() calls because
-    # data[[res]] seems to sometimes produce character vectors
-    # (try with FH and auto-aggregation)
-    if (!is.null(spec$default_model_data)) {
-      data[[res]] = trans(data[[res]])
-    } else {
-      data[[res]] = trans(data[[res]])
-    }
-  }
-
   # set basal default priors
   # we don't want improper priors on the random effect variances
   # so we can over-estimate these variances by multiplying the total variability
