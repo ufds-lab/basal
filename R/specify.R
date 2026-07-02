@@ -64,12 +64,24 @@ specify <- function(formula = NULL,
                     domain_name = NULL,
                     response_name = NULL,
                     auxiliary_variables = NULL,
-                    variable_transform = NULL) {
+                    variable_transform = NULL,
+                    family = gaussian(),
+                    model_stage = "single",
+                    second_stage_model = FALSE,
+                    second_stage_spec = NULL) {
   
   func_call <- match.call()
   default_model_data <- NULL # default value. Get's overwritten if not using custom model
   
-  # we should make model lose caps before this
+  if ((model_stage != "single" || !is.null(model_stage)) && !second_stage_model) {
+    if (!is.null(second_stage_spec)) {
+      warning(paste0(
+        "Provided a specification for a second stage when fitting a single stage ",
+        "model. Discarding this specification."
+      ))
+    }
+  }
+  
   if (!(model %in% c("custom", "FH", "BHF"))) {
     stop("Provided model not a listed option")
   } else if (model == "custom") {
@@ -106,9 +118,18 @@ specify <- function(formula = NULL,
       formula <- NULL
     }
     if (is.null(response_name)) {
-      stop("Must supply a response variable.")
+      if (!second_stage_model) {
+        stop("Must supply a response variable.")
+      }
     } else if (is.null(domain_name)) {
-      stop("Must supply a domain. name for BHF.")
+      if (!second_stage_model) {
+        stop("Must supply a domain. name for BHF.")
+      } else {
+        message(paste0(
+          "Provided no domain name for the second stage => domain will inherit ",
+          "from first stage model."
+        ))
+      }
     } else if (is.null(auxiliary_variables)) {
       warning("No auxiliary variables supplied. Using all other variables.")
       auxiliary_variables <- paste0(". - ", domain_name - response_name)
@@ -156,6 +177,38 @@ specify <- function(formula = NULL,
         ))
     }
   }
+  
+  if (model_stage == "zi") {
+    if (!second_stage_model) {
+      if (is.null(second_stage_spec)) {
+        message("Specification for second stage inherited from this level")
+      } else {
+        if (model == "custom") {
+          if (is.null(second_stage$formula)) {
+            message("Inheriting formula for second stage from this level")
+            second_stage$formula <- formula
+          }
+          if (is.null(second_stage$level)) {
+            message("Inheriting level for second stage from this level")
+            second_stage$level <- level
+          }
+        }
+        if (is.null(second_stage$auxiliary_variables)) {
+          message("Inheriting auxiliary variables in second stage from this stage")
+          second_stage$auxiliary_variables <- auxiliary_variables
+        }
+        if (is.null(second_stage$))
+      }
+    }
+  }
+  
+#  formula = NULL,
+#  level = NULL, 
+#  model = "custom", 
+#  obs_variability = NULL,
+#  domain_name = NULL,
+#  response_name = NULL,
+#  auxiliary_variables = NULL,
 
   out <- list(
     call = func_call,

@@ -160,6 +160,23 @@ estimates_FH_pre_agg = estimate.basal_fit(
 ); estimates_FH$preds
 ```
 
+```{r}
+zero_glm <- specify(
+  level = "unit",
+  model = "BHF",
+  auxiliary_variables = c("tcc", "evc"),
+  domain = "county",
+)
+
+two_stage_spec <- specify(
+  level = "unit",
+  model = "BHF",
+  response = "obs_biomass",
+  auxiliary_variables = "tcc",
+  domain = "county",
+  model_stage = "single",
+)
+```
 
 
 To do:
