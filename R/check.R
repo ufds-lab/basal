@@ -18,7 +18,7 @@
 #' @export
 check.basal_fit = function(
     fit,
-    stat = c(mean = mean, var = var),
+    stat = c(mean = mean, var = var, ecdf = ecdf),
     include_base_pp_check = TRUE,
     draws = 50,
     trace_plots = FALSE

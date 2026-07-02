@@ -36,10 +36,7 @@ fit_BHF = fit.basal_spec(
 )
 
 check_BHF = check.basal_fit(
-  fit = fit_BHF,
-  stat = c(mean = mean,
-           var = var,
-           ecdf = ecdf)
+  fit = fit_BHF
 )
 
 estimates_BHF = estimate.basal_fit(
@@ -97,8 +94,7 @@ fit_FH = fit.basal_spec(
 )
 
 check_FH = check.basal_fit(
-  fit = fit_FH,
-  stat = c(mean = mean, var = var, ecdf = ecdf)
+  fit = fit_FH
 )
 
 estimates_FH = estimate.basal_fit(
@@ -111,40 +107,39 @@ estimates_FH = estimate.basal_fit(
 
 ```{r}
 spec_area_custom = specify(
-  BASAL_HT_ESTIMATOR | se(BASAL_HT_SE) ~ tcc + evc + (1 | county),
-  domain = "county",
+  formula = formula(obs_biomass ~ tcc + evc + (1 | county)),
   model = "custom",
-  level = "unit",
-  variable_transform = list(
-    transform = function (y) {y^(1/3)},
-    inv_transform = function (y) {y^3}
-  )
+  level = "area",
+  domain = "county"
 )
 
-         N = nrow(idaho_aux_full),
-         domain = "county") %>% 
-  fit.basal_spec(
-    data = .,
-    spec_area_custom,
-    population_size = nrow(idaho_aux_full)
-  )
+fit_area_custom = fit.basal_spec(
+  spec_area_custom,
+  idaho_obs_full %>% filter(obs_biomass > 0),
+  population_size = nrow(idaho_aux_full)
+)
 
 check_FH = check.basal_fit(
-  fit = fit_FH
+  fit = fit_area_custom
 )
 
 estimates_FH = estimate.basal_fit(
-  fit = fit_FH,
+  fit = fit_area_custom,
   newdata = idaho_aux_aggregate,
   domain = "county",
   ndraws = 5000
-); estimates_custom$preds
+); estimates_FH$preds
 ```
 
 
+
+
 To do:
-3. Allow user to specify priors
-4. (maybe) implement generics like `predict()`, `posterior_predict()`, or `post_epred()`
+1. Fix FH models
+2. Allow user to specify priors
+3. (maybe) implement generics like `predict()`, `posterior_predict()`, or `post_epred()`
   - would make things like posterior predictive checks for two-stage models and similar things much much easier
   - While we're at it, we could extend `summary()` to `fit.basal` class
+4. Implement ZI estimator
+
 

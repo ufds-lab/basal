@@ -141,11 +141,7 @@ spec_FH = specify(
   model = "FH",
   domain = "county",
   response = "obs_biomass",
-  auxiliary_variables = c("tcc", "evc"),
-  variable_transform = list(
-    transform = function (y) {y^(1/3)},
-    inv_transform = function (y) {y^3}
-  )
+  auxiliary_variables = c("tcc", "evc")
 )
 
 fit_FH = fit.basal_spec(
@@ -155,22 +151,66 @@ fit_FH = fit.basal_spec(
 )
 
 check_FH = check.basal_fit(
-  fit = fit_FH
+  fit = fit_FH,
+  draws = 200
 )
 
+# we compare estimates with `hbsae` by re-estimating on the fitted data
 estimates_FH = estimate.basal_fit(
   fit = fit_FH,
-  newdata = idaho_aux_aggregate,
+  newdata = fit_FH$data,
   domain = "county",
   ndraws = 5000
 ); estimates_FH$preds
 ```
 
-To do:
-1. Compare BHFs to each other and to `hbsae`
-2. Fix FH models
-3. Allow user to specify priors
-4. (maybe) implement generics like `predict()`, `posterior_predict()`, or `post_epred()`
-  - would make things like posterior predictive checks for two-stage models and similar things much much easier
-  - While we're at it, we could extend `summary()` to `fit.basal` class
+
+```{r}
+fh_hbsae = fSAE.Area(
+  est.init = fit_FH$data$BASAL_HT_ESTIMATOR,
+  var.init = fit_FH$data$BASAL_HT_SE^2,
+  X = cbind(1, fit_FH$data$tcc, fit_FH$data$evc)
+)
+
+hbsae_fh_df = data.frame(
+  county = fit_FH$data$county,
+  mean = fh_hbsae$est,
+  var = fh_hbsae$mse
+)
+```
+
+```{r}
+compare_estimates(estimates_FH$preds, hbsae_fh_df, "county")
+```
+
+```{r}
+spec_area_custom = specify(
+  formula = obs_biomass ~ tcc + evc + (1 | county),
+  level = "area",
+  domain = "county"
+)
+
+fit_area_custom = fit.basal_spec(
+  spec_area_custom,
+  idaho_obs_full %>% filter(obs_biomass > 0),
+  population_size = nrow(idaho_aux_full)
+)
+
+check_area_custom = check.basal_fit(
+  fit = fit_area_custom,
+  draws = 200
+)
+
+# we compare estimates with `hbsae` by re-estimating on the fitted data
+estimates_area_custom = estimate.basal_fit(
+  fit = fit_area_custom,
+  newdata = fit_area_custom$data,
+  domain = "county",
+  ndraws = 5000
+); estimates_area_custom$preds
+```
+
+```{r}
+compare_estimates(estimates_area_custom$preds, hbsae_fh_df, "county")
+```
 

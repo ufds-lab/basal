@@ -43,7 +43,7 @@ fit.basal_spec <- function(spec,
   check_inherits("basal_spec", spec)
 
   if (!is.null(spec$formula)) {
-    res = formula[[2]]
+    res = spec$formula[[2]]
   } else {
     res = spec$default_model_data$response_name
   }
@@ -76,13 +76,23 @@ fit.basal_spec <- function(spec,
           "direct estimator) in area-level models."))
       }
       full_data <- data
-      trim_data = data[,colnames(data) %in% c(spec$default_model_data$response_name,
-                                              spec$default_model_data$domain_name,
-                                              spec$default_model_data$auxiliary_variables)]
-      data <- agg_HT(trim_data,
-                     spec$default_model_data$response_name,
-                     population_size,
-                     spec$default_model_data$domain_name)
+      if (spec$model_type == "FH") {
+        trim_data = data[,c(spec$default_model_data$response_name,
+                            spec$default_model_data$domain_name,
+                            spec$default_model_data$auxiliary_variables)]
+        data <- agg_HT(trim_data,
+                       spec$default_model_data$response_name,
+                       population_size,
+                       spec$default_model_data$domain_name)
+      } else {
+        stopifnot(!is.null(spec$formula))
+        trim_data = data[,all.vars(spec$formula)]
+        data <- agg_HT(trim_data,
+                       res,
+                       population_size,
+                       spec$domain)
+      }
+      
       res = "BASAL_HT_ESTIMATOR"
     } else {
       # We first get obs_variability.
@@ -110,7 +120,7 @@ fit.basal_spec <- function(spec,
         res, " | se(BASAL_HT_SE) ~ 1"
       ))
       # Now do the addition terms check
-      if (length(all.vars(tmp_formula[[2]])) > 1) {
+      if (length(all.vars(formula[[2]])) > 1) {
         # I'm unsure if we can allow the user to specify addition terms in an
         # area level model. I'm going to make this illegal.
         stop(paste0(
