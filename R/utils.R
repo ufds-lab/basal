@@ -41,33 +41,33 @@ extract_variables <- function(formula) {
 agg_HT <- function(data, res, N, domain, agg_data = NULL) {
   if (is.null(agg_data)) {
     make_aggs <- T
-    agg_data = data[1,]
+    agg_data <- data[1,]
   }
   if ("BASAL_HT_ESTIMATOR" %in% colnames(data) ||
       "BASAL_HT_SE" %in% colnames(data) ||
       "BASAL_N" %in% colnames(data)) {
     stop("Variables with 'BASAL' prefix are protected. Please rename these.")
   }
-  agg_data$`BASAL_HT_ESTIMATOR` = NA
-  agg_data$`BASAL_HT_SE` = NA
-  agg_data$`BASAL_N` = NA
+  agg_data$`BASAL_HT_ESTIMATOR` <- NA
+  agg_data$`BASAL_HT_SE` <- NA
+  agg_data$`BASAL_N` <- NA
   
-  unique_domains = unique(data[[domain]])
+  unique_domains <- unique(data[[domain]])
   for (i in 1:length(unique_domains)) {
-    thedomain = unique_domains[i]
-    thedata = data[data[[domain]] == thedomain,]
-    est = 
+    thedomain <- unique_domains[i]
+    thedata <- data[data[[domain]] == thedomain,]
+    est <- 
       mase::horvitzThompson(y = thedata[[res]],
                       N = N,
                       var_est = T,
                       messages = F)
     if (make_aggs) {
-      agg_data[i,] = c(
+      agg_data[i,] <- c(
         lapply(thedata, function(x) {
           if (is.numeric(x)) {
             return (mean(x))
           } else {
-            levels = unique(x)
+            levels <- unique(x)
             if (length(levels) != 1) {
               warning(
                 "Detected multiple levels in non-numeric data. Arbitrarily choosing a value."
@@ -80,10 +80,10 @@ agg_HT <- function(data, res, N, domain, agg_data = NULL) {
       )
     }
     
-    agg_data[agg_data[[domain]] == thedomain,"BASAL_HT_ESTIMATOR"] = est$pop_mean
-    agg_data[agg_data[[domain]] == thedomain,"BASAL_HT_SE"] = sqrt(est$pop_mean_var)
-    agg_data[agg_data[[domain]] == thedomain,"BASAL_N"] = nrow(thedata)
-#    agg_data[agg_data$domain == thedomain,]$n_zero = nrow(thedata[(thedata[[res]] == 0),])
+    agg_data[agg_data[[domain]] == thedomain,"BASAL_HT_ESTIMATOR"] <- est$pop_mean
+    agg_data[agg_data[[domain]] == thedomain,"BASAL_HT_SE"] <- sqrt(est$pop_mean_var)
+    agg_data[agg_data[[domain]] == thedomain,"BASAL_N"] <- nrow(thedata)
+#    agg_data[agg_data$domain == thedomain,]$n_zero <- nrow(thedata[(thedata[[res]] == 0),])
   }
   return(agg_data)
 }

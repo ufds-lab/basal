@@ -83,13 +83,13 @@ specify <- function(formula = NULL,
       if (!is.null(domain_name)) {
         message("Supplied a domain name for a unit-level custom model.",
                 "Domain name will be ignored.")
-        domain_name = NULL
+        domain_name <- NULL
       }
       if (!is.null(obs_variability)) {
         message("Supplied variability of the observations. This isn't used",
                 "use y | se(obs_variability) ~ ...",
                 "this message will be cleaned up later")
-        obs_variability = NULL
+        obs_variability <- NULL
       }
     } else if (level == "area") {
       if (is.null(obs_variability)) { 

@@ -15,7 +15,7 @@
 #' avoid R session crashing. A value of `NULL` or `Inf` will predict on all.
 #' 
 #' @param seed The seed for random number generation in posterior prediction.
-estimate.basal_fit = function(
+estimate.basal_fit <- function(
     fit,
     newdata = NULL,
     domain = NULL,
@@ -29,59 +29,73 @@ estimate.basal_fit = function(
     set.seed(seed)
   }
   
-  effects = unique(fit$model$prior$group)
-  effects = effects[effects != ""]
-  predictors = names(coef(fit$model)) # can be updated
+  if (max_preds > nrow(as.data.frame(fit_FH$model))) {
+    stop(paste0(
+      "Can't estimate more quantities than obtained via MCMC. Increase the ",
+      "number of chains or number of iterations."
+    ))
+  }
+  
+  if (!(is.null(domain) || domain %in% colnames(newdata))) {
+    stop(paste0(
+      "Provided domain is not a column in newdata. If you want estimates over",
+      " the whole region, set domain = NULL, otherwise set to a column in newdata."
+    ))
+  }
+  
+  effects <- unique(fit$model$prior$group)
+  effects <- effects[effects != ""]
+  predictors <- names(coef(fit$model)) # can be updated
   if (is.null(max_preds)) {
-    nd_subset = newdata
+    nd_subset <- newdata
   } else {
-    nd_subset = newdata %>%
+    nd_subset <- newdata %>%
       .[sample.int(nrow(.), size = min(nrow(.), max_preds)),]
   }
   
   if (fit$spec$level == "area") {
-    setdiff = setdiff(unique(nd_subset[[domain]]), unique(fit$data[[domain]]))
+    setdiff <- setdiff(unique(nd_subset[[domain]]), unique(fit$data[[domain]]))
     if (length(setdiff) != 0) {
       warning(paste0(
         "Domains not present in training data detected. These cannot be reliably",
         " estimated on and will be excluded."
       ))
-      nd_subset = nd_subset[!c(nd_subset[[domain]] %in% setdiff),]
+      nd_subset <- nd_subset[!c(nd_subset[[domain]] %in% setdiff),]
     }
     
-    training_se = fit$data$BASAL_HT_SE
-    names(training_se) = fit$data[[domain]]
-    nd_subset$`BASAL_HT_SE` = training_se[nd_subset[[domain]]]
+    training_se <- fit$data$BASAL_HT_SE
+    names(training_se) <- fit$data[[domain]]
+    nd_subset$`BASAL_HT_SE` <- training_se[nd_subset[[domain]]]
   }
   
-  post_preds = t(posterior_epred(fit$model, 
+  post_preds <- t(posterior_epred(fit$model, 
                                  newdata = nd_subset, 
                                  ndraws = ndraws,
                                  allow_new_levels = TRUE))
   
   if (!is.null(fit$spec$variable_transform)) {
-    inv_trans = fit$spec$variable_transform$inv_transform
-    post_preds = inv_trans(post_preds)
+    inv_trans <- fit$spec$variable_transform$inv_transform
+    post_preds <- inv_trans(post_preds)
   }
   
   
-  nd_subset[,(ncol(nd_subset)+1):(ncol(nd_subset) + ndraws)] = post_preds
-  colnames(nd_subset)[(ncol(nd_subset)-ndraws+1):(ncol(nd_subset))] = paste0("rep", 1:ndraws)
+  nd_subset[,(ncol(nd_subset)+1):(ncol(nd_subset) + ndraws)] <- post_preds
+  colnames(nd_subset)[(ncol(nd_subset)-ndraws+1):(ncol(nd_subset))] <- paste0("rep", 1:ndraws)
   
-  preds = nd_subset %>%
+  preds <- nd_subset %>%
     group_by_at(domain) %>%
     reframe(across(paste0("rep", 1:ndraws), mean)) %>%
     pivot_longer(2:ncol(.),
                  names_to = "draw",
                  values_to = "pred_mean")
   
-  ret_preds = preds %>%
+  ret_preds <- preds %>%
     group_by_at(domain) %>%
     mutate(across(pred_mean, stat)) %>%
     dplyr::select(-c(draw, pred_mean)) %>%
     unique()
   
-  ret = list(
+  ret <- list(
     fit = fit,
     params = list(
       newdata = newdata,

@@ -1,5 +1,5 @@
 ---
-title: "ex_pipeline"
+title: "example_pipeline"
 output: html_document
 ---
 
@@ -17,7 +17,7 @@ for (file in files) {
 rm(file, files)
 ```
 
-
+# Automatic BHF
 ```{r}
 spec_BHF = specify(
   model = "BHF",
@@ -47,6 +47,7 @@ estimates_BHF = estimate.basal_fit(
 ); estimates_BHF$preds
 ```
 
+# Manual BHF
 ```{r}
 spec_custom = specify(
   formula = formula(obs_biomass ~ tcc + evc + (1 | county)),
@@ -74,7 +75,7 @@ estimates_custom = estimate.basal_fit(
 ); estimates_custom$preds
 ```
 
-
+# Automatic FH
 ```{r}
 spec_FH = specify(
   model = "FH",
@@ -105,10 +106,10 @@ estimates_FH = estimate.basal_fit(
 ); estimates_FH$preds
 ```
 
+# Manual FH
 ```{r}
 spec_area_custom = specify(
   formula = formula(obs_biomass ~ tcc + evc + (1 | county)),
-  model = "custom",
   level = "area",
   domain = "county"
 )
@@ -119,12 +120,40 @@ fit_area_custom = fit.basal_spec(
   population_size = nrow(idaho_aux_full)
 )
 
-check_FH = check.basal_fit(
+check_area_custom = check.basal_fit(
   fit = fit_area_custom
 )
 
-estimates_FH = estimate.basal_fit(
+estimates_area_custom = estimate.basal_fit(
   fit = fit_area_custom,
+  newdata = idaho_aux_aggregate,
+  domain = "county",
+  ndraws = 5000
+); estimates_area_custom$preds
+```
+
+# Automatic FH, pre-aggregated
+
+```{r}
+spec_FH_pre_agg = specify(
+  model = "FH",
+  domain = "county",
+  response = "obs_biomass",
+  auxiliary_variables = c("tcc", "evc"),
+  obs_variability = fit_FH$data$BASAL_HT_SE # also works with "BASAL_HT_SE"
+)
+
+fit_FH_pre_agg = fit.basal_spec(
+  spec_FH_pre_agg,
+  fit_FH$data
+)
+
+check_FH_pre_agg = check.basal_fit(
+  fit = fit_FH_pre_agg
+)
+
+estimates_FH_pre_agg = estimate.basal_fit(
+  fit = fit_FH_pre_agg,
   newdata = idaho_aux_aggregate,
   domain = "county",
   ndraws = 5000
@@ -133,13 +162,11 @@ estimates_FH = estimate.basal_fit(
 
 
 
-
 To do:
-1. Fix FH models
-2. Allow user to specify priors
-3. (maybe) implement generics like `predict()`, `posterior_predict()`, or `post_epred()`
+1. Allow user to specify priors
+2. (maybe) implement generics like `predict()`, `posterior_predict()`, or `post_epred()`
   - would make things like posterior predictive checks for two-stage models and similar things much much easier
   - While we're at it, we could extend `summary()` to `fit.basal` class
-4. Implement ZI estimator
+3. Implement ZI estimator
 
 

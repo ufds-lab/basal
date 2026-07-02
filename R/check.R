@@ -16,7 +16,7 @@
 #' are not included in the object.
 #' 
 #' @export
-check.basal_fit = function(
+check.basal_fit <- function(
     fit,
     stat = c(mean = mean, var = var, ecdf = ecdf),
     include_base_pp_check = TRUE,
@@ -24,34 +24,34 @@ check.basal_fit = function(
     trace_plots = FALSE
 ) {
   message("Assuming engine is brms")
-  ret = list()
+  ret <- list()
   if (!is.null(stat) && is.null(names(stat))) {
     warning(paste0(
       "Must apply names to your functions. Proceeding while naming",
       " in chronological order (i.e., c(mean, var) -> c(`1` = mean, `2` = var))."
       ))
-    names(stat) = 1:length(stat)
+    names(stat) <- 1:length(stat)
   }
   
   if (include_base_pp_check) {
-    ret$pp_checks$epdf = pp_check(fit$model, ndraws = draws)
+    ret$pp_checks$epdf <- pp_check(fit$model, ndraws = draws)
   }
   if (!is.null(stat)) {
-    extra_pp_check = custom_pp_check(
+    extra_pp_check <- custom_pp_check(
       fit, draws, stat
     )
     for (i in 1:length(stat)) {
-      ret$pp_checks[[names(stat)[i]]] = extra_pp_check[[i]]
+      ret$pp_checks[[names(stat)[i]]] <- extra_pp_check[[i]]
     }
   }
   
-  ret$convergence$rhat = brms::rhat(fit$model)
+  ret$convergence$rhat <- brms::rhat(fit$model)
   if (sum(ret$convergence$rhat > 1.1, na.rm = T)) {
     warning(
       "Possible issue in convergence. Check rhat values and pairs()."
       )
   }
-  ret$convergence$neff = brms::neff_ratio(fit$model) * nrow(as.data.frame(fit$model))
+  ret$convergence$neff <- brms::neff_ratio(fit$model) * nrow(as.data.frame(fit$model))
   if (sum(ret$convergence$neff < 200, na.rm = T)) {
     warning(
       "Possible issue in convergence. Check neff values and pairs()."
@@ -59,7 +59,7 @@ check.basal_fit = function(
   }
   if (trace_plots) {
     for(var in rownames(posterior_summary(fit$model))) {
-      ret$convergence$trace[[var]] = mcmc_trace(fit$model, pars = var)
+      ret$convergence$trace[[var]] <- mcmc_trace(fit$model, pars = var)
     }
   }
   
@@ -74,23 +74,23 @@ check.basal_fit = function(
 #' 
 #' @param stat (possible list of) function to apply to draws from posterior 
 #' predictive distribution
-custom_pp_check = function(
+custom_pp_check <- function(
     object,
     draws,
     stat
 ) {
-  y = object$data[[object$params$response]]
-  y_stats = sapply(stat, function(fun) {fun(y)})
-  pp = posterior_predict(object$model, ndraws = draws)
-  post_checks = sapply(stat, function(fun) {
+  y <- object$data[[object$params$response]]
+  y_stats <- sapply(stat, function(fun) {fun(y)})
+  pp <- posterior_predict(object$model, ndraws = draws)
+  post_checks <- sapply(stat, function(fun) {
     apply(pp, MARGIN = 1, FUN = fun)
   })
   
-  plot_list = sapply(1:length(stat), function(i) {
-    post_data = unlist(post_checks[,i])
-    y_stat = unlist(y_stats[i])
+  plot_list <- sapply(1:length(stat), function(i) {
+    post_data <- unlist(post_checks[,i])
+    y_stat <- unlist(y_stats[i])
     if (is.numeric(y_stat)) { 
-      plot = (
+      plot <- (
         ggplot() +
         geom_density(aes(x = post_data, color = "y_rep"), linewidth = 0.5) +
         geom_vline(aes(color = "y", xintercept = y_stat)) +
@@ -98,18 +98,18 @@ custom_pp_check = function(
              max(quantile(post_data, 0.99), y_stat)) 
       )
     } else if (is.list(y_stat) && is.function(y_stat[[1]])) {
-      plot = ggplot() 
+      plot <- ggplot() 
       for (j in 1:length(post_data)) {
-        plot = plot + 
+        plot <- plot + 
           stat_function(fun = post_data[[j]], aes(color = "y_rep"), 
                         linewidth = 0.5, alpha = 5/log(length(post_data))) 
       }
-      plot = plot +
+      plot <- plot +
         stat_function(fun = y_stat[[1]], aes(color = "y")) +      
         xlim(quantile(y, 0.01), quantile(y, 0.99))
 
     }
-    plot = plot + 
+    plot <- plot + 
       theme_minimal() +
       theme(axis.line.x.bottom = element_line(),
             axis.line.y.left = element_line(),
@@ -130,6 +130,6 @@ custom_pp_check = function(
       ))
   })
   
-  names(plot_list) = names(stat)
+  names(plot_list) <- names(stat)
   return(plot_list)
 }

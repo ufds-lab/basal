@@ -43,19 +43,19 @@ fit.basal_spec <- function(spec,
   check_inherits("basal_spec", spec)
 
   if (!is.null(spec$formula)) {
-    res = spec$formula[[2]]
+    res <- spec$formula[[2]]
   } else {
-    res = spec$default_model_data$response_name
+    res <- spec$default_model_data$response_name
   }
   if (!is.null(spec$variable_transform)) {
-    trans = spec$variable_transform$transform
+    trans <- spec$variable_transform$transform
     # weird as.numeric() calls because
     # data[[res]] seems to sometimes produce character vectors
     # (try with FH and auto-aggregation)
     if (!is.null(spec$default_model_data)) {
-      data[[res]] = trans(data[[res]])
+      data[[res]] <- trans(data[[res]])
     } else {
-      data[[res]] = trans(data[[res]])
+      data[[res]] <- trans(data[[res]])
     }
   }
 
@@ -77,7 +77,7 @@ fit.basal_spec <- function(spec,
       }
       full_data <- data
       if (spec$model_type == "FH") {
-        trim_data = data[,c(spec$default_model_data$response_name,
+        trim_data <- data[,c(spec$default_model_data$response_name,
                             spec$default_model_data$domain_name,
                             spec$default_model_data$auxiliary_variables)]
         data <- agg_HT(trim_data,
@@ -86,27 +86,27 @@ fit.basal_spec <- function(spec,
                        spec$default_model_data$domain_name)
       } else {
         stopifnot(!is.null(spec$formula))
-        trim_data = data[,all.vars(spec$formula)]
+        trim_data <- data[,all.vars(spec$formula)]
         data <- agg_HT(trim_data,
                        res,
                        population_size,
                        spec$domain)
       }
       
-      res = "BASAL_HT_ESTIMATOR"
+      res <- "BASAL_HT_ESTIMATOR"
     } else {
       # We first get obs_variability.
       obs_var <- spec$obs_variability
-      if (is.numeric(obs_variability)) {
-        data$`BASAL_HT_SE` = obs_variability
-      } else if (is.character(obs_variability)) {
-        if (!(obs_variability %in% colnames(data))) {
+      if (is.numeric(obs_var)) {
+        data$`BASAL_HT_SE` <- obs_var
+      } else if (is.character(obs_var)) {
+        if (!(obs_var %in% colnames(data))) {
           stop("obs_variability must be a vector of standard errors or a column in the data.")
         }
-        colnames(data)[colnames(data) == obs_var] = "BASAL_HT_SE"
+        colnames(data)[colnames(data) == obs_var] <- "BASAL_HT_SE"
       }
     }
-  data = data[(data$BASAL_HT_SE != 0 & !is.nan(data$BASAL_HT_SE)),]
+  data <- data[(data$BASAL_HT_SE != 0 & !is.nan(data$BASAL_HT_SE)),]
   }
 
   if (spec$model_type == "custom") {
@@ -135,27 +135,27 @@ fit.basal_spec <- function(spec,
       valid_formula <- brmsformula(formula)
     }
   } else if (spec$model_type == "BHF") {
-    formula =
+    formula <-
       formula(paste0(
         spec$default_model_data$response_name, " ~ ",
         paste0(spec$default_model_data$auxiliary_variables, collapse = " + "), " + ",
         "(1 | ",  spec$default_model_data$domain_name, ")"
       ))
-    valid_formula = brmsformula(formula)
+    valid_formula <- brmsformula(formula)
   } else if (spec$model_type == "FH") {
-    formula =
+    formula <-
       formula(paste0(
         res, "| se(BASAL_HT_SE) ~ ",
         paste0(spec$default_model_data$auxiliary_variables, collapse = " + "), " + ",
         "(1 | ",  spec$default_model_data$domain_name, ")"
       ))
-    valid_formula = brmsformula(formula)
+    valid_formula <- brmsformula(formula)
 
-    data = data[(data$BASAL_HT_SE != 0 & !is.nan(data$BASAL_HT_SE)),]
+    data <- data[(data$BASAL_HT_SE != 0 & !is.nan(data$BASAL_HT_SE)),]
   }
 
-  vars = all.vars(formula)
-  vars = vars[!(vars %in% c("BASAL_HT_SE"))]
+  vars <- all.vars(formula)
+  vars <- vars[!(vars %in% c("BASAL_HT_SE"))]
   if (length((missing = setdiff(vars, colnames(data)))) != 0) {
     if (length(missing) == 1) {
       stop(paste0("Variable ", missing, " missing from your data."))
@@ -170,14 +170,14 @@ fit.basal_spec <- function(spec,
   }
 
   if (!is.null(spec$variable_transform)) {
-    trans = spec$variable_transform$transform
+    trans <- spec$variable_transform$transform
     # weird as.numeric() calls because
     # data[[res]] seems to sometimes produce character vectors
     # (try with FH and auto-aggregation)
     if (!is.null(spec$default_model_data)) {
-      data[[res]] = trans(data[[res]])
+      data[[res]] <- trans(data[[res]])
     } else {
-      data[[res]] = trans(data[[res]])
+      data[[res]] <- trans(data[[res]])
     }
   }
 
@@ -188,35 +188,35 @@ fit.basal_spec <- function(spec,
   # should be less than the variability of the data, so this shouldn't be
   # too informative
 
-  predictors = vars[vars != res]
-  numeric_preds = predictors[sapply(data[,predictors], is.numeric)]
+  predictors <- vars[vars != res]
+  numeric_preds <- predictors[sapply(data[,predictors], is.numeric)]
 
-  res_sd = sd(data[[res]]) # compute sd
-  pred_sd = sapply(data[,numeric_preds], sd)
+  res_sd <- sd(data[[res]]) # compute sd
+  pred_sd <- sapply(data[,numeric_preds], sd)
 
-  pred_sd_ratio = pred_sd/res_sd
+  pred_sd_ratio <- pred_sd/res_sd
 
-  prior_family = paste0("student_t(3, 0, ", pred_sd_ratio * 2.5, ")")
-  res_prior = paste0("student_t(3, 0, ", res_sd * 2.5, ")")
+  prior_family <- paste0("student_t(3, 0, ", pred_sd_ratio * 2.5, ")")
+  res_prior <- paste0("student_t(3, 0, ", res_sd * 2.5, ")")
 
   # we modify default priors from brms
-  priors = default_prior(
+  priors <- default_prior(
     valid_formula,
     data
   )
 
-  reg_coef_mask = (priors$class == "b") & (priors$coef %in% numeric_preds)
-  priors[reg_coef_mask,]$prior = prior_family
-  priors[reg_coef_mask,]$source = "default (basal)"
+  reg_coef_mask <- (priors$class == "b") & (priors$coef %in% numeric_preds)
+  priors[reg_coef_mask,]$prior <- prior_family
+  priors[reg_coef_mask,]$source <- "default (basal)"
 
-  pop_levels = unique(priors$group)
-  pop_levels = pop_levels[pop_levels != ""]
-  non_numeric_preds = predictors[-which(predictors %in% union(pop_levels, numeric_preds))]
+  pop_levels <- unique(priors$group)
+  pop_levels <- pop_levels[pop_levels != ""]
+  non_numeric_preds <- predictors[-which(predictors %in% union(pop_levels, numeric_preds))]
 
   if (length(non_numeric_preds) != 0) {
-    reg_coef_mask = (priors$class == "b") & (priors$coef == non_numeric_preds)
-    priors[reg_coef_mask,]$prior = res_prior
-    priors[reg_coef_mask,]$source = "default (basal)"
+    reg_coef_mask <- (priors$class == "b") & (priors$coef == non_numeric_preds)
+    priors[reg_coef_mask,]$prior <- res_prior
+    priors[reg_coef_mask,]$source <- "default (basal)"
   }
 
   priors[priors$class == "Intercept",]$prior <- res_prior
