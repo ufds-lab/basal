@@ -178,6 +178,11 @@ two_stage_spec <- specify(
   second_stage_spec = second_stage
 )
 
+two_stage_fit <- fit.basal_spec(
+  two_stage_spec,
+  idaho_obs_full
+)
+
 two_stage_spec$second_stage_spec
 ```
 
