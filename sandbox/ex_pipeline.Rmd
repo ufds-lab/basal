@@ -161,11 +161,10 @@ estimates_FH_pre_agg = estimate.basal_fit(
 ```
 
 ```{r}
-zero_glm <- specify(
-  level = "unit",
+second_stage <- specify(
   model = "BHF",
   auxiliary_variables = c("tcc", "evc"),
-  domain = "county",
+  specifying_second_stage_model = TRUE
 )
 
 two_stage_spec <- specify(
@@ -174,8 +173,11 @@ two_stage_spec <- specify(
   response = "obs_biomass",
   auxiliary_variables = "tcc",
   domain = "county",
-  model_stage = "single",
+  model_stage = "zi",
+  second_stage_spec = second_stage
 )
+
+two_stage_spec$second_stage_spec
 ```
 
 

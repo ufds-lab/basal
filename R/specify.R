@@ -67,149 +67,186 @@ specify <- function(formula = NULL,
                     variable_transform = NULL,
                     family = gaussian(),
                     model_stage = "single",
-                    second_stage_model = FALSE,
+                    specifying_second_stage_model = FALSE,
                     second_stage_spec = NULL) {
   
-  func_call <- match.call()
-  default_model_data <- NULL # default value. Get's overwritten if not using custom model
+  # If we have a custom model, the user must provide a formula and a level
+  # If we have a non-custom model, the user must specify a model (type)
+  # For both, there must be response, auxiliary, and domain
+  # for BHF, this is it
+  # for FH, we can have obs_variability
   
-  if ((model_stage != "single" || !is.null(model_stage)) && !second_stage_model) {
-    if (!is.null(second_stage_spec)) {
-      warning(paste0(
-        "Provided a specification for a second stage when fitting a single stage ",
-        "model. Discarding this specification."
-      ))
-    }
+  {
+    func_call <- match.call()
+    
+    match.arg(level, c(NULL, "area", "unit")) # not the best practice with NULL here but works nicely
+    match.arg(model, c("custom", "FH", "BHF")); stopifnot(!is.null(model))
+    match.arg(model_stage, c("single", "zi")); stopifnot(!is.null(model_stage))
+  } # housekeeping provided parameters
+  
+  if (specifying_second_stage_model) {
+    # re-code model so coming for loop separates it
+    old_model <- model 
+    model <- "aux_spec"
+    model_stage <- "zi"
+    default_model_data <- NULL
   }
   
-  if (!(model %in% c("custom", "FH", "BHF"))) {
-    stop("Provided model not a listed option")
-  } else if (model == "custom") {
-    check_inherits("formula", formula)
-    if (is.null(formula)) {
-      stop("Must provide a formula with a custom model.")
-    } else if ((length(level) > 1) || !(level == "area" || level == "unit")) {
-      stop("Level must be a single value either equal to 'area' or 'unit'.")
+  if (model == "custom") {
+    if (is.null(formula) || is.null(level)) {
+      stop("Must provide a formula and level for custom models.")
     }
-    if (level == "unit") {
-      if (!is.null(domain_name)) {
-        message("Supplied a domain name for a unit-level custom model.",
-                "Domain name will be ignored.")
-        domain_name <- NULL
-      }
-      if (!is.null(obs_variability)) {
-        message("Supplied variability of the observations. This isn't used",
-                "use y | se(obs_variability) ~ ...",
-                "this message will be cleaned up later")
-        obs_variability <- NULL
-      }
-    } else if (level == "area") {
-      if (is.null(obs_variability)) { 
-        if (is.null(domain_name)) {
-          stop("Must supply a domain name for auto aggregation.")
-        }
-      }
+    default_data_model <- NULL
+    response_name <- NULL; auxiliary_variables <- NULL
+  } else if (model != "aux_spec") {
+    if (is.null(domain_name) ||
+        is.null(response_name) ||
+        is.null(auxiliary_variables)) {
+      stop("Must provide domain, response, and auxiliary variable names for pre-set models.")
     }
-  } else { # model != "custom"
-    if (!is.null(formula)) {
-      warning("Ignoring supplied formula for pre-set models. Please use custom model",
-              "if you want to use a formula, or use
-                'response', 'domain_name', and 'auxiliary_variables' for preset models")
-      formula <- NULL
-    }
-    if (is.null(response_name)) {
-      if (!second_stage_model) {
-        stop("Must supply a response variable.")
-      }
-    } else if (is.null(domain_name)) {
-      if (!second_stage_model) {
-        stop("Must supply a domain. name for BHF.")
-      } else {
-        message(paste0(
-          "Provided no domain name for the second stage => domain will inherit ",
-          "from first stage model."
-        ))
-      }
-    } else if (is.null(auxiliary_variables)) {
-      warning("No auxiliary variables supplied. Using all other variables.")
-      auxiliary_variables <- paste0(". - ", domain_name - response_name)
-    }
+    if (model == "BHF") level <- "unit"
+    if (model == "FH") level <- "area"
+    formula <- NULL;
     
-    if (model == "BHF") {
-      if (is.null(level)) {
-        level <- "unit"
-      } else if (level != "unit") {
-        warning("Specified level is not equal to \"unit\" on a BHF model. Setting 'level = \"unit\"'.")
-        level <- "unit"
-      }
-      obs_variability <- NULL
-      
-    } else if (model == "FH") {
-      if (is.null(level)) {
-        level <- "area"
-      } else if (level != "area") {
-        warning("Specified level is not equal to `\"area`\" on a FH model. Seeding 'level = \"unit\"'.")
-        level <- "area"
-      }   
-    }
     default_model_data <- list(
       response_name = response_name,
       domain_name = domain_name,
       auxiliary_variables = auxiliary_variables
     )
+  } else if (model == "aux_spec") {
+    family <- bernoulli()
+    model <- old_model
+    if (model == "custom") {
+      if (is.null(formula) ||
+          is.null(level)) {
+        message(paste0(
+          "Missing values for formula and/or level will be filled by the first stage"
+        )) 
+      }
+    } else {
+      if (model == "BHF") level <- "unit"
+      if (model == "FH") level <- "area"
+      if (is.null(domain_name) ||
+          is.null(response_name) ||
+          is.null(auxiliary_variables) ) {
+        message(paste0(
+          "One or more of domain_name, response_name, or auxiliary_variables are ",
+          "missing. These will be inherited from the first stage"
+        )) 
+      }
+      default_model_data <- list(
+        response_name = "BASAL_ZERO_INDICATOR",
+        domain_name = domain_name,
+        auxiliary_variables = auxiliary_variables
+      )
+    }
+  }
+  
+  # condition parameters based on level
+  if (!is.null(level) && level == "unit" && !is.null(obs_variability)) {
+    message("Supplied variability of the observations. This isn't used ",
+            "use `y | se(obs_variability) ~ <covariates>`",
+            " to specify known variance.")
+    obs_variability <- NULL
+  }
+  if (!is.null(level) && level == "area" && is.null(domain_name) && is.null(obs_variability)) {
+    stop(paste0(
+      "Must have either a domain name (for auto aggregation) or observed ",
+      "variability with area level models"
+    ))
   }
   
   # check variable transformation
   if (!is.null(variable_transform)) {
-    if (!is.list(variable_transform)) {
-      stop("variable_transform must be a list.")
-    } else if (!is.function(variable_transform$transform)) {
-      stop("variable_transform$transform must be a function")
-    } else if (!is.function(variable_transform$inv_transform)) {
-      stop("variable_transform$inv_transform must be a function")
-    } else if (
-      variable_transform$inv_transform(variable_transform$transform(0)) != 0 ||
-      variable_transform$inv_transform(variable_transform$transform(1)) != 1
-    ) {
+    check_inherits("list", variable_transform)
+    check_inherits("function",
+                   variable_transform$transform, variable_transform$inv_transform)
+    
+    identity = TRUE
+    for (i in 1:10) {
+      identity = identity && 
+        round(variable_transform$inv_transform(variable_transform$transform(i)),10) == i
+    }
+    if (!identity) {
       stop(paste0(
         "variable_transform$inv_transform isn't a right-inverse of",
-        " variable_transform$transform on c(0,1)."
-        ))
+        " variable_transform$transform on 1:10."
+      ))
     }
   }
   
-  if (model_stage == "zi") {
-    if (!second_stage_model) {
-      if (is.null(second_stage_spec)) {
-        message("Specification for second stage inherited from this level")
-      } else {
-        if (model == "custom") {
-          if (is.null(second_stage$formula)) {
-            message("Inheriting formula for second stage from this level")
-            second_stage$formula <- formula
+  if (model_stage == "zi" && !specifying_second_stage_model) {
+    if (is.null(second_stage_spec)) {
+      message("Specification for second stage inherited from this level")
+      second_stage_spec <- specify(
+        formula = formula,
+        level = level, 
+        model = model, 
+        obs_variability = NULL,
+        domain_name = domain_name,
+        response_name = response_name,
+        auxiliary_variables = auxiliary_variables,
+        variable_transform = NULL,
+        family = bernoulli(),
+        model_stage = model_stage,
+        specifying_second_stage_model = TRUE,
+        second_stage_spec = NULL
+      )
+    } else {
+      if (second_stage_spec$model_type != model) {
+        if (second_stage_spec$model_type != "custom") {
+          if ((is.null(second_stage_spec$default_model_data$domain_name) &&
+               is.null(domain_name)) ||
+              (is.null(second_stage_spec$default_model_data$auxiliary_variables) && 
+               is.null(auxiliary_variables))) {
+            stop(paste0(
+              "Did not specify domain or auxiliary variables in ",
+              "the second stage model. This model is custom and you have not ",
+              "specified domain_name or auxiliary_variables. Please further ",
+              "specify the second stage, set second stage to custom, ", 
+              "or set these variables here"
+            ))
+            
+          }  else {
+            if (!is.null(domain_name) && is.null(second_stage_spec$default_model_data$domain_name)) {
+              second_stage_spec$default_model_data$domain_name <- domain_name
+            } 
+            if (!is.null(auxiliary_variables) && 
+                is.null(second_stage_spec$default_model_data$auxiliary_variables)) {
+              second_stage_spec$default_model_data$auxiliary_variables <- auxiliary_variables
+            }
           }
-          if (is.null(second_stage$level)) {
-            message("Inheriting level for second stage from this level")
-            second_stage$level <- level
+        } else {
+          if (is.null(second_stage_spec$formula)) {
+            message(paste0(
+              "Can't inherit formula from model type ", model, ". Setting second ",
+              "stage model type to ", model, ". To use custom second stage, set ",
+              "the formula in the second stage."
+            ))
+            second_stage_spec$model_type <- model
           }
         }
-        if (is.null(second_stage$auxiliary_variables)) {
-          message("Inheriting auxiliary variables in second stage from this stage")
-          second_stage$auxiliary_variables <- auxiliary_variables
+      }
+      if (second_stage_spec$model_type == model) {
+        if (second_stage_spec$model_type == "custom") {
+          if (is.null(second_stage_spec$formula)) {
+            second_stage_spec$formula <- formula
+          }
+          if (is.null(second_stage_spec$level)) {
+            second_stage_spec$level <- level
+          }
+        } else if (second_stage_spec$model_type != "custom") {
+          if (is.null(second_stage_spec$default_model_data$auxiliary_variables)) {
+            second_stage_spec$default_model_data$auxiliary_variables <- auxiliary_variables
+          }
+          if (is.null(second_stage_spec$default_model_data$domain_name)) {
+            second_stage_spec$default_model_data$domain_name <- domain_name
+          }
         }
-        if (is.null(second_stage$))
       }
     }
   }
   
-#  formula = NULL,
-#  level = NULL, 
-#  model = "custom", 
-#  obs_variability = NULL,
-#  domain_name = NULL,
-#  response_name = NULL,
-#  auxiliary_variables = NULL,
-
   out <- list(
     call = func_call,
     formula = formula,
@@ -218,9 +255,11 @@ specify <- function(formula = NULL,
     domain_name = domain_name,
     obs_variability = obs_variability,
     default_model_data = default_model_data,
-    variable_transform = variable_transform
+    variable_transform = variable_transform,
+    model_stage = model_stage,
+    second_stage_spec = second_stage_spec
   )
-
+  
   return(
     structure(out, class = "basal_spec")
   )

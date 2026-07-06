@@ -231,7 +231,7 @@ fit.basal_spec <- function(spec,
         chains = chains,
         iter = iter,
         thin = thin,
-        family = spec$family
+        family = spec$family,
         warmup = burn_in,
         ...
       )
