@@ -59,8 +59,8 @@ fit.basal_spec <- function(spec,
     }
   }
 
- 
-  
+
+
   if (spec$level == "area") {
     if (spec$model_type != "FH") {
       warning("This may not work correctly.")
@@ -92,70 +92,82 @@ fit.basal_spec <- function(spec,
                        population_size,
                        spec$domain)
       }
-      
+
       res <- "BASAL_HT_ESTIMATOR"
     } else {
       # We first get obs_variability.
       obs_var <- spec$obs_variability
       if (is.numeric(obs_var)) {
-        data$`BASAL_HT_SE` <- obs_var
+        data$BASAL_HT_SE <- obs_var
       } else if (is.character(obs_var)) {
         if (!(obs_var %in% colnames(data))) {
           stop("obs_variability must be a vector of standard errors or a column in the data.")
         }
-        colnames(data)[colnames(data) == obs_var] <- "BASAL_HT_SE"
+        colnames(data)[colnames(data)== obs_var] <- "BASAL_HT_SE"
       }
     }
   data <- data[(data$BASAL_HT_SE != 0 & !is.nan(data$BASAL_HT_SE)),]
   }
 
-  if (spec$model_type == "custom") {
-    # Debug: level and tmp_formula.
-    if (spec$level == "unit") {
+  spec_family   <- spec$family
+  formula       <- NULL
+  valid_formula <- NULL
+
+  # zi
+  if (!is.null(spec$model_stage) && spec$model_stage == "zi") {
+    spec_family <- zero_inflated_normal
+
+    if (spec$model_type == "custom") {
       formula <- spec$formula
-      valid_formula <- brmsformula(formula)
-    } else if (spec$level == "area") {
-      formula <- spec$formula
-      tmp_formula <- formula(paste0(
-        res, " | se(BASAL_HT_SE) ~ 1"
-      ))
-      # Now do the addition terms check
-      if (length(all.vars(formula[[2]])) > 1) {
-        # I'm unsure if we can allow the user to specify addition terms in an
-        # area level model. I'm going to make this illegal.
-        stop(paste0(
-          "Cannot fit area-levels with pre-specified brms addition terms.",
-          " If you want addition terms, you should pre-aggregate data and fit ",
-          "a unit-level model with the addition terms."
-        ))
+      if (!is.null(spec$second_stage_spec) && !is.null(spec$second_stage_spec$formula)) {
+        sec_rhs <- spec$second_stage_spec$formula[[3]]
+        sec_rhs_str <- deparse(sec_rhs)
+        sec_formula <- as.formula(paste0("logitnonzero ~ ", sec_rhs_str))
+        valid_formula <- brms::bf(formula) + brms::bf(sec_formula)
+      } else {
+        valid_formula <- brms::bf(formula)
       }
-
-      # Inject the synthesized measurement error LHS back into the user's custom formula
-      formula[[2]] <- tmp_formula[[2]]
-      valid_formula <- brmsformula(formula)
+    } else if (spec$model_type == "BHF") {
+      formula_str <- paste0(res, " ~ ", paste0(spec$default_model_data$auxiliary_variables, collapse = " + "),
+                              " + (1 | ", spec$default_model_data$domain_name, ")")
+      formula <- as.formula(formula_str)
+      valid_formula <- brms::bf(formula)
+    } else {
+      stop("Sorry, zero-inflated models are only available for Custom or BHF Unit-level estimation.")
     }
-  } else if (spec$model_type == "BHF") {
-    formula <-
-      formula(paste0(
-        spec$default_model_data$response_name, " ~ ",
-        paste0(spec$default_model_data$auxiliary_variables, collapse = " + "), " + ",
-        "(1 | ",  spec$default_model_data$domain_name, ")"
-      ))
-    valid_formula <- brmsformula(formula)
-  } else if (spec$model_type == "FH") {
-    formula <-
-      formula(paste0(
-        res, "| se(BASAL_HT_SE) ~ ",
-        paste0(spec$default_model_data$auxiliary_variables, collapse = " + "), " + ",
-        "(1 | ",  spec$default_model_data$domain_name, ")"
-      ))
-    valid_formula <- brmsformula(formula)
 
-    data <- data[(data$BASAL_HT_SE != 0 & !is.nan(data$BASAL_HT_SE)),]
+  } else {
+
+    if (spec$model_type == "custom") {
+      if (spec$level == "unit") {
+        formula <- spec$formula
+        valid_formula <- brmsformula(formula)
+      } else if (spec$level == "area") {
+        formula <- spec$formula
+        tmp_formula <- formula(paste0(res, " | se(BASAL_HT_SE) ~ 1"))
+        if (length(all.vars(formula[[2]])) > 1) {
+          stop("Cannot fit area-levels with pre-specified brms addition terms.")
+        }
+        formula[[2]] <- tmp_formula[[2]]
+        valid_formula <- brmsformula(formula)
+      }
+    } else if (spec$model_type == "BHF") {
+      formula <- formula(paste0(spec$default_model_data$response_name, " ~ ",
+                                paste0(spec$default_model_data$auxiliary_variables, collapse = " + "),
+                                " + (1 | ", spec$default_model_data$domain_name, ")"))
+      valid_formula <- brmsformula(formula)
+    } else if (spec$model_type == "FH") {
+      formula <- formula(paste0(res, "| se(BASAL_HT_SE) ~ ",
+                                paste0(spec$default_model_data$auxiliary_variables, collapse = " + "),
+                                " + (1 | ", spec$default_model_data$domain_name, ")"))
+      valid_formula <- brmsformula(formula)
+      data <- data[(data$BASAL_HT_SE != 0 & !is.nan(data$BASAL_HT_SE)), ]
+    }
   }
 
   vars <- all.vars(formula)
-  vars <- vars[!(vars %in% c("BASAL_HT_SE"))]
+  vars <- vars[!(vars %in% c("BASAL_HT_SE", "logitnonzero"))]
+
   if (length((missing = setdiff(vars, colnames(data)))) != 0) {
     if (length(missing) == 1) {
       stop(paste0("Variable ", missing, " missing from your data."))
@@ -231,7 +243,8 @@ fit.basal_spec <- function(spec,
         chains = chains,
         iter = iter,
         thin = thin,
-        family = spec$family
+        family = spec_family,
+        stanvars = if (!is.null(spec$model_stage) && spec$model_stage == "zi") get_basal_stanvars() else NULL,
         warmup = burn_in,
         ...
       )
@@ -245,7 +258,8 @@ fit.basal_spec <- function(spec,
         chains = chains,
         iter = iter,
         thin = thin,
-        family = spec$family,
+        family = spec_family,
+        stanvars = if (!is.null(spec$model_stage) && spec$model_stage == "zi") get_basal_stanvars() else NULL,
         warmup = burn_in,
         seed = seed,
         ...

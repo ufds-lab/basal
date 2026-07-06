@@ -34,7 +34,7 @@ agg_stat <- function(vals, nms, .f) {
 #' @noRd
 extract_variables <- function(formula) {
   # extract the variables
-} 
+}
 
 #' Apply HT estimators to different domains
 #' @noRd
@@ -51,12 +51,12 @@ agg_HT <- function(data, res, N, domain, agg_data = NULL) {
   agg_data$`BASAL_HT_ESTIMATOR` <- NA
   agg_data$`BASAL_HT_SE` <- NA
   agg_data$`BASAL_N` <- NA
-  
+
   unique_domains <- unique(data[[domain]])
   for (i in 1:length(unique_domains)) {
     thedomain <- unique_domains[i]
     thedata <- data[data[[domain]] == thedomain,]
-    est <- 
+    est <-
       mase::horvitzThompson(y = thedata[[res]],
                       N = N,
                       var_est = T,
@@ -79,11 +79,45 @@ agg_HT <- function(data, res, N, domain, agg_data = NULL) {
         NA, NA, NA # add NA at the end for BASAL_HT_ESTIMATOR, BASAL_HT_SE, and BASAL_N
       )
     }
-    
+
     agg_data[agg_data[[domain]] == thedomain,"BASAL_HT_ESTIMATOR"] <- est$pop_mean
     agg_data[agg_data[[domain]] == thedomain,"BASAL_HT_SE"] <- sqrt(est$pop_mean_var)
     agg_data[agg_data[[domain]] == thedomain,"BASAL_N"] <- nrow(thedata)
 #    agg_data[agg_data$domain == thedomain,]$n_zero <- nrow(thedata[(thedata[[res]] == 0),])
   }
   return(agg_data)
+}
+
+#' Custom brms family for zero-inflated normal data
+#' @export
+zero_inflated_normal <- brms::custom_family(
+  "zero_inflated_normal",
+  dpars = c("mu", "sigma", "logitnonzero"),
+  links = c("identity"),
+  lb = c(NA, 0, NA),
+  ub = c(NA, NA, NA),
+  type = "real"
+)
+
+get_basal_stanvars <- function() {
+  stan_funs <- "
+  real zero_inflated_normal_lpdf(real y, real mu, real sigma, real logitnonzero) {
+    real probnonzero = exp(logitnonzero)/(1 + exp(logitnonzero));
+    if (y == 0) {
+      return log1m(probnonzero);
+    } else {
+      return log(probnonzero) + normal_lpdf(y | mu, sigma);
+    }
+  }
+  real zero_inflated_normal_rng(real mu, real sigma, real logitnonzero) {
+    real probnonzero = exp(logitnonzero)/(1 + exp(logitnonzero));
+    int zero = bernoulli_rng(probnonzero);
+    if (zero == 1) {
+      return normal_rng(mu, sigma);
+    } else {
+      return 0;
+    }
+  }
+  "
+  brms::stanvar(scode = stan_funs, block = "functions")
 }
