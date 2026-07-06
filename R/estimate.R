@@ -4,8 +4,8 @@
 #' 
 #' @param newdata data to predict data on. If NULL, fit on training data.
 #' 
-#' @param domain (vector of) names of areas to aggregate estimates on. If `NULL`, aggregate
-#' all the data together.
+#' @param domain (vector of) names of areas to aggregate estimates on. If `NULL`, 
+#' aggregate all the data together.
 #' 
 #' @param stat Named vector of function(s) to apply to posterior predictions.
 #' 
@@ -29,7 +29,7 @@ estimate.basal_fit <- function(
     set.seed(seed)
   }
   
-  if (max_preds > nrow(as.data.frame(fit_FH$model))) {
+  if (ndraws > nrow(as.data.frame(fit_FH$model))) {
     stop(paste0(
       "Can't estimate more quantities than obtained via MCMC. Increase the ",
       "number of chains or number of iterations."

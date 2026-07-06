@@ -71,7 +71,8 @@ estimates_custom = estimate.basal_fit(
   fit = fit_custom,
   newdata = idaho_aux_aggregate,
   domain = "county",
-  ndraws = 5000
+  ndraws = 5000,
+  stat = c(mean = mean, var = var, sd = sd)
 ); estimates_custom$preds
 ```
 
@@ -187,5 +188,10 @@ To do:
   - would make things like posterior predictive checks for two-stage models and similar things much much easier
   - While we're at it, we could extend `summary()` to `fit.basal` class
 3. Implement ZI estimator
+4. no domain in estimation should default to domains in specify()
+5. Check if back-transformation is applying in estimate()
+6. default stats for estimate give SE instead of var
 
 
+Questions:
+1. domain vs area for "small areas"

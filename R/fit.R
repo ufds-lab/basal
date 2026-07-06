@@ -187,6 +187,10 @@ fit.basal_spec <- function(spec,
   # of the data by some number (>1). We know that the variability of random effects
   # should be less than the variability of the data, so this shouldn't be
   # too informative
+  
+  # setting priors by modifying the object created by default_priors()
+  # is not ideal, although I'm unsure of another way to give default priors 
+  # for *everything*
 
   predictors <- vars[vars != res]
   numeric_preds <- predictors[sapply(data[,predictors], is.numeric)]
