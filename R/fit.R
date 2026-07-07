@@ -47,7 +47,7 @@ fit.basal_spec <- function(spec,
       res <- spec$formula[[2]]
     }
     second_spec_res <- spec$second_stage_spec
-    data$BASAL_ZERO_INDICATOR = as.numeric((data[[res]] == 0))
+    data$BASAL_NONZERO_INDICATOR = as.numeric((data[[res]] == 0))
     second_stage_fit <- fit.basal_spec(
       spec$second_stage_spec,
       data,

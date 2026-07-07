@@ -18,11 +18,11 @@
 #' @export
 check.basal_fit <- function(
     fit,
-    stat = c(mean = mean, se = sd, ecdf = ecdf),
+    stat = c(mean = mean, var = var, ecdf = ecdf),
     include_base_pp_check = TRUE,
     draws = 50,
     trace_plots = FALSE,
-    two_stage_stat = c(proportion_positive = prop_positive)
+    two_stage_stat = c(proportion_positive = prop_positive, entropy = entropy)
 ) {
   message("Assuming engine is brms")
   if (is.null(fit$second_stage_fit)) {
@@ -64,13 +64,13 @@ check.basal_fit <- function(
   ret$convergence$rhat <- brms::rhat(fit$model)
   if (sum(ret$convergence$rhat > 1.1, na.rm = T)) {
     warning(
-      "Possible issue in convergence. Check rhat values and pairs()."
+      "Possible issue in convergence. Check rhat values with summary(), and plots form pairs()."
       )
   }
   ret$convergence$neff <- brms::neff_ratio(fit$model) * nrow(as.data.frame(fit$model))
   if (sum(ret$convergence$neff < 200, na.rm = T)) {
     warning(
-      "Possible issue in convergence. Check neff values and pairs()."
+      "Possible issue in convergence. Check neff values with summary(), and plots from pairs()."
     )
   }
   if (trace_plots) {
@@ -79,7 +79,9 @@ check.basal_fit <- function(
     }
   }
   
-  return(ret)
+  return(
+    structure(ret, class = "basal_check")
+  )
 }
 
 #' Custom posterior predictions

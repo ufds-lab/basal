@@ -127,7 +127,6 @@ check_area_custom = check.basal_fit(
 estimates_area_custom = estimate.basal_fit(
   fit = fit_area_custom,
   newdata = idaho_aux_aggregate,
-  domain = "county",
   ndraws = 5000
 ); estimates_area_custom$preds
 ```
@@ -187,7 +186,7 @@ two_stage_fit <- fit.basal_spec(
 )
 
 two_stage_check <- check.basal_fit(
-  two_stage_fit,
+  two_stage_fit
 )
 
 estimate_two_stage = estimate.basal_fit(
@@ -196,7 +195,7 @@ estimate_two_stage = estimate.basal_fit(
   domain = "county",
   max_preds = 1e5,
   ndraws = 200
-); estimate_two_stage$preds
+); estimate_two_stage
 ```
 
 
@@ -206,7 +205,6 @@ To do:
   - would make things like posterior predictive checks for two-stage models and similar things much much easier
   - While we're at it, we could extend `summary()` to `fit.basal` class
 3. Implement ZI estimator
-4. no domain in estimate() should default to domains in specify()
 
 
 Questions:

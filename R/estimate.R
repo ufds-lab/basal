@@ -18,7 +18,7 @@
 estimate.basal_fit <- function(
     fit,
     newdata = NULL,
-    domain = NULL,
+    domain = "BASAL_INHERIT",
     stat = c(mean = mean, 
              var = var),
     ndraws = 1000,
@@ -29,6 +29,32 @@ estimate.basal_fit <- function(
   
   if (!is.null(seed)) {
     set.seed(seed)
+  }
+  if (domain == "BASAL_INHERIT") {
+    if (!is.null(fit$spec$domain_name)) {
+      domain = fit$spec$domain_name
+    } else if(!is.null(fit$spec$default_model_data$domain_name)) {
+      domain = fit$spec$default_model_data$domain_name
+    } else {
+      group_coefs = unique(fit$model$prior[,4])
+      group_coefs = group_coefs[group_coefs != ""]
+      if (length(group_coefs) == 1) {
+        domain = group_coefs[1]
+      } else {
+        stop(paste0(
+          "Can't infer domain name from the model specification or parametric form. ",
+          "Please provide a column name containing the domains."
+        ))
+      }
+    }
+    if (!(domain %in% colnames(newdata))) {
+      stop(paste0(
+        "Domain ", domain, ", inferred as the domain for estimates, is not ",
+        "present in newdata."
+      ))
+    } else {
+      message("Assuming domain is ", domain, ".")
+    }
   }
   
   if (ndraws > nrow(as.data.frame(fit$model))) {
@@ -120,5 +146,8 @@ estimate.basal_fit <- function(
     raw_rep_preds = preds
   )
   
-  return (ret)
+  return (structure(
+    structure(ret, class = "basal_estimate")
+  ))
 }
+

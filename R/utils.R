@@ -124,3 +124,10 @@ default_ncores <- function() {
   
   return (max(1L, min(caps)/2))
 }
+
+entropy = function (x) {
+  p = mean(x)
+  H <- -p * log(p) - (1-p) * log(1-p)
+  H[is.nan(H)] <- 0
+  return (H)
+}
