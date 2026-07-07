@@ -183,7 +183,8 @@ two_stage_spec <- specify(
 
 two_stage_fit <- fit.basal_spec(
   two_stage_spec,
-  idaho_obs_full
+  idaho_obs_full,
+  population_size = nrow(idaho_aux_full)
 )
 
 two_stage_check <- check.basal_fit(

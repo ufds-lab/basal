@@ -116,7 +116,7 @@ specify <- function(formula = NULL,
     )
   } else if (model == "aux_spec") {
     if (family$family != "bernoulli") {
-      family <- bernoulli()
+      family <- brms::bernoulli()
     }
     model <- old_model
     if (model == "custom") {
@@ -129,6 +129,9 @@ specify <- function(formula = NULL,
     } else {
       if (model == "BHF") level <- "unit"
       if (model == "FH") level <- "area"
+      if (level == "area") {
+        stop("Can't specify area-level models for the second stage.")
+      }
       if (is.null(domain_name) ||
           is.null(response_name) ||
           is.null(auxiliary_variables) ) {
@@ -152,7 +155,11 @@ specify <- function(formula = NULL,
             " to specify known variance.")
     obs_variability <- NULL
   }
-  if (!is.null(level) && level == "area" && is.null(domain_name) && is.null(obs_variability)) {
+  if (!is.null(level) && 
+      level == "area" && 
+      is.null(domain_name) && 
+      is.null(obs_variability) &&
+      !specifying_second_stage_model) {
     stop(paste0(
       "Must have either a domain name (for auto aggregation) or observed ",
       "variability with area level models"
@@ -213,6 +220,7 @@ specify <- function(formula = NULL,
           }  else {
             if (!is.null(domain_name) && is.null(second_stage_spec$default_model_data$domain_name)) {
               second_stage_spec$default_model_data$domain_name <- domain_name
+              second_stage_spec$domain_name <- domain_name
             } 
             if (!is.null(auxiliary_variables) && 
                 is.null(second_stage_spec$default_model_data$auxiliary_variables)) {
@@ -244,8 +252,19 @@ specify <- function(formula = NULL,
           }
           if (is.null(second_stage_spec$default_model_data$domain_name)) {
             second_stage_spec$default_model_data$domain_name <- domain_name
+            second_stage_spec$domain_name <- domain_name
           }
         }
+      }
+    }
+    if (level == "area") {
+      message("Can't fit area-level models to zero observations, re-specifying as a unit-level.")
+      level <- "unit"
+      if (!is.null(obs_variability)) {
+        stop("Can't re-specify model as unit-level. Must provide un-aggregated data")
+      }
+      if (model == "FH") {
+        model <- "BHF"
       }
     }
   }

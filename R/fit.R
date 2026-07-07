@@ -33,8 +33,10 @@ fit.basal_spec <- function(spec,
                            seed = NULL,
                            thin = 2,
                            engine = "brms",
+                           ncores = default_ncores(),
+                           nthreads = 1,
                            ...) {
-
+  
   func_call <- match.call()
   
   if (!is.null(spec$second_stage_spec)) {
@@ -48,7 +50,18 @@ fit.basal_spec <- function(spec,
     data$BASAL_ZERO_INDICATOR = as.numeric((data[[res]] == 0))
     second_stage_fit <- fit.basal_spec(
       spec$second_stage_spec,
-      data
+      data,
+      population_size = population_size,
+      priors = priors,
+      chains = chains,
+      iter = iter,
+      burn_in = burn_in,
+      seed = seed,
+      thin = thin,
+      engine = engine,
+      ncores = ncores,
+      nthreads = nthreads,
+      ...
     )
     data = data[data[[res]] != 0,]
   } else {
@@ -107,6 +120,7 @@ fit.basal_spec <- function(spec,
                        spec$domain)
       }
       
+      browser()
       res <- "BASAL_HT_ESTIMATOR"
     } else {
       # We first get obs_variability.
@@ -128,20 +142,24 @@ fit.basal_spec <- function(spec,
     if (spec$level == "unit") {
       formula <- spec$formula
       valid_formula <- brmsformula(formula)
-    } else if (spec$level == "area") {
-      formula <- spec$formula
-      tmp_formula <- formula(paste0(
-        res, " | se(BASAL_HT_SE) ~ 1"
-      ))
-      # Now do the addition terms check
-      if (length(all.vars(formula[[2]])) > 1) {
-        # I'm unsure if we can allow the user to specify addition terms in an
-        # area level model. I'm going to make this illegal.
-        stop(paste0(
-          "Cannot fit area-levels with pre-specified brms addition terms.",
-          " If you want addition terms, you should pre-aggregate data and fit ",
-          "a unit-level model with the addition terms."
+    } else if (spec$level == "area" ) {
+      if (family$family == "gaussian") {
+        formula <- spec$formula
+        tmp_formula <- formula(paste0(
+          res, " | se(BASAL_HT_SE) ~ 1"
         ))
+        # Now do the addition terms check
+        if (length(all.vars(formula[[2]])) > 1) {
+          # I'm unsure if we can allow the user to specify addition terms in an
+          # area level model. I'm going to make this illegal.
+          stop(paste0(
+            "Cannot fit area-levels with pre-specified brms addition terms.",
+            " If you want addition terms, you should pre-aggregate data and fit ",
+            "a unit-level model with the addition terms."
+          ))
+        }
+      } else {
+        tmp_formula <- formula(paste0(res, " ~ 1"))
       }
 
       # Inject the synthesized measurement error LHS back into the user's custom formula
@@ -163,6 +181,9 @@ fit.basal_spec <- function(spec,
         paste0(spec$default_model_data$auxiliary_variables, collapse = " + "), " + ",
         "(1 | ",  spec$default_model_data$domain_name, ")"
       ))
+    if (spec$family$family != "gaussian") {
+      formula[[2]] <- formula(paste0(res, " ~ 1"))[[2]]
+    }
     valid_formula <- brmsformula(formula)
 
     data <- data[(data$BASAL_HT_SE != 0 & !is.nan(data$BASAL_HT_SE)),]
@@ -229,6 +250,12 @@ fit.basal_spec <- function(spec,
   priors[priors$class == "Intercept",]$prior <- res_prior
   priors[priors$class == "Intercept",]$source <- "default (basal)"
 
+  
+  if (ncores >= 2 * chains) {
+    nthreads <- max(nthreads, floor(ncores/chains))
+    ncores <- chains
+  }
+  
   if (is.null(seed)) {
     raw_model <- suppressMessages(
       brms::brm(
@@ -240,6 +267,8 @@ fit.basal_spec <- function(spec,
         thin = thin,
         family = spec$family,
         warmup = burn_in,
+        cores = ncores,
+        threads = nthreads,
         ...
       )
     )
@@ -255,6 +284,8 @@ fit.basal_spec <- function(spec,
         family = spec$family,
         warmup = burn_in,
         seed = seed,
+        cores = ncores,
+        threads = threads,
         ...
       )
     )

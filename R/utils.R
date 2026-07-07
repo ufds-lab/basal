@@ -49,7 +49,9 @@ agg_HT <- function(data, res, N, domain, agg_data = NULL) {
     stop("Variables with 'BASAL' prefix are protected. Please rename these.")
   }
   agg_data$`BASAL_HT_ESTIMATOR` <- NA
+  agg_data$`BASAL_HT_SUM_ESTIMATOR` <- NA
   agg_data$`BASAL_HT_SE` <- NA
+  agg_data$`BASAL_HT_SUM_SE` <- NA
   agg_data$`BASAL_N` <- NA
   
   unique_domains <- unique(data[[domain]])
@@ -76,12 +78,14 @@ agg_HT <- function(data, res, N, domain, agg_data = NULL) {
             return (x[1])
           }
         }),
-        NA, NA, NA # add NA at the end for BASAL_HT_ESTIMATOR, BASAL_HT_SE, and BASAL_N
+        NA, NA, NA, NA, NA # add NA at the end for BASAL_HT_ESTIMATOR, BASAL_HT_SE, and BASAL_N
       )
     }
     
     agg_data[agg_data[[domain]] == thedomain,"BASAL_HT_ESTIMATOR"] <- est$pop_mean
     agg_data[agg_data[[domain]] == thedomain,"BASAL_HT_SE"] <- sqrt(est$pop_mean_var)
+    agg_data[agg_data[[domain]] == thedomain,"BASAL_HT_SUM_ESTIMATOR"] <- est$pop_total
+    agg_data[agg_data[[domain]] == thedomain,"BASAL_HT_SUM_SE"] <- sqrt(est$pop_total_var)
     agg_data[agg_data[[domain]] == thedomain,"BASAL_N"] <- nrow(thedata)
 #    agg_data[agg_data$domain == thedomain,]$n_zero <- nrow(thedata[(thedata[[res]] == 0),])
   }
@@ -91,3 +95,33 @@ agg_HT <- function(data, res, N, domain, agg_data = NULL) {
 prop_positive = function(x) {
   return(mean(x == 1))
 }
+
+#' Number of CPU cores we may use
+#' copied from {eulerr}, https://github.com/jolars/eulerr
+#'
+#' Collects the core-count limits we trust and returns the smallest, never less
+#' than one. This mirrors the (much more elaborate) min-of-signals design of
+#' `parallelly::availableCores()`, but only the durable, non-platform-specific
+#' signals: the detected core count, `R CMD check`'s `_R_CHECK_LIMIT_CORES_`
+#' (capped at two), and `OMP_THREAD_LIMIT`. We deliberately do not parse cgroup
+#' quotas or HPC scheduler variables.
+#'
+#' @return A positive integer scalar.
+#' @keywords internal
+default_ncores <- function() {
+  n_cores <- parallel::detectCores(logical = TRUE)
+  caps <- if (is.na(n_cores)) 1L else as.integer(n_cores)
+  
+  # `R CMD check --as-cran` sets `_R_CHECK_LIMIT_CORES_`; the CRAN check farm
+  # sets `OMP_THREAD_LIMIT`. Both cap how many cores we may use.
+  if (nzchar(Sys.getenv("_R_CHECK_LIMIT_CORES_"))) {
+    caps <- c(caps, 2L)
+  }
+  omp <- suppressWarnings(as.integer(Sys.getenv("OMP_THREAD_LIMIT", "")))
+  if (!is.na(omp)) {
+    caps <- c(caps, omp)
+  }
+  
+  return(max(1L, min(caps)/2))
+}
+
