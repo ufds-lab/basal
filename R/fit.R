@@ -36,6 +36,24 @@ fit.basal_spec <- function(spec,
                            ...) {
 
   func_call <- match.call()
+  
+  if (!is.null(spec$second_stage_spec)) {
+    message("Estimating two models for two-stage model. This may take a while...")
+    if (is.null(spec$formula)) {
+      res <- spec$default_model_data$response_name
+    } else {
+      res <- spec$formula[[2]]
+    }
+    second_spec_res <- spec$second_stage_spec
+    data$BASAL_ZERO_INDICATOR = as.numeric((data[[res]] == 0))
+    second_stage_fit <- fit.basal_spec(
+      spec$second_stage_spec,
+      data
+    )
+    data = data[data[[res]] != 0,]
+  } else {
+    second_stage_fit <- NULL
+  }
 
 
 #  check_inherits("data.frame", data)
@@ -52,11 +70,7 @@ fit.basal_spec <- function(spec,
     # weird as.numeric() calls because
     # data[[res]] seems to sometimes produce character vectors
     # (try with FH and auto-aggregation)
-    if (!is.null(spec$default_model_data)) {
-      data[[res]] <- trans(data[[res]])
-    } else {
-      data[[res]] <- trans(data[[res]])
-    }
+    data[[res]] <- trans(data[[res]])
   }
 
  
@@ -169,18 +183,6 @@ fit.basal_spec <- function(spec,
     res <- formula[[2]]
   }
 
-  if (!is.null(spec$variable_transform)) {
-    trans <- spec$variable_transform$transform
-    # weird as.numeric() calls because
-    # data[[res]] seems to sometimes produce character vectors
-    # (try with FH and auto-aggregation)
-    if (!is.null(spec$default_model_data)) {
-      data[[res]] <- trans(data[[res]])
-    } else {
-      data[[res]] <- trans(data[[res]])
-    }
-  }
-
   # set basal default priors
   # we don't want improper priors on the random effect variances
   # so we can over-estimate these variances by multiplying the total variability
@@ -192,7 +194,11 @@ fit.basal_spec <- function(spec,
   numeric_preds <- predictors[sapply(data[,predictors], is.numeric)]
 
   res_sd <- sd(data[[res]]) # compute sd
-  pred_sd <- sapply(data[,numeric_preds], sd)
+  if (length(numeric_preds) == 1) {
+    pred_sd = sd(data[,numeric_preds])
+  } else {
+    pred_sd <- sapply(data[,numeric_preds], sd)
+  }
 
   pred_sd_ratio <- pred_sd/res_sd
 
@@ -202,9 +208,10 @@ fit.basal_spec <- function(spec,
   # we modify default priors from brms
   priors <- default_prior(
     valid_formula,
-    data
+    data,
+    family = spec$family
   )
-
+  
   reg_coef_mask <- (priors$class == "b") & (priors$coef %in% numeric_preds)
   priors[reg_coef_mask,]$prior <- prior_family
   priors[reg_coef_mask,]$source <- "default (basal)"
@@ -262,7 +269,8 @@ fit.basal_spec <- function(spec,
     params = list(
       response = res,
       predictors = predictors
-    )
+    ),
+    second_stage_fit = second_stage_fit
   )
 
   return(

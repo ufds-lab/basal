@@ -25,11 +25,13 @@ estimate.basal_fit <- function(
     max_preds = 1e5,
     seed = NULL
 ) {
+  two_stage <- !is.null(fit$second_stage_fit)
+  
   if (!is.null(seed)) {
     set.seed(seed)
   }
   
-  if (max_preds > nrow(as.data.frame(fit_FH$model))) {
+  if (ndraws > nrow(as.data.frame(fit$model))) {
     stop(paste0(
       "Can't estimate more quantities than obtained via MCMC. Increase the ",
       "number of chains or number of iterations."
@@ -43,8 +45,6 @@ estimate.basal_fit <- function(
     ))
   }
   
-  effects <- unique(fit$model$prior$group)
-  effects <- effects[effects != ""]
   predictors <- names(coef(fit$model)) # can be updated
   if (is.null(max_preds)) {
     nd_subset <- newdata
@@ -53,7 +53,10 @@ estimate.basal_fit <- function(
       .[sample.int(nrow(.), size = min(nrow(.), max_preds)),]
   }
   
-  if (fit$spec$level == "area") {
+  if (fit$spec$level == "area" || 
+      (two_stage && fit$spec$second_stage_spec$level == "area")) {
+    # the first stage has strictly fewer domains than the second stage, so
+    # using the domains in fit$data below is sufficient
     setdiff <- setdiff(unique(nd_subset[[domain]]), unique(fit$data[[domain]]))
     if (length(setdiff) != 0) {
       warning(paste0(
@@ -69,13 +72,23 @@ estimate.basal_fit <- function(
   }
   
   post_preds <- t(posterior_epred(fit$model, 
-                                 newdata = nd_subset, 
-                                 ndraws = ndraws,
-                                 allow_new_levels = TRUE))
+                                  newdata = nd_subset, 
+                                  ndraws = ndraws,
+                                  allow_new_levels = TRUE))
   
   if (!is.null(fit$spec$variable_transform)) {
     inv_trans <- fit$spec$variable_transform$inv_transform
     post_preds <- inv_trans(post_preds)
+  }
+  
+  if (two_stage) {
+    second_stage_weights = t(
+      posterior_epred(fit$second_stage_fit$model,
+                      newdata = nd_subset,
+                      ndraws = ndraws,
+                      allow_new_levels = TRUE)
+    )
+    post_preds = post_preds * second_stage_weights
   }
   
   

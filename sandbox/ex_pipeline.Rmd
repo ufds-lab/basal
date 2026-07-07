@@ -174,10 +174,29 @@ two_stage_spec <- specify(
   auxiliary_variables = "tcc",
   domain = "county",
   model_stage = "zi",
-  second_stage_spec = second_stage
+  second_stage_spec = second_stage,
+  variable_transform = list(
+    transform = function (y) {y^(1/3)},
+    inv_transform = function (y) {y^3}
+  )
 )
 
-two_stage_spec$second_stage_spec
+two_stage_fit <- fit.basal_spec(
+  two_stage_spec,
+  idaho_obs_full
+)
+
+two_stage_check <- check.basal_fit(
+  two_stage_fit
+)
+
+estimate_two_stage = estimate.basal_fit(
+  two_stage_fit,
+  newdata = idaho_aux_full,
+  domain = "county",
+  max_preds = 4e5,
+  ndraws = 250
+); estimate_two_stage$preds
 ```
 
 

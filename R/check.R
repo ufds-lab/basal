@@ -21,9 +21,17 @@ check.basal_fit <- function(
     stat = c(mean = mean, var = var, ecdf = ecdf),
     include_base_pp_check = TRUE,
     draws = 50,
-    trace_plots = FALSE
+    trace_plots = FALSE,
+    two_stage_stat = c(proportion_positive = prop_positive)
 ) {
   message("Assuming engine is brms")
+  if (is.null(fit$second_stage_fit)) {
+    two_stage_stat <- NULL
+  } else {
+    names(stat) <- paste("response model:", names(stat))
+    names(two_stage_stat) <- paste("logistic model:", names(two_stage_stat))
+  }
+  
   ret <- list()
   if (!is.null(stat) && is.null(names(stat))) {
     warning(paste0(
@@ -42,6 +50,14 @@ check.basal_fit <- function(
     )
     for (i in 1:length(stat)) {
       ret$pp_checks[[names(stat)[i]]] <- extra_pp_check[[i]]
+    }
+  }
+  if (!is.null(two_stage_stat)) {
+    two_stage_pp_check <- custom_pp_check(
+      fit$second_stage_fit, draws, two_stage_stat
+    )
+    for (i in 1:length(two_stage_stat)) {
+      ret$pp_checks[[names(two_stage_stat)[i]]] <- two_stage_pp_check[[i]]
     }
   }
   

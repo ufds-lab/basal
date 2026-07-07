@@ -98,6 +98,7 @@ specify <- function(formula = NULL,
     }
     default_data_model <- NULL
     response_name <- NULL; auxiliary_variables <- NULL
+    default_model_data <- NULL
   } else if (model != "aux_spec") {
     if (is.null(domain_name) ||
         is.null(response_name) ||
@@ -114,7 +115,9 @@ specify <- function(formula = NULL,
       auxiliary_variables = auxiliary_variables
     )
   } else if (model == "aux_spec") {
-    family <- bernoulli()
+    if (family$family != "bernoulli") {
+      family <- bernoulli()
+    }
     model <- old_model
     if (model == "custom") {
       if (is.null(formula) ||
@@ -250,6 +253,7 @@ specify <- function(formula = NULL,
   out <- list(
     call = func_call,
     formula = formula,
+    family = family,
     level = level,
     model_type = model,
     domain_name = domain_name,

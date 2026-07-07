@@ -87,3 +87,7 @@ agg_HT <- function(data, res, N, domain, agg_data = NULL) {
   }
   return(agg_data)
 }
+
+prop_positive = function(x) {
+  return(mean(x == 1))
+}
