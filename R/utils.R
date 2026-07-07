@@ -34,7 +34,7 @@ agg_stat <- function(vals, nms, .f) {
 #' @noRd
 extract_variables <- function(formula) {
   # extract the variables
-} 
+}
 
 #' Apply HT estimators to different domains
 #' @noRd
@@ -53,12 +53,12 @@ agg_HT <- function(data, res, N, domain, agg_data = NULL) {
   agg_data$`BASAL_HT_SE` <- NA
   agg_data$`BASAL_HT_SUM_SE` <- NA
   agg_data$`BASAL_N` <- NA
-  
+
   unique_domains <- unique(data[[domain]])
   for (i in 1:length(unique_domains)) {
     thedomain <- unique_domains[i]
     thedata <- data[data[[domain]] == thedomain,]
-    est <- 
+    est <-
       mase::horvitzThompson(y = thedata[[res]],
                       N = N,
                       var_est = T,
@@ -81,7 +81,7 @@ agg_HT <- function(data, res, N, domain, agg_data = NULL) {
         NA, NA, NA, NA, NA # add NA at the end for BASAL_HT_ESTIMATOR, BASAL_HT_SE, and BASAL_N
       )
     }
-    
+
     agg_data[agg_data[[domain]] == thedomain,"BASAL_HT_ESTIMATOR"] <- est$pop_mean
     agg_data[agg_data[[domain]] == thedomain,"BASAL_HT_SE"] <- sqrt(est$pop_mean_var)
     agg_data[agg_data[[domain]] == thedomain,"BASAL_HT_SUM_ESTIMATOR"] <- est$pop_total
@@ -124,4 +124,3 @@ default_ncores <- function() {
   
   return(max(1L, min(caps)/2))
 }
-
