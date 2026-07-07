@@ -36,18 +36,17 @@ fit.basal_spec <- function(spec,
                            ncores = default_ncores(),
                            nthreads = 1,
                            ...) {
-  
+
   func_call <- match.call()
-  
+
   if (!is.null(spec$second_stage_spec)) {
     message("Estimating two models for two-stage model. This may take a while...")
     if (is.null(spec$formula)) {
       res <- spec$default_model_data$response_name
     } else {
-      res <- spec$formula[[2]]
+      res <- all.vars(spec$formula[[2]])[1]
     }
-    second_spec_res <- spec$second_stage_spec
-    data$BASAL_NONZERO_INDICATOR = as.numeric((data[[res]] == 0))
+    data$BASAL_NONZERO_INDICATOR = as.numeric((data[[res]] > 0))
     second_stage_fit <- fit.basal_spec(
       spec$second_stage_spec,
       data,
@@ -74,7 +73,7 @@ fit.basal_spec <- function(spec,
   check_inherits("basal_spec", spec)
 
   if (!is.null(spec$formula)) {
-    res <- spec$formula[[2]]
+    res <- all.vars(spec$formula[[2]])[1]
   } else {
     res <- spec$default_model_data$response_name
   }
@@ -117,9 +116,9 @@ fit.basal_spec <- function(spec,
         data <- agg_HT(trim_data,
                        res,
                        population_size,
-                       spec$domain)
+                       spec$domain_name)
       }
-      
+
       res <- "BASAL_HT_ESTIMATOR"
     } else {
       # We first get obs_variability.
@@ -139,7 +138,7 @@ fit.basal_spec <- function(spec,
   if (spec$model_type == "custom") {
     if (spec$level == "unit") {
       formula <- spec$formula
-      valid_formula <- brmsformula(formula)
+      valid_formula <- brms::brmsformula(formula)
     } else if (spec$level == "area" ) {
       if (spec$family$family == "gaussian") {
         formula <- spec$formula
@@ -162,7 +161,7 @@ fit.basal_spec <- function(spec,
 
       # Inject the synthesized measurement error LHS back into the user's custom formula
       formula[[2]] <- tmp_formula[[2]]
-      valid_formula <- brmsformula(formula)
+      valid_formula <- brms::brmsformula(formula)
     }
   } else if (spec$model_type == "BHF") {
     formula <-
@@ -171,7 +170,7 @@ fit.basal_spec <- function(spec,
         paste0(spec$default_model_data$auxiliary_variables, collapse = " + "), " + ",
         "(1 | ",  spec$default_model_data$domain_name, ")"
       ))
-    valid_formula <- brmsformula(formula)
+    valid_formula <- brms::brmsformula(formula)
   } else if (spec$model_type == "FH") {
     formula <-
       formula(paste0(
@@ -182,14 +181,15 @@ fit.basal_spec <- function(spec,
     if (spec$family$family != "gaussian") {
       formula[[2]] <- formula(paste0(res, " ~ 1"))[[2]]
     }
-    valid_formula <- brmsformula(formula)
+    valid_formula <- brms::brmsformula(formula)
 
     data <- data[(data$BASAL_HT_SE != 0 & !is.nan(data$BASAL_HT_SE)),]
   }
 
   vars <- all.vars(formula)
   vars <- vars[!(vars %in% c("BASAL_HT_SE"))]
-  if (length((missing = setdiff(vars, colnames(data)))) != 0) {
+  missing <- setdiff(vars, colnames(data))
+  if (length(missing) != 0) {
     if (length(missing) == 1) {
       stop(paste0("Variable ", missing, " missing from your data."))
     } else {
@@ -199,7 +199,7 @@ fit.basal_spec <- function(spec,
   }
 
   if (!("res" %in% ls())) {
-    res <- formula[[2]]
+    res <- all.vars(formula[[2]])[1]
   }
 
   # set basal default priors
@@ -229,12 +229,12 @@ fit.basal_spec <- function(spec,
   res_prior <- paste0("student_t(3, 0, ", res_sd * 2.5, ")")
 
   # we modify default priors from brms
-  priors <- default_prior(
+  priors <- brms::default_prior(
     valid_formula,
     data,
     family = spec$family
   )
-  
+
   reg_coef_mask <- (priors$class == "b") & (priors$coef %in% numeric_preds)
   priors[reg_coef_mask,]$prior <- prior_family
   priors[reg_coef_mask,]$source <- "default (basal)"
@@ -252,14 +252,14 @@ fit.basal_spec <- function(spec,
   priors[priors$class == "Intercept",]$prior <- res_prior
   priors[priors$class == "Intercept",]$source <- "default (basal)"
 
-  
+
   # a thread (here) is not a real thread. A thread is used to speed up within-chain
   # computations.
   if (ncores >= 2 * chains) {
     nthreads <- max(nthreads, floor(ncores/chains))
     ncores <- chains
   }
-  
+
   if (is.null(seed)) {
     raw_model <- suppressMessages(
       brms::brm(
@@ -289,7 +289,7 @@ fit.basal_spec <- function(spec,
         warmup = burn_in,
         seed = seed,
         cores = ncores,
-        threads = threads,
+        threads = nthreads,
         ...
       )
     )
