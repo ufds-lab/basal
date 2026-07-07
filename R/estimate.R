@@ -31,11 +31,7 @@ estimate.basal_fit <- function(
     set.seed(seed)
   }
   
-<<<<<<< HEAD
   if (ndraws > nrow(as.data.frame(fit$model))) {
-=======
-  if (ndraws > nrow(as.data.frame(fit_FH$model))) {
->>>>>>> main
     stop(paste0(
       "Can't estimate more quantities than obtained via MCMC. Increase the ",
       "number of chains or number of iterations."

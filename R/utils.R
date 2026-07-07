@@ -97,7 +97,7 @@ prop_positive = function(x) {
 }
 
 #' Number of CPU cores we may use
-#' copied from {eulerr}, https://github.com/jolars/eulerr
+#' copied (with slight modifications) from {eulerr}, https://github.com/jolars/eulerr
 #'
 #' Collects the core-count limits we trust and returns the smallest, never less
 #' than one. This mirrors the (much more elaborate) min-of-signals design of
@@ -122,5 +122,5 @@ default_ncores <- function() {
     caps <- c(caps, omp)
   }
   
-  return(max(1L, min(caps)/2))
+  return (max(1L, min(caps)/2))
 }

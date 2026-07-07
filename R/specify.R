@@ -70,27 +70,33 @@ specify <- function(formula = NULL,
                     specifying_second_stage_model = FALSE,
                     second_stage_spec = NULL) {
   
+  # If we have a custom model, the user must provide a formula and a level
+  # If we have a non-custom model, the user must specify a model (type)
+  # For both, there must be response, auxiliary, and domain
+  # for BHF, this is it
+  # for FH, we can have obs_variability
+  
   {
     func_call <- match.call()
     
     match.arg(level, c(NULL, "area", "unit")) # not the best practice with NULL here but works nicely
     match.arg(model, c("custom", "FH", "BHF")); stopifnot(!is.null(model))
     match.arg(model_stage, c("single", "zi")); stopifnot(!is.null(model_stage))
-    
-    if (specifying_second_stage_model) {
-      # re-code model so coming for loop separates it
-      old_model <- model 
-      model <- "aux_spec"
-      model_stage <- "zi"
-      default_model_data <- NULL
-    }
   } # housekeeping provided parameters
+  
+  if (specifying_second_stage_model) {
+    # re-code model so coming for loop separates it
+    old_model <- model 
+    model <- "aux_spec"
+    model_stage <- "zi"
+    default_model_data <- NULL
+  }
   
   if (model == "custom") {
     if (is.null(formula) || is.null(level)) {
       stop("Must provide a formula and level for custom models.")
     }
-    default_model_data <- NULL
+    default_data_model <- NULL
     response_name <- NULL; auxiliary_variables <- NULL
     default_model_data <- NULL
   } else if (model != "aux_spec") {
