@@ -209,9 +209,9 @@ To do:
   - While we're at it, we could extend `summary()` to `fit.basal` class
 3. Implement ZI estimator
 4. no domain in estimation should default to domains in specify()
-5. Check if back-transformation is applying in estimate()
-6. default stats for estimate give SE instead of var
 
 
 Questions:
 1. domain vs area for "small areas"
+
+
