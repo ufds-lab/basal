@@ -1,11 +1,3 @@
-# I found some functions that may be useful from the saeczi package
-
-#' Extract all matches from a string
-#' @noRd
-str_extract_all_base <- function(string, pattern) {
-  regmatches(string, gregexpr(pattern, string))
-}
-
 #' Checking if a parameter input inherits a specific class
 #' @noRd
 check_inherits <- function(what, ...) {
@@ -13,7 +5,7 @@ check_inherits <- function(what, ...) {
   for (i in seq_along(opts)) {
     if (!is.null(opts[[i]])) {
       if (!inherits(opts[[i]], what)) {
-        stop(paste0(opts[[i]], " needs to be of class ", what))
+        stop("Object ", i, " needs to inherit from class ", what)
       }
     } else {
       stop("unable to check NULL objects")
@@ -111,7 +103,7 @@ prop_positive = function(x) {
 default_ncores <- function() {
   n_cores <- parallel::detectCores(logical = TRUE)
   caps <- if (is.na(n_cores)) 1L else as.integer(n_cores)
-  
+
   # `R CMD check --as-cran` sets `_R_CHECK_LIMIT_CORES_`; the CRAN check farm
   # sets `OMP_THREAD_LIMIT`. Both cap how many cores we may use.
   if (nzchar(Sys.getenv("_R_CHECK_LIMIT_CORES_"))) {
@@ -121,6 +113,6 @@ default_ncores <- function() {
   if (!is.na(omp)) {
     caps <- c(caps, omp)
   }
-  
+
   return (max(1L, min(caps)/2))
 }
