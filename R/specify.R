@@ -141,7 +141,7 @@ specify <- function(formula = NULL,
         ))
       }
       default_model_data <- list(
-        response_name = "BASAL_ZERO_INDICATOR",
+        response_name = "BASAL_NONZERO_INDICATOR",
         domain_name = domain_name,
         auxiliary_variables = auxiliary_variables
       )

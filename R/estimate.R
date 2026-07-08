@@ -135,7 +135,7 @@ estimate.basal_fit <- function(
     reframe(across(paste0("rep", 1:ndraws), mean)) %>%
     pivot_longer(2:ncol(.),
                  names_to = "draw",
-                 values_to = "pred_mean")
+                 values_to = "predicted_mean")
 
   ret_preds <- preds %>%
     group_by_at(domain) %>%
