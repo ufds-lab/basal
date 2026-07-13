@@ -230,11 +230,11 @@ fit.basal_spec <- function(spec,
   predictors <- vars[vars != res]
   numeric_preds <- predictors[sapply(data[,predictors], is.numeric)]
 
-  res_sd <- sd(data[[res]]) # compute sd
+  res_sd <- stats::sd(data[[res]]) # compute sd
   if (length(numeric_preds) == 1) {
-    pred_sd = sd(data[,numeric_preds])
+    pred_sd = stats::sd(data[,numeric_preds])
   } else {
-    pred_sd <- sapply(data[,numeric_preds], sd)
+    pred_sd <- sapply(data[,numeric_preds], stats::sd)
   }
 
   pred_sd_ratio <- pred_sd/res_sd

@@ -19,35 +19,35 @@
 #}
 
 #' @exportS3Method base::print
-print.basal_fit <- function(fit, ...) {
-  print(fit$model)
+print.basal_fit <- function(x, ...) {
+  print(x$model)
 }
 
 #' @exportS3Method graphics::pairs
-pairs.basal_fit <- function(fit, ...) {
-  data <- fit$data
+pairs.basal_fit <- function(x, ...) {
+  data <- x$data
   data <- data[,c(fit$params$response, fit$params$predictors)]
   data <- data[,sapply(data[1,], is.numeric)]
   browser()
-  pairs(data)
+  graphics::pairs(data)
 }
 
 #' @exportS3Method base::print
-print.basal_check <- function(check, ...) {
-  print(check$pp_checks)
+print.basal_check <- function(x, ...) {
+  print(x$pp_checks)
 }
 
 #' @exportS3Method graphics::pairs
-pairs.basal_check <- function(check, ...) {
+pairs.basal_check <- function(x, ...) {
   stop("No method for basal_check with pairs(). Use pairs() with an object of basal_fit.")
 }
 
 #' @exportS3Method base::summary
-summary.basal_check <- function(check, ...) {
-  print(check$convergence)
+summary.basal_check <- function(object, ...) {
+  print(object$convergence)
 }
 
 #' @exportS3Method base::print
-print.basal_estimate <- function(estimate, ...) {
-  print(estimate$preds)
+print.basal_estimate <- function(x, ...) {
+  print(x$preds)
 }

@@ -13,7 +13,7 @@ specify(
   response_name = NULL,
   auxiliary_variables = NULL,
   variable_transform = NULL,
-  family = gaussian(),
+  family = stats::gaussian(),
   model_stage = "single",
   specifying_second_stage_model = FALSE,
   second_stage_spec = NULL

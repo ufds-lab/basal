@@ -148,8 +148,8 @@ custom_pp_check <- function(
           ggplot2::geom_density(ggplot2::aes(x = post_data, color = "y_rep"), 
                                 linewidth = 0.5) +
           ggplot2::geom_vline(ggplot2::aes(color = "y", xintercept = y_stat)) +
-          ggplot2::xlim(min(quantile(post_data, 0.01), y_stat),
-                        max(quantile(post_data, 0.99), y_stat))
+          ggplot2::xlim(min(stats::quantile(post_data, 0.01), y_stat),
+                        max(stats::quantile(post_data, 0.99), y_stat))
       )
     } else if (is.list(y_stat) && is.function(y_stat[[1]])) {
       plot <- ggplot2::ggplot()
@@ -160,7 +160,7 @@ custom_pp_check <- function(
       }
       plot <- plot +
         ggplot2::stat_function(fun = y_stat[[1]], ggplot2::aes(color = "y")) +
-        ggplot2::xlim(quantile(y, 0.01), quantile(y, 0.99))
+        ggplot2::xlim(stats::quantile(y, 0.01), stats::quantile(y, 0.99))
       
     }
     plot <- plot +

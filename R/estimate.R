@@ -80,7 +80,7 @@ estimate.basal_fit <- function(
   }
 
 
-  predictors <- names(coef(fit$model)) # can be updated
+  predictors <- names(stats::coef(fit$model)) # can be updated
   if (is.null(max_preds)) {
     nd_subset <- newdata
   } else {
@@ -139,7 +139,7 @@ estimate.basal_fit <- function(
 
   ret_preds <- preds |>
     dplyr::group_by_at(domain) |>
-    dplyr::mutate(across(predicted_mean, stat)) |>
+    dplyr::mutate(dplyr::across(predicted_mean, stat)) |>
     dplyr::select(-c(draw, predicted_mean)) |>
     unique()
 
