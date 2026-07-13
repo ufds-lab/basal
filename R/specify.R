@@ -1,4 +1,6 @@
-#' Specify a Small Area Estimation Model
+#' @title specify
+#'
+#' @description Specify a Small Area Estimation Model
 #'
 #' @param formula Formula for a model of type `model = "custom"`. This should be
 #' the standard form of R mixed effect models. e.g., `y ~ x1 + (1 | id) + (x2 | county)`.
@@ -27,14 +29,27 @@
 #' @param response_name Character string specifying the column name of the target
 #' response. Only required for preset framework.
 #'
-#' @param auxiliary_variable Character vector containing names of covariates for
+#' @param auxiliary_variables Character vector containing names of covariates for
 #' the response. Defaults to using all other variables if unspecified in preset models.
 #'
 #' @param variable_transform a list specifying a variable transformation
 #' `transform` and inverse variable transformation `inv_transform`. These will be
 #' evaluated at points c(0,1) to ensure they work correctly.
 #'
-#' @return Object of type basal_spec.
+#' @param family GLM family type, specifying error distributions and links. See `help(stats::glm)`
+#' 
+#' @param model_stage What stage of model to fit. Currently supported for only
+#' "single" and "zi" stage models
+#' 
+#' @param specifying_second_stage_model Boolean indicating whether or not a specification
+#' will be used for the second stage of a ZI model. Not necessary but allows partial
+#' specifications which will be filled in by the larger specification.
+#' 
+#' @param second_stage_spec Either `NULL` or an object of type `basal_spec`, 
+#' giving a specification for the second stage of a ZI model. The second stage is 
+#' the GLM predicting the probability of zero-valued plots.
+#' 
+#' @return Object of type `basal_spec`.
 #'
 #' @examples
 #' plot_spec <- specify(

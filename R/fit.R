@@ -16,6 +16,14 @@
 #' @param burn_in Numeric integer. Number of burn-in/burn_in iterations per chain. Defaults to 2000.
 #'
 #' @param seed Numeric integer. Seed for random number generation. Defaults to 1.
+#' 
+#' @param thin Thinning for the MCMC. The model keeps every one in every `thin` observations
+#' 
+#' @param engine Engine used for fitting model. Can only use `engine = "brms"` right now
+#' 
+#' @param ncores number of cores to use to computed MCMC chains in parallel
+#' 
+#' @param nthreads number of cores to speed up individual MCMC chains
 #'
 #' @param ... Additional arguments passed to the model fitting engine.
 #'
@@ -38,14 +46,32 @@ fit.basal_spec <- function(spec,
                            ...) {
 
   func_call <- match.call()
+  
+  if (inherits(formula, "brmsformula")) {
+    valid_formula = formula
+    formula = formula$formula
+    warning("This isn't a warning. I want to make sure that the code works when supplying a brmsformula instead of normal formula. Try supplying something like brmsformula(y ~ 1, sigma ~ 1) to see if that works correctly. Then remove. This is for me, Leland.")
+  }
+  
+#  check_inherits("data.frame", data)
+  check_inherits("numeric", chains, iter, burn_in, thin)
+  check_inherits("basal_spec", spec)
+  
+  if (is.null(spec$formula)) {
+    res <- spec$default_model_data$response_name
+  } else {
+    res <- all.vars(spec$formula[[2]])[1]
+  }
+  if (!is.null(spec$variable_transform)) {
+    trans <- spec$variable_transform$transform
+    # weird as.numeric() calls because
+    # data[[res]] seems to sometimes produce character vectors
+    # (try with FH and auto-aggregation)
+    data[[res]] <- trans(data[[res]])
+  }
 
   if (!is.null(spec$second_stage_spec)) {
     message("Estimating two models for two-stage model. This may take a while...")
-    if (is.null(spec$formula)) {
-      res <- spec$default_model_data$response_name
-    } else {
-      res <- all.vars(spec$formula[[2]])[1]
-    }
     data$BASAL_NONZERO_INDICATOR = as.numeric((data[[res]] > 0))
     second_stage_fit <- fit.basal_spec(
       spec$second_stage_spec,
@@ -62,29 +88,17 @@ fit.basal_spec <- function(spec,
       nthreads = nthreads,
       ...
     )
-    data = data[data[[res]] != 0,]
+    unfiltered_data <- data
+    data <- data[data[[res]] != 0,]
   } else {
     second_stage_fit <- NULL
   }
-
-
-#  check_inherits("data.frame", data)
-  check_inherits("numeric", chains, iter, burn_in, thin)
-  check_inherits("basal_spec", spec)
 
   if (!is.null(spec$formula)) {
     res <- all.vars(spec$formula[[2]])[1]
   } else {
     res <- spec$default_model_data$response_name
   }
-  if (!is.null(spec$variable_transform)) {
-    trans <- spec$variable_transform$transform
-    # weird as.numeric() calls because
-    # data[[res]] seems to sometimes produce character vectors
-    # (try with FH and auto-aggregation)
-    data[[res]] <- trans(data[[res]])
-  }
-
 
 
   if (spec$level == "area") {
@@ -234,6 +248,7 @@ fit.basal_spec <- function(spec,
     data,
     family = spec$family
   )
+  if (FALSE) {
 
   reg_coef_mask <- (priors$class == "b") & (priors$coef %in% numeric_preds)
   priors[reg_coef_mask,]$prior <- prior_family
@@ -251,6 +266,7 @@ fit.basal_spec <- function(spec,
 
   priors[priors$class == "Intercept",]$prior <- res_prior
   priors[priors$class == "Intercept",]$source <- "default (basal)"
+  }
 
 
   # a thread (here) is not a real thread. A thread is used to speed up within-chain
@@ -307,6 +323,10 @@ fit.basal_spec <- function(spec,
     ),
     second_stage_fit = second_stage_fit
   )
+  
+  if (!is.null(second_stage_fit)) {
+    out$unfiltered_data <- unfiltered_data
+  }
 
   return(
     structure(out, class = "basal_fit")

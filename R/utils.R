@@ -14,22 +14,23 @@ check_inherits <- function(what, ...) {
   invisible(opts)
 }
 
-#' Fast aggregation
-#' @noRd
-agg_stat <- function(vals, nms, .f) {
-  agg <- tapply(vals, nms, .f)
-  out <- data.frame(nms = names(agg), vals = agg)
-  out
-}
-
-#' Extract variables (i.e., resposne and covariates) from model formula
-#' @noRd
-extract_variables <- function(formula) {
-  # extract the variables
-}
-
-#' Apply HT estimators to different domains
-#' @noRd
+#' @title Apply Direct Estimators to data
+#' 
+#' @description 
+#' Apply Horvitz-Thompson (or Post-Stratified) estimators to different domains.
+#' 
+#' @param data Data to compute the direct estimators on
+#' 
+#' @param res Variable to estimate
+#' 
+#' @param N population size
+#' 
+#' @param domain Domains to compute the direct estimators over
+#' 
+#' @param agg_data Dataset with aggregated observations for other variables, or
+#' `NULL` to aggregate `data`.
+#' 
+#' @keywords internal
 agg_HT <- function(data, res, N, domain, agg_data = NULL) {
   if (is.null(agg_data)) {
     make_aggs <- T
@@ -84,12 +85,10 @@ agg_HT <- function(data, res, N, domain, agg_data = NULL) {
   return(agg_data)
 }
 
-prop_positive = function(x) {
-  return(mean(x == 1))
-}
-
+#' @title default_ncores
+#' @description
 #' Number of CPU cores we may use
-#' copied (with slight modifications) from {eulerr}, https://github.com/jolars/eulerr
+#' copied (with slight modifications) from \{eulerr\}, https://github.com/jolars/eulerr
 #'
 #' Collects the core-count limits we trust and returns the smallest, never less
 #' than one. This mirrors the (much more elaborate) min-of-signals design of
@@ -117,8 +116,32 @@ default_ncores <- function() {
   return (max(1L, min(caps)/2))
 }
 
-entropy = function (x) {
-  p = mean(x)
+#' @title proportion of positive
+#' @description
+#' 
+#' Computes the proportion of positive observations in a. binomial trial `x`.
+#' @param x Realization of binomial trials.
+#' 
+#' @param success The value which is considered a success
+#' 
+#' @returns A positive integer scalar, the proportionof successes in `x`.
+#' @keywords internal
+prop_positive = function(x, success = 1) {
+  return(mean(x == success))
+}
+
+#' @title Entropy
+#' @description
+#' Compute entropy of a bernoulli trial with estimated probability computed from 
+#' binomial trials with realizations `x`.
+#' 
+#' @param x Realization of binomial trials.
+#' 
+#' @param success The value which is considered a success
+#' 
+#' @returns A positive integer scalar, indicating the entropy of the bernoulli trial.
+entropy = function (x, success = 1) {
+  p = prop_positive(x, success)
   H <- -p * log(p) - (1-p) * log(1-p)
   H[is.nan(H)] <- 0
   return (H)

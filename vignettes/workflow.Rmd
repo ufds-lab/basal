@@ -1,26 +1,40 @@
 ---
-title: "Workflow"
-author: Leland Russell, Wystan Wu
-date: "`r Sys.Date()`"
+title: "workflow"
 output: rmarkdown::html_vignette
-vignette: |
-  %\VignetteIndexEntry{intro}
+vignette: >
+  %\VignetteIndexEntry{workflow}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r, echo=FALSE}
-library(brms)
-library(bayesplot)
-source("../../bsae/data_wrangling.R")
-
-files = list.files("../R/")
-for (file in files) {
-  source(paste0("../R/", file))
-}
-
-rm(file, files)
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+mean = mean
+sd = sd
+quantile = quantile
 ```
+
+```{r setup}
+library(basal)
+
+data("SJC_population", "SJC_sample")
+```
+
+\section{Data Description}
+
+Here's some data. There will be a better section here, or no section, depending. Either way, these are FIA data like what we might use, but they are public. We have anumber of columns, of which I have selected the interesting ones.
+
+```{r}
+SJC_sample = SJC_sample |>
+  dplyr::select(c("biomass", "tcc", "elev", "island", "measurement_year"))
+
+SJC_population = SJC_population |>
+  dplyr::select(c("tcc", "elev", "island", "tnt"))
+```
+
 
 
 \section{Basic Workflow}
@@ -33,9 +47,9 @@ When modeling in `basal`, every model starts with a specification which will det
 ```{r}
 BHF_spec <- specify(
   model = "BHF",
-  domain_name = "county",
-  response_name = "obs_biomass",
-  auxiliary_variables = c("tcc", "evc")
+  domain_name = "island",
+  response_name = "biomass",
+  auxiliary_variables = c("tcc", "elev")
 )
 ```
 
@@ -43,21 +57,21 @@ From this, the level of the model as well as the relationship between the respon
 
 ```{r}
 BHF_spec_manual <- specify(
-  obs_biomass ~ tcc + evc + (1 | county),
+  biomass ~ tcc + elev + (1 | island),
   level = "unit"
 )
 ```
 
-The second specification is both simpler and more complex. It requires less input from the user provided they know how to express their modelling assumptions in a form like that of {lme4}. Simultaneously, though, it may be more ambiguous to express a model by a formula. Either way, these two models will impose the same modeling assumptions and ultimately be indistinguishable.
+The second specification is both simpler and more complex. It requires less input from the user provided they know how to express their modelling assumptions in a form like that of `{lme4}`. Simultaneously, though, it may be more ambiguous to express a model by a formula. Either way, these two models will impose the same modeling assumptions and will ultimately be indistinguishable.
 
 In the transition to the area-level model, while modeling assumptions may become more stringent, the burden on the user changes only marginally. When estimating a FH model, for example, one may use almost identical code as the BHF model, substituting only `model = "BHF"` for `model = "FH"`.
 
 ```{r}
 FH_spec <- specify(
   model = "FH",
-  domain_name = "county",
-  response_name = "obs_biomass",
-  auxiliary_variables = c("tcc", "evc")
+  domain_name = "island",
+  response_name = "biomass",
+  auxiliary_variables = c("tcc", "elev")
 )
 ```
 
@@ -65,29 +79,29 @@ From this, the engine will understand that, as the FH is an area-level model, it
 
 ```{r}
 FH_spec_manual <- specify(
-  obs_biomass ~ tcc + evc + (1 | county),
+  biomass ~ tcc + elev + (1 | island),
   level = "area",
   domain_name = "county"
 )
 ```
 
-Once a model has been specified, its parameters can be estimated through the `fit()` function. While there are many options for `fit()`, the only necessary ones are a previously specified model, and a dataset. The columns in the dataset must correspond to the formulae or various variable names listed in `specify()`, although aside from area-level models, not much is needed.
+Once a model has been specified, its parameters can be estimated through the `fit()` function. While there are many options for `fit()`, the only necessary ones are a previously specified model, and a dataset. The columns in the dataset must correspond to the variables in the formula or various variable names listed in `specify()`, although aside from area-level models, not much is needed.
 
-```{r, cache = TRUE, include=FALSE}
+```{r, cache = TRUE, echo=FALSE}
 BHF_fit <- fit.basal_spec(
   BHF_spec,
-  idaho_obs_full
+  SJC_sample |> dplyr::filter(biomass > 0)
 )
 ```
 
 For area level models, in order to compute direct estimates, the size of the population must be given.
 
-```{r, cache = TRUE, include=FALSE}
-FH_fit <- fit.basal_spec(
-  FH_spec,
-  idaho_obs_full,
-  population_size = nrow(idaho_aux_full)
-)
+```{r, cache = TRUE, echo=FALSE}
+#FH_fit <- fit.basal_spec(
+#  FH_spec,
+#  idaho_obs_full,
+#  population_size = nrow(idaho_aux_full)
+#)
 ```
 
 With these models in hand, it is best practices to ensure the model specification and subsequent MCMC posterior approximation is accurate, which we do with the `check()` function.
@@ -96,7 +110,7 @@ With these models in hand, it is best practices to ensure the model specificatio
 check.basal_fit(BHF_fit)
 ```
 
-The output from these functions shows statistics computed from the original population (black) as well as statistics computed from posterior predictive populations (blue). The first plow shows the empirical density of both, and the fourth shows the empirical cdf. These are both related and show the same information in different ways. In both, we see a significant deviation of our posterior predictive samples from the observed sample indicating that our model does not explain the data very well. 
+The output from these functions shows statistics computed from the original population (black) as well as statistics computed from posterior predictive populations (blue). The first plot shows the empirical density of both the provided data and predicted data from the posterior predictive distribution. The fourth shows the empirical cdf. These are both related and show the same information in different ways. In both, we see a significant deviation of our posterior predictive samples from the observed sample indicating that our model does not explain the data very well. These may be less familiar than things like histograms, but often provide easier methods to compare different distributions, namely allowing plots showing multiple distributions at once. We are looking for these plots to line up well.
 
 The other two plots show the density of the distribution of posterior predictive means and variances with lines indicating the point statistics calculated from the provided data. These do not seem concerning initially, except that the range of values is quite large, suggesting that we may have high variability in the model, further suggesting that our data might not explain the data well.
 
@@ -105,9 +119,9 @@ Looking at the empirical density (in the first plot), we see first a point-mass 
 ```{r}
 BHF_spec_trans <- specify(
   model = "BHF",
-  domain_name = "county",
-  response_name = "obs_biomass",
-  auxiliary_variables = c("tcc", "evc"),
+  domain_name = "island",
+  response_name = "biomass",
+  auxiliary_variables = c("tcc", "elev"),
   variable_transform = list(
     transform = function (y) {y^(1/3)},
     inv_transform = function (y) {y^3}
@@ -117,10 +131,10 @@ BHF_spec_trans <- specify(
 
 And we can then fit a model and check the posterior predictives:
 
-```{r, cache = TRUE, include=FALSE}
+```{r, cache = TRUE, echo=FALSE}
 BHF_fit_trans = fit.basal_spec(
   BHF_spec_trans,
-  idaho_obs_full[idaho_obs_full$obs_biomass != 0,]
+  SJC_sample[SJC_sample$biomass != 0,]
 )
 ```
 
@@ -137,40 +151,35 @@ The final step is to compute estimates, for which we need some new data. We coul
 ```{r}
 estimate.basal_fit(
   BHF_fit_trans,
-  idaho_aux_aggregate
+  SJC_population
 )
 ```
 
-The different types of statistics are pretty flexible. Furthermore, estimation can occur on arbitrary small areas. For example, though we used county as the domain when specifying the model, we could estimate on the level of vegetation type:
+The different types of statistics are pretty flexible. Furthermore, estimation can occur on arbitrary small areas. For example, though we used county as the domain when specifying the model, we could estimate on the level of `tnt`, areas with either trees or no trees:
 
 ```{r}
-idaho_aux_evt_agg = idaho_aux_full %>%
-  group_by(evt) %>%
-  reframe(tcc = mean(tcc, na.rm = T),
-          evc = mean(evc, na.rm = T))
-
 estimate.basal_fit(
   BHF_fit_trans,
-  idaho_aux_evt_agg,
-  domain = "evt",
+  SJC_population,
+  domain = "tnt",
   stat = c(mean = mean, se = sd)
 )
 ```
 
-By default, `estimate()` provides estimates of the mean and variance, however, the estimated statistics can be changed by changing the `stat` argument. For example, to construct credible intervals, we can use the quantile function. In thisc ase, since we are working with extreme quantiles, we increase the number of draws.
+By default, `estimate()` provides estimates of the mean and variance, however, the estimated statistics can be changed by changing the `stat` argument. For example, to construct credible intervals, we can use the quantile function. In this case, since we are working with extreme quantiles, we increase the number of draws.
 
 ```{r}
 estimate.basal_fit(
   BHF_fit_trans,
-  idaho_aux_aggregate,
+  SJC_sample,
   stat = c(se = sd, 
-           lower = function(x) {quantile(x, 0.025, na.rm = T)},
-           upper = function(x) {quantile(x, 0.975, na.rm = T)}),
+           lower_CI = function(x) {quantile(x, 0.025, na.rm = T)},
+           upper_CI = function(x) {quantile(x, 0.975, na.rm = T)}),
   ndraws = 5000
 )
 ```
 
-This allows us to make inferences like ``This model assigns 95% posterior probability to the event where the mean biomass in Ada county, Idaho is as above''. Although, it's important to remember that this model is on modified data, where we excluded zeroes.
+This allows us to make inferences like ``This model assigns 95% posterior probability to the event where the mean biomass in the Blakely island is as above''. Although, it's important to remember that this model is on modified data, where we excluded zeroes.
 
 
 \section{Zero Inflated Estimators/Two-Stage Models}

@@ -20,8 +20,8 @@ estimate.basal_fit <- function(
     fit,
     newdata = NULL,
     domain = "BASAL_INHERIT",
-    stat = c(mean = mean, 
-             var = var),
+    stat = c(mean = base::mean, 
+             var = stats::var),
     ndraws = 1000,
     max_preds = 1e5,
     seed = NULL
@@ -84,8 +84,8 @@ estimate.basal_fit <- function(
   if (is.null(max_preds)) {
     nd_subset <- newdata
   } else {
-    nd_subset <- newdata %>%
-      .[sample.int(nrow(.), size = min(nrow(.), max_preds)),]
+    nd_subset <- newdata |>
+      dplyr::slice_sample(n = max_preds)
   }
 
   if (fit$spec$level == "area" ||
@@ -106,10 +106,10 @@ estimate.basal_fit <- function(
     nd_subset$`BASAL_HT_SE` <- training_se[nd_subset[[domain]]]
   }
 
-  post_preds <- t(posterior_epred(fit$model,
-                                  newdata = nd_subset,
-                                  ndraws = ndraws,
-                                  allow_new_levels = TRUE))
+  post_preds <- t(brms::posterior_epred(fit$model,
+                                        newdata = nd_subset,
+                                        ndraws = ndraws,
+                                        allow_new_levels = TRUE))
 
   if (!is.null(fit$spec$variable_transform)) {
     inv_trans <- fit$spec$variable_transform$inv_transform
@@ -118,10 +118,10 @@ estimate.basal_fit <- function(
 
   if (two_stage) {
     second_stage_weights = t(
-      posterior_epred(fit$second_stage_fit$model,
-                      newdata = nd_subset,
-                      ndraws = ndraws,
-                      allow_new_levels = TRUE)
+      brms::posterior_epred(fit$second_stage_fit$model,
+                            newdata = nd_subset,
+                            ndraws = ndraws,
+                            allow_new_levels = TRUE)
     )
     post_preds = post_preds * second_stage_weights
   }
@@ -130,17 +130,17 @@ estimate.basal_fit <- function(
   nd_subset[,(ncol(nd_subset)+1):(ncol(nd_subset) + ndraws)] <- post_preds
   colnames(nd_subset)[(ncol(nd_subset)-ndraws+1):(ncol(nd_subset))] <- paste0("rep", 1:ndraws)
 
-  preds <- nd_subset %>%
-    group_by_at(domain) %>%
-    reframe(across(paste0("rep", 1:ndraws), mean)) %>%
-    pivot_longer(2:ncol(.),
-                 names_to = "draw",
-                 values_to = "predicted_mean")
+  preds <- nd_subset |>
+    dplyr::group_by_at(domain) |>
+    dplyr::reframe(dplyr::across(paste0("rep", 1:ndraws), mean)) |>
+    tidyr::pivot_longer(1 + 1:ndraws,
+                        names_to = "draw",
+                        values_to = "predicted_mean")
 
-  ret_preds <- preds %>%
-    group_by_at(domain) %>%
-    mutate(across(pred_mean, stat)) %>%
-    dplyr::select(-c(draw, pred_mean)) %>%
+  ret_preds <- preds |>
+    dplyr::group_by_at(domain) |>
+    dplyr::mutate(across(predicted_mean, stat)) |>
+    dplyr::select(-c(draw, predicted_mean)) |>
     unique()
 
   ret <- list(
