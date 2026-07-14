@@ -35,7 +35,10 @@ estimate.basal_fit <- function(
   if (!is.null(seed)) {
     set.seed(seed)
   }
-  if (domain == "BASAL_INHERIT") {
+  if (is.null(domain)) {
+    domain = "BASAL_OVERALL"
+    newdata[[domain]] = "overall"
+  } else if (domain == "BASAL_INHERIT") {
     if (!is.null(fit$spec$domain_name)) {
       domain = fit$spec$domain_name
     } else if(!is.null(fit$spec$default_model_data$domain_name)) {
@@ -68,10 +71,6 @@ estimate.basal_fit <- function(
       "number of chains or number of iterations."
     ))
   }
-  if (is.null(domain)) {
-    domain <- "BASAL_OVERALL_DOMAIN"
-    newdata[[domain]] <- "overall"
-  }
   if (!(domain %in% colnames(newdata))) {
     stop(paste0(
       "Provided domain is not a column in newdata. If you want estimates over",
@@ -87,7 +86,6 @@ estimate.basal_fit <- function(
     nd_subset <- newdata |>
       dplyr::slice_sample(n = max_preds)
   }
-
   if (fit$spec$level == "area" ||
       (two_stage && fit$spec$second_stage_spec$level == "area")) {
     # the first stage has strictly fewer domains than the second stage, so
@@ -137,12 +135,43 @@ estimate.basal_fit <- function(
                         names_to = "draw",
                         values_to = "predicted_mean")
 
-  ret_preds <- preds |>
-    dplyr::group_by_at(domain) |>
-    dplyr::mutate(dplyr::across(predicted_mean, stat)) |>
-    dplyr::select(-c(draw, predicted_mean)) |>
-    unique()
-
+  og_stat = stat
+  # oftentimes, there will be weird NAs, and having functions which are slightly
+  # robust is nice. Simultaneously I don't want to put this onto the user.
+  # So I'm going to try to automatically do it, but this only works if users
+  # add a ... argument (e.g., funciton(x, ...)), in which case I try inserting 
+  # an na.rm = TRUE argument
+  for (i in 1:length(stat)) {
+    fun = og_stat[[i]]
+    res <- try(fun(c(1,2,3), na.rm = TRUE), silent = TRUE)
+    if (!inherits(res, "try-error")) {
+      fun_wrapper <- function(thefun) {
+        function (x, ...) {
+          thefun(x, na.rm = T, ...)
+        }
+      }
+      stat[[i]] <- fun_wrapper(og_stat[[i]])
+    }
+    # the way R works, though, is that upon creating functions, they are promises
+    # and so if they access something in the larger environment and later
+    # if part of this changes, then the first time they are run
+    # they will access this variable at runtime, not define-time. 
+    # We are evaluating the functions here so they work as hoped
+    tmp <- stat[[i]](1:10)
+  }
+  
+  
+  if (domain != "BASAL_OVERALL") {
+    ret_preds <- preds |>
+      dplyr::group_by_at(domain) |>
+      dplyr::mutate(dplyr::across(predicted_mean, stat)) |>
+      dplyr::select(-c(draw, predicted_mean)) |>
+      dplyr::ungroup() |>
+      unique()
+  } else {
+    ret_preds <- sapply(stat, function(stat) {stat(preds$predicted_mean)})
+  }
+  
   ret <- list(
     fit = fit,
     params = list(

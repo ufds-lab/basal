@@ -131,7 +131,6 @@ custom_pp_check <- function(
     pp <- brms::posterior_predict(object$model, ndraws = draws,
                                   newdata = object$unfiltered_data,
                                   allow_new_levels = T)
-    browser()
     pp <- pp * brms::posterior_predict(object$second_stage_fit$model, ndraws = draws,
                                       newdata = object$unfiltered_data)
   }

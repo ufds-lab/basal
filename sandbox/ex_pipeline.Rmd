@@ -47,6 +47,23 @@ estimates_BHF = estimate.basal_fit(
 ); estimates_BHF
 ```
 
+```{r}
+spec_BHF_no_trans = specify(
+  model = "BHF",
+  domain = "county",
+  response = "obs_biomass",
+  auxiliary_variables = c("tcc", "evc")
+)
+
+fit_BHF_no_trans = fit.basal_spec(
+  spec_BHF_no_trans, 
+  (idaho_obs_full %>% filter(obs_biomass > 0))
+)
+
+check_BHF_no_trans = check.basal_fit(
+  fit = fit_BHF_no_trans
+)
+```
 
 # Manual BHF
 ```{r}
@@ -208,8 +225,11 @@ two_stage_check <- check.basal_fit(
 estimate_two_stage = estimate.basal_fit(
   two_stage_fit,
   newdata = idaho_aux_full,
-  domain = "county",
+  domain = NULL,
   max_preds = 1e5,
+  stat = c(mean = mean, var = var,
+           lower_ci = function(x, ...) {quantile(x, 0.025, ...)},
+           upper_ci = function(x, ...) {quantile(x, 0.975, ...)}),
   ndraws = 200
 ); estimate_two_stage
 ```
