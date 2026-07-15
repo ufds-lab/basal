@@ -90,7 +90,48 @@ plot_spec_bhf <- specify(
   model = "BHF",
   domain_name = "county",
   response_name = "obs_biomass",
+  auxiliary_variables = c("evc", "evt"),
+  variable_transform = list(
+    transform = function (y) {y^(1/3)},
+    inv_transform = function (y) {y^3}
+  )
+)
+
+# we can specify area level models with `model = "FH"`, or `level = "area"`
+FH_spec <- specify(
+  model = "FH",
+  domain_name = "county",
+  response_name = "county",
+  response_name = "obs_biomass",
   auxiliary_variables = c("evc", "evt")
+ )
+ 
+ # and we can create an equivalent model manually:
+ FH_spec_manual <- specify(
+   obs_biomass ~  evc + evt + (1 | county),
+   level = "area",
+   domain = "county"
+ )
+ 
+ # We allow zero-inflated models as well
+ # This will inherit the remainder of the arguments from the response model
+ GLM_spec <- specify(
+   model = "BHF",
+   auxiliary_variables = c("evc", "evt"),
+   specifying_second_stage = TRUE
+ )
+ 
+response_model <- specify(
+  model = "BHF",
+  response = "obs_biomass",
+  auxiliary_variables = "tcc",
+  domain = "county",
+  model_stage = "zi",
+  second_stage_spec = GLM_spec,
+  variable_transform = list(
+    transform = function (y) {y^(1/3)},
+    inv_transform = function (y) {y^3}
+  )
 )
 
 }

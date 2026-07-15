@@ -48,7 +48,8 @@ check.basal_fit <- function(
   }
 
   if (include_base_pp_check) {
-    ret$pp_checks$epdf <- brms::pp_check(fit$model, ndraws = draws)
+    ret$pp_checks$epdf <- brms::pp_check(fit$model, ndraws = draws) +
+      ggplot2::labs(title = "Posterior predictive distributions for epdf of response.")
   }
   if (!is.null(stat)) {
     extra_pp_check <- custom_pp_check(
@@ -75,6 +76,9 @@ check.basal_fit <- function(
     }
   }
 
+  if (!is.null(fit$second_stage_fit)) {
+    message("There are no convergence metrics computed for the second stage model, only plots. If you want convergence metrics call check.basal_fit(fit$second_stage_fit). Add this to the base function.")
+  }
   ret$convergence$rhat <- brms::rhat(fit$model)
   if (sum(ret$convergence$rhat > 1.1, na.rm = T)) {
     warning(

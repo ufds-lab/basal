@@ -19,8 +19,9 @@ quantile = quantile
 
 ```{r setup}
 library(basal)
+library(ggplot2)
 
-data("SJC_population", "SJC_sample")
+data("oregon_population", "oregon_sample")
 ```
 
 \section{Data Description}
@@ -28,17 +29,25 @@ data("SJC_population", "SJC_sample")
 Here's some data. There will be a better section here, or no section, depending. Either way, these are FIA data like what we might use, but they are public. We have anumber of columns, of which I have selected the interesting ones.
 
 ```{r}
-SJC_sample = SJC_sample |>
-  dplyr::select(c("biomass", "tcc", "elev", "island", "measurement_year"))
+oregon_population = oregon_population |>
+  dplyr::select(c("countyfips", "tnt", "evt_class_cd", "ppt", "elev", "lfevc"))
+oregon_sample = oregon_sample |>
+  dplyr::select(c("biomass", "countyfips", "tnt", "evt_class_cd", "ppt", "elev", "lfevc"))
+```
 
-SJC_population = SJC_population |>
-  dplyr::select(c("tcc", "elev", "island", "tnt"))
+To assist with stability and reduce variability of priors, we will scale the `elev` variable to have a smaller variance. We will discuss this more in depth in another vignette---`advanced_model_fitting`---but take it for granted here.
+```{r}
+oregon_population$elev = oregon_population$elev/sd(oregon_sample$elev)
+oregon_sample$elev = oregon_sample$elev/sd(oregon_sample$elev)
+
+oregon_population$lfevc = oregon_population$lfevc/sd(oregon_sample$lfevc)
+oregon_sample$lfevc = oregon_sample$lfevc/sd(oregon_sample$lfevc)
 ```
 
 
 
 \section{Basic Workflow}
-The governing philosophy behind `basal` is that every model is, up to specification details, the same. Frequentist models may give the illusion that different types of models are fundamentally different. For example, OLS estimators have a closed form and can be directly estimated. Meanwhile, generalized linear models require iterative methods for parameter estimations or mixed models use restricted maximum likelihood. The different methods for estimating models separate them into different strata, different functions for estimation, different modeling assumptions.
+The governing philosophy behind `basal` is that every model is, up to specification details, the same. Frequentist models may give the illusion that different types of models are fundamentally different. For example, OLS estimators have a closed form and can be directly estimated. Meanwhile, generalized linear models require iterative methods for parameter estimations or mixed models use restricted maximum likelihood. Still other types of models may use different types of estimation techniques. The different methods for estimating models separate them into different strata, different functions for estimation, different modeling assumptions.
 
 In the Bayesian paradigm, however, MCMC methods ensure that every model is estimated the same way. To reflect this, every regression model listed above, and indeed more not covered within this package, are the same. The defining factor of a model is the specification of parameters and their contribution to a response variable. Although this may be relaxed to existence of certain parameters, as full specification (i.e., prior distribution specification) is not always as necessary.
 
@@ -47,9 +56,9 @@ When modeling in `basal`, every model starts with a specification which will det
 ```{r}
 BHF_spec <- specify(
   model = "BHF",
-  domain_name = "island",
+  domain_name = "evt_class_cd",
   response_name = "biomass",
-  auxiliary_variables = c("tcc", "elev")
+  auxiliary_variables = c("ppt", "lfevc")
 )
 ```
 
@@ -57,21 +66,21 @@ From this, the level of the model as well as the relationship between the respon
 
 ```{r}
 BHF_spec_manual <- specify(
-  biomass ~ tcc + elev + (1 | island),
+  biomass ~ lfevc + ppt + (1 | evt_class_cd),
   level = "unit"
 )
 ```
 
-The second specification is both simpler and more complex. It requires less input from the user provided they know how to express their modelling assumptions in a form like that of `{lme4}`. Simultaneously, though, it may be more ambiguous to express a model by a formula. Either way, these two models will impose the same modeling assumptions and will ultimately be indistinguishable.
+The second specification is both simpler and more complex. It requires less input from the user provided they know how to express their modelling assumptions in a form like that of `\{lme4\}`. Simultaneously, though, it may be more ambiguous to express a model by a formula. Either way, these two models will impose the same modeling assumptions and will ultimately be indistinguishable.
 
 In the transition to the area-level model, while modeling assumptions may become more stringent, the burden on the user changes only marginally. When estimating a FH model, for example, one may use almost identical code as the BHF model, substituting only `model = "BHF"` for `model = "FH"`.
 
 ```{r}
 FH_spec <- specify(
   model = "FH",
-  domain_name = "island",
+  domain_name = "evt_class_cd",
   response_name = "biomass",
-  auxiliary_variables = c("tcc", "elev")
+  auxiliary_variables = c("lfevc", "ppt")
 )
 ```
 
@@ -79,29 +88,29 @@ From this, the engine will understand that, as the FH is an area-level model, it
 
 ```{r}
 FH_spec_manual <- specify(
-  biomass ~ tcc + elev + (1 | island),
+  biomass ~ lfevc + ppt + (1 | evt_class_cd),
   level = "area",
-  domain_name = "county"
+  domain_name = "evt_class_cd"
 )
 ```
 
 Once a model has been specified, its parameters can be estimated through the `fit()` function. While there are many options for `fit()`, the only necessary ones are a previously specified model, and a dataset. The columns in the dataset must correspond to the variables in the formula or various variable names listed in `specify()`, although aside from area-level models, not much is needed.
 
-```{r, cache = TRUE, echo=FALSE}
+```{r, cache = TRUE, results = "hide"}
 BHF_fit <- fit.basal_spec(
   BHF_spec,
-  SJC_sample |> dplyr::filter(biomass > 0)
+  oregon_sample
 )
 ```
 
 For area level models, in order to compute direct estimates, the size of the population must be given.
 
-```{r, cache = TRUE, echo=FALSE}
-#FH_fit <- fit.basal_spec(
-#  FH_spec,
-#  idaho_obs_full,
-#  population_size = nrow(idaho_aux_full)
-#)
+```{r, cache = TRUE, results = "hide"}
+FH_fit <- fit.basal_spec(
+  FH_spec,
+  oregon_sample,
+  population_size = nrow(oregon_population)
+)
 ```
 
 With these models in hand, it is best practices to ensure the model specification and subsequent MCMC posterior approximation is accurate, which we do with the `check()` function.
@@ -110,32 +119,34 @@ With these models in hand, it is best practices to ensure the model specificatio
 check.basal_fit(BHF_fit)
 ```
 
-The output from these functions shows statistics computed from the original population (black) as well as statistics computed from posterior predictive populations (blue). The first plot shows the empirical density of both the provided data and predicted data from the posterior predictive distribution. The fourth shows the empirical cdf. These are both related and show the same information in different ways. In both, we see a significant deviation of our posterior predictive samples from the observed sample indicating that our model does not explain the data very well. These may be less familiar than things like histograms, but often provide easier methods to compare different distributions, namely allowing plots showing multiple distributions at once. We are looking for these plots to line up well.
-
-The other two plots show the density of the distribution of posterior predictive means and variances with lines indicating the point statistics calculated from the provided data. These do not seem concerning initially, except that the range of values is quite large, suggesting that we may have high variability in the model, further suggesting that our data might not explain the data well.
+The output from these functions shows statistics computed from the original population (black) as well as statistics computed from posterior predictive populations (blue). The first plot shows the empirical density of both the provided data and predicted data from the posterior predictive distribution. The second shows the empirical cdf. These are both related and show the same information in different ways. In both, we see a significant deviation of our posterior predictive samples from the observed sample indicating that our model does not explain the data very well. These may be less familiar than things like histograms, but often provide easier methods to compare different distributions, namely allowing plots showing multiple distributions at once. We are looking for these plots to line up well.
 
 Looking at the empirical density (in the first plot), we see first a point-mass at zero in the density, reflecting the zero-inflated nature of the data, as well as a strong right skew. The former may be removed by filtering out the zero-valued observations (and this will be formalized in a later model), and the latter may be corrected by applying a variable transform for which we must re-define our model by adding a `variable_transform`. To supply an inverse transform, we must provide a list with a `transform` object and `inv_transform` object---functions which are their own inverses. The model will be estimated on the transformed data, and then be back-transformed using the inverse transformation.
+
+In general, it is easier to see if posterior predictives agree with data using the ecdf, but easier to diagnose issues (i.e., seeing if variable transformations may be necessary) using the epdf.
 
 ```{r}
 BHF_spec_trans <- specify(
   model = "BHF",
-  domain_name = "island",
+  domain_name = "evt_class_cd",
   response_name = "biomass",
-  auxiliary_variables = c("tcc", "elev"),
+  auxiliary_variables = c("lfevc", "elev"),
   variable_transform = list(
-    transform = function (y) {y^(1/3)},
-    inv_transform = function (y) {y^3}
+    transform = function (y) {y^(1/4)},
+    inv_transform = function (y) {y^4}
   )
 )
 ```
 
 And we can then fit a model and check the posterior predictives:
 
-```{r, cache = TRUE, echo=FALSE}
+```{r, cache = TRUE, results = "hide"}
 BHF_fit_trans = fit.basal_spec(
   BHF_spec_trans,
-  SJC_sample[SJC_sample$biomass != 0,]
+  oregon_sample[oregon_sample$biomass != 0,]
 )
+
+BHF_fit_trans$model$prior
 ```
 
 ```{r}
@@ -144,49 +155,139 @@ check.basal_fit(
 )
 ```
 
-All of these plots are much more reassuring. The emerical pdf and cdf both closely match the data with only slight deviations, and the ranges on mean and variance distributions are much lower.
+All of these plots are much more reassuring. The empirical pdf and cdf both closely match the data with only slight deviations.
 
-The final step is to compute estimates, for which we need some new data. We could provide the initial data, but here we provide population data:
-
-```{r}
-estimate.basal_fit(
-  BHF_fit_trans,
-  SJC_population
-)
-```
-
-The different types of statistics are pretty flexible. Furthermore, estimation can occur on arbitrary small areas. For example, though we used county as the domain when specifying the model, we could estimate on the level of `tnt`, areas with either trees or no trees:
+The final step is to compute estimates, for which we need some new data. 
+We could provide the initial data, but here we provide population data. Without specifying domains, the code will use the domains in the model specification:
 
 ```{r}
 estimate.basal_fit(
   BHF_fit_trans,
-  SJC_population,
-  domain = "tnt",
-  stat = c(mean = mean, se = sd)
+  oregon_population
 )
 ```
 
-By default, `estimate()` provides estimates of the mean and variance, however, the estimated statistics can be changed by changing the `stat` argument. For example, to construct credible intervals, we can use the quantile function. In this case, since we are working with extreme quantiles, we increase the number of draws.
+but we could also compute estimates on other small areas. For example, though we used county as the domain when specifying the model, we could estimate on the level of `countyfips`, the different counties, this is possibly more desirable for estimates.
 
 ```{r}
 estimate.basal_fit(
   BHF_fit_trans,
-  SJC_sample,
-  stat = c(se = sd, 
-           lower_CI = function(x) {quantile(x, 0.025, na.rm = T)},
-           upper_CI = function(x) {quantile(x, 0.975, na.rm = T)}),
-  ndraws = 5000
+  oregon_population,
+  domain = "countyfips"
+)$preds |>
+  head(5)
+```
+
+By default, `estimate()` provides estimates of the mean and variance, however, the estimated statistics can be changed by changing the `stat` argument. For example, to construct credible intervals, we can use a wrapper around the quantile function. In general, when providing functions in the form of `stat`, they should allow the additional argument `...`, or otherwise ignore `NA` values. Also in this case, since we are working with extreme quantiles, we increase the number of draws.
+
+```{r}
+estimate.basal_fit(
+  BHF_fit_trans,
+  oregon_population,
+  domain = NULL,
+  stat = c(mean = mean, se = sd, 
+           lower_CI = function(x, ...) {quantile(x, 0.025, ...)},
+           upper_CI = function(x, ...) {quantile(x, 0.975, ...)}),
+  ndraws = 5000,
+  max_preds = 1e4
 )
 ```
 
-This allows us to make inferences like ``This model assigns 95% posterior probability to the event where the mean biomass in the Blakely island is as above''. Although, it's important to remember that this model is on modified data, where we excluded zeroes.
+This allows us to make inferences like ``This model assigns 95% posterior probability to the event where the mean biomass in oregon is within the interval above''. Although, it's important to remember that this model is on modified data, where we excluded zeroes.
 
 
 \section{Zero Inflated Estimators/Two-Stage Models}
 
-\section{Notes}
+A popular choice in recent years for dealing with zero inflation has been the development of a two-stage zero-inflated estimator. This consists of two models. There is a response model, like the ones fitted above, fitted on nonzero observations, and there is a GLM, estimating the probability of a plot having a nonzero value. To compute estimates, then, the response model at a plot is weighted by the probability that this plot has a nonzero value.
 
-\subsection{Advanced modeling with `brms`.}
+In order to fit this in `basal`, we use two model specifications and fit each one individually, and pool them for posterior predictive checks and estimation. The work specifying for the GLM can be much easier than a normal specification as many of the parameters can be safely inherited from the response model. For example, we could do this with the above model like so:
+
+```{r}
+zi_BHF <- specify(
+  model = "BHF",
+  domain_name = "evt_class_cd",
+  response_name = "biomass",
+  auxiliary_variables = c("lfevc", "elev"),
+  variable_transform = list(
+    transform = function (y) {y^(1/4)},
+    inv_transform = function (y) {y^4}
+  ),
+  model_stage = "zi"
+)
+```
+
+This will fit a logistic model of the form of a BHF with similar variables (specifically, `nonzero ~ lfevc + elev + ( 1 | evt_class_cd)`). Where `nonzero` = $I(\texttt{biomass} \neq 0)$. The specification for this model is below:
+
+```{r}
+second_stage <- specify(
+  model = "BHF",
+  domain_name = "evt_class_cd",
+  auxiliary_variables = c("lfevc", "elev"),
+  specifying_second_stage_model = TRUE
+)
+```
+
+While most of these choices will not affect the models past parametric form or covariates used in the GLM, the response name is uniquely important because it is used to filter the data. For example, if `response_name = "ppt"`, then there would be a GLM fit to predicting whether or not `ppt` is nonzero. More significantly, though, is that the response model would be fit using data where `ppt` is nonzero. Generally it is not advised to provide full specifications for the GLM, and instead allow it to inherit as many parameters from the response model. This makes it easier to change models and reduces the chance of accidental mis-specification. Here we will use a second stage model with different covariates, but otherwise everything else will be inherited.
+
+```{r}
+second_stage <- specify(
+  model = "BHF", # this must be specified or the model assumes a "custom" model
+  auxiliary_variables = c("lfevc"),
+  specifying_second_stage_model = TRUE
+)
+
+zi_BHF <- specify(
+  model = "BHF",
+  domain_name = "evt_class_cd",
+  response_name = "biomass",
+  auxiliary_variables = c("lfevc", "elev"),
+  variable_transform = list(
+    transform = function (y) {y^(1/4)},
+    inv_transform = function (y) {y^4}
+  ),
+  model_stage = "zi",
+  second_stage_spec = second_stage # provide the specification from above
+)
+```
+
+Then this may be estimated as normal. Here we use some other arguments to ensure posterior convergence. For more discussion on these, see the vignette that will be made on advanced model fitting.
+
+```{r, cache = TRUE, results = "hide"}
+zi_fit = fit.basal_spec(
+  zi_BHF,
+  data = oregon_sample,
+  burn_in = 1000,
+  iter = 7000,
+  thin = 4
+)
+```
+
+and likewise we can view posterior predictives, which now creates plots for both models individually as well as the joint resposne and logistic model.
+
+```{r}
+zi_check = check.basal_fit(
+  zi_fit
+)
+```
+
+and finally, posterior estimation is just as before:
+
+```{r}
+estimate.basal_fit(
+  zi_fit,
+  oregon_population,
+  domain = NULL,
+  ndraws = 4000,
+  max_preds = 1e4,
+  stat = c(mean = mean, se = sd,
+           lower_CI = function(x, ...) {quantile(x, 0.025, ...)},
+           upper_CI = function(x, ...) {quantile(x, 0.975, ...)})
+)
+```
+
+
+
+\section{Notes}
 
 \subsection{Auto-Aggregation}
 

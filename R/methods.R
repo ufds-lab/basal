@@ -26,9 +26,8 @@ print.basal_fit <- function(x, ...) {
 #' @exportS3Method graphics::pairs
 pairs.basal_fit <- function(x, ...) {
   data <- x$data
-  data <- data[,c(fit$params$response, fit$params$predictors)]
+  data <- data[,c(x$params$response, x$params$predictors)]
   data <- data[,sapply(data[1,], is.numeric)]
-  browser()
   graphics::pairs(data)
 }
 

@@ -42,7 +42,7 @@ fit.basal_spec <- function(spec,
                            thin = 2,
                            engine = "brms",
                            ncores = default_ncores(),
-                           nthreads = 1,
+                           nthreads = "default",
                            ...) {
 
   func_call <- match.call()
@@ -62,6 +62,7 @@ fit.basal_spec <- function(spec,
   } else {
     res <- all.vars(spec$formula[[2]])[1]
   }
+  
   if (!is.null(spec$variable_transform)) {
     trans <- spec$variable_transform$transform
     # weird as.numeric() calls because
@@ -72,7 +73,7 @@ fit.basal_spec <- function(spec,
 
   if (!is.null(spec$second_stage_spec)) {
     message("Estimating two models for two-stage model. This may take a while...")
-    data$BASAL_NONZERO_INDICATOR = as.numeric((data[[res]] > 0))
+    data$BASAL_NONZERO_INDICATOR = as.numeric((data[[res]] != 0))
     second_stage_fit <- fit.basal_spec(
       spec$second_stage_spec,
       data,
@@ -226,9 +227,20 @@ fit.basal_spec <- function(spec,
   # setting priors by modifying the object created by default_priors()
   # is not ideal, although I'm unsure of another way to give default priors
   # for *everything*
-
+  
+  # we modify default priors from brms
+  priors <- brms::default_prior(
+    valid_formula,
+    data,
+    family = spec$family
+  )
+  
   predictors <- vars[vars != res]
   numeric_preds <- predictors[sapply(data[,predictors], is.numeric)]
+  intersect = intersect(priors$group, numeric_preds)
+  if (length(intersect) != 0) {
+    numeric_preds = numeric_preds[!(numeric_preds %in% intersect)]
+  }
 
   res_sd <- stats::sd(data[[res]]) # compute sd
   if (length(numeric_preds) == 1) {
@@ -238,17 +250,9 @@ fit.basal_spec <- function(spec,
   }
 
   pred_sd_ratio <- pred_sd/res_sd
-
+  
   prior_family <- paste0("student_t(3, 0, ", pred_sd_ratio * 2.5, ")")
   res_prior <- paste0("student_t(3, 0, ", res_sd * 2.5, ")")
-
-  # we modify default priors from brms
-  priors <- brms::default_prior(
-    valid_formula,
-    data,
-    family = spec$family
-  )
-  if (FALSE) {
 
   reg_coef_mask <- (priors$class == "b") & (priors$coef %in% numeric_preds)
   priors[reg_coef_mask,]$prior <- prior_family
@@ -266,14 +270,17 @@ fit.basal_spec <- function(spec,
 
   priors[priors$class == "Intercept",]$prior <- res_prior
   priors[priors$class == "Intercept",]$source <- "default (basal)"
-  }
 
 
   # a thread (here) is not a real thread. A thread is used to speed up within-chain
   # computations.
   if (ncores >= 2 * chains) {
-    nthreads <- max(nthreads, floor(ncores/chains))
+    if (nthreads == "default") {
+      nthreads <- floor(ncores/chains)
+    } 
     ncores <- chains
+  } else if (nthreads == "default") {
+    nthreads = 1
   }
 
   if (is.null(seed)) {

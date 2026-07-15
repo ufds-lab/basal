@@ -47,29 +47,10 @@ estimates_BHF = estimate.basal_fit(
 ); estimates_BHF
 ```
 
-```{r}
-spec_BHF_no_trans = specify(
-  model = "BHF",
-  domain = "county",
-  response = "obs_biomass",
-  auxiliary_variables = c("tcc", "evc")
-)
-
-fit_BHF_no_trans = fit.basal_spec(
-  spec_BHF_no_trans, 
-  (idaho_obs_full %>% filter(obs_biomass > 0))
-)
-
-check_BHF_no_trans = check.basal_fit(
-  fit = fit_BHF_no_trans
-)
-```
-
 # Manual BHF
 ```{r}
 spec_custom = specify(
-  formula = formula(obs_biomass ~ tcc + (ppt | county) + (elev | evt)),
-  family = exponential(),
+  formula = formula(obs_biomass ~ tcc + evc + (1 | county)),
   level = "unit",
   variable_transform = list(
     transform = function (y) {y^(1/3)},
@@ -79,10 +60,7 @@ spec_custom = specify(
 
 fit_custom = fit.basal_spec(
   spec_custom,
-  (idaho_obs_full %>% filter(obs_biomass > 0)),
-  burn_in = 10,
-  iter = 5000,
-  chains = 4
+  (idaho_obs_full %>% filter(obs_biomass > 0))
 )
 
 check_custom = check.basal_fit(
@@ -95,17 +73,6 @@ estimates_custom = estimate.basal_fit(
   domain = "county",
   ndraws = 5000
 ); estimates_custom$preds
-```
-
-```{r}
-as.data.frame(fit_custom$model) %>%
-  dplyr::select(b_Intercept) %>%
-  mutate(i = rep(1:(nrow(.)/3), 3),
-         chain = c(rep(1, (nrow(.)/3)), rep(2,(nrow(.)/3)), rep(3,(nrow(.)/3)))) %>%
-#  filter(chain == 3) %>%
-  ggplot(aes(x = i, y = b_Intercept)) +
-  geom_line() +
-  facet_wrap(~chain)
 ```
 
 # Automatic FH
@@ -200,7 +167,6 @@ second_stage <- specify(
 )
 
 two_stage_spec <- specify(
-  level = "unit",
   model = "BHF",
   response = "obs_biomass",
   auxiliary_variables = "tcc",
