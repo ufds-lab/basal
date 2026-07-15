@@ -37,11 +37,13 @@ oregon_sample = oregon_sample |>
 
 To assist with stability and reduce variability of priors, we will scale the `elev` variable to have a smaller variance. We will discuss this more in depth in another vignette---`advanced_model_fitting`---but take it for granted here.
 ```{r}
+# sapply(oregon_sample, sd) # find variables with large variances
+
 oregon_population$elev = oregon_population$elev/sd(oregon_sample$elev)
 oregon_sample$elev = oregon_sample$elev/sd(oregon_sample$elev)
 
-oregon_population$lfevc = oregon_population$lfevc/sd(oregon_sample$lfevc)
-oregon_sample$lfevc = oregon_sample$lfevc/sd(oregon_sample$lfevc)
+oregon_population$ppt = oregon_population$ppt/sd(oregon_sample$ppt)
+oregon_sample$ppt = oregon_sample$ppt/sd(oregon_sample$ppt)
 ```
 
 
@@ -106,11 +108,11 @@ BHF_fit <- fit.basal_spec(
 For area level models, in order to compute direct estimates, the size of the population must be given.
 
 ```{r, cache = TRUE, results = "hide"}
-FH_fit <- fit.basal_spec(
-  FH_spec,
-  oregon_sample,
-  population_size = nrow(oregon_population)
-)
+# FH_fit <- fit.basal_spec(
+#   FH_spec,
+#   oregon_sample,
+#   population_size = nrow(oregon_population)
+# )
 ```
 
 With these models in hand, it is best practices to ensure the model specification and subsequent MCMC posterior approximation is accurate, which we do with the `check()` function.
@@ -130,7 +132,7 @@ BHF_spec_trans <- specify(
   model = "BHF",
   domain_name = "evt_class_cd",
   response_name = "biomass",
-  auxiliary_variables = c("lfevc", "elev"),
+  auxiliary_variables = c("lfevc", "ppt"),
   variable_transform = list(
     transform = function (y) {y^(1/4)},
     inv_transform = function (y) {y^4}
@@ -145,8 +147,6 @@ BHF_fit_trans = fit.basal_spec(
   BHF_spec_trans,
   oregon_sample[oregon_sample$biomass != 0,]
 )
-
-BHF_fit_trans$model$prior
 ```
 
 ```{r}
@@ -207,7 +207,7 @@ zi_BHF <- specify(
   model = "BHF",
   domain_name = "evt_class_cd",
   response_name = "biomass",
-  auxiliary_variables = c("lfevc", "elev"),
+  auxiliary_variables = c("lfevc", "ppt"),
   variable_transform = list(
     transform = function (y) {y^(1/4)},
     inv_transform = function (y) {y^4}
@@ -222,17 +222,7 @@ This will fit a logistic model of the form of a BHF with similar variables (spec
 second_stage <- specify(
   model = "BHF",
   domain_name = "evt_class_cd",
-  auxiliary_variables = c("lfevc", "elev"),
-  specifying_second_stage_model = TRUE
-)
-```
-
-While most of these choices will not affect the models past parametric form or covariates used in the GLM, the response name is uniquely important because it is used to filter the data. For example, if `response_name = "ppt"`, then there would be a GLM fit to predicting whether or not `ppt` is nonzero. More significantly, though, is that the response model would be fit using data where `ppt` is nonzero. Generally it is not advised to provide full specifications for the GLM, and instead allow it to inherit as many parameters from the response model. This makes it easier to change models and reduces the chance of accidental mis-specification. Here we will use a second stage model with different covariates, but otherwise everything else will be inherited.
-
-```{r}
-second_stage <- specify(
-  model = "BHF", # this must be specified or the model assumes a "custom" model
-  auxiliary_variables = c("lfevc"),
+  auxiliary_variables = c("lfevc", "ppt"),
   specifying_second_stage_model = TRUE
 )
 
@@ -240,25 +230,38 @@ zi_BHF <- specify(
   model = "BHF",
   domain_name = "evt_class_cd",
   response_name = "biomass",
-  auxiliary_variables = c("lfevc", "elev"),
+  auxiliary_variables = c("lfevc", "ppt"),
   variable_transform = list(
     transform = function (y) {y^(1/4)},
     inv_transform = function (y) {y^4}
   ),
   model_stage = "zi",
-  second_stage_spec = second_stage # provide the specification from above
+  second_stage_spec = second_stage # supply the GLM specification here
 )
 ```
 
-Then this may be estimated as normal. Here we use some other arguments to ensure posterior convergence. For more discussion on these, see the vignette that will be made on advanced model fitting.
+While most of these choices will not affect the models past parametric form or covariates used in the GLM, the response name is uniquely important because it is used to filter the data. For example, if `response_name = "ppt"`, then there would be a GLM fit to predicting whether or not `ppt` is nonzero. More significantly, though, is that the response model would be fit using data where `ppt` is nonzero. Generally it is not advised to provide full specifications for the GLM, and instead allow it to inherit as many parameters from the response model. This makes it easier to change models and reduces the chance of accidental mis-specification. Here we will use the same parametric form for the GLM.
+
+```{r}
+zi_BHF <- specify(
+  model = "BHF",
+  domain_name = "evt_class_cd",
+  response_name = "biomass",
+  auxiliary_variables = c("lfevc", "ppt"),
+  variable_transform = list(
+    transform = function (y) {y^(1/4)},
+    inv_transform = function (y) {y^4}
+  ),
+  model_stage = "zi"
+)
+```
+
+Then this may be estimated as normal.
 
 ```{r, cache = TRUE, results = "hide"}
 zi_fit = fit.basal_spec(
   zi_BHF,
-  data = oregon_sample,
-  burn_in = 1000,
-  iter = 7000,
-  thin = 4
+  data = oregon_sample
 )
 ```
 

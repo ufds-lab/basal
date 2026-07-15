@@ -251,8 +251,8 @@ fit.basal_spec <- function(spec,
 
   pred_sd_ratio <- pred_sd/res_sd
   
-  prior_family <- paste0("student_t(3, 0, ", pred_sd_ratio * 2.5, ")")
-  res_prior <- paste0("student_t(3, 0, ", res_sd * 2.5, ")")
+  prior_family <- paste0("normal(0, ", pred_sd_ratio * 2.5, ")")
+  res_prior <- paste0("normal(0, ", res_sd * 2.5, ")")
 
   reg_coef_mask <- (priors$class == "b") & (priors$coef %in% numeric_preds)
   priors[reg_coef_mask,]$prior <- prior_family

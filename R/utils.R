@@ -250,7 +250,7 @@ validate_second_stage <- function(spec, auxiliary_variables) {
       obs_variability = NULL,
       domain_name = spec$domain_name,
       response_name = spec$response_name,
-      auxiliary_variables = spec$auxiliary_variables,
+      auxiliary_variables = auxiliary_variables,
       variable_transform = NULL,
       family = brms::bernoulli(),
       model_stage = spec$model_stage,
