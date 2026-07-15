@@ -256,6 +256,22 @@ zi_BHF <- specify(
 )
 ```
 
+While most of these choices will not affect the models past parametric form or covariates used in the GLM, the response name is uniquely important because it is used to filter the data. For example, if `response_name = "ppt"`, then there would be a GLM fit to predicting whether or not `ppt` is nonzero. More significantly, though, is that the response model would be fit using data where `ppt` is nonzero. Generally it is not advised to provide full specifications for the GLM, and instead allow it to inherit as many parameters from the response model. This makes it easier to change models and reduces the chance of accidental mis-specification. Here we will use the same parametric form for the GLM.
+
+```{r}
+zi_BHF <- specify(
+  model = "BHF",
+  domain_name = "evt_class_cd",
+  response_name = "biomass",
+  auxiliary_variables = c("lfevc", "ppt"),
+  variable_transform = list(
+    transform = function (y) {y^(1/4)},
+    inv_transform = function (y) {y^4}
+  ),
+  model_stage = "zi"
+)
+```
+
 Then this may be estimated as normal.
 
 ```{r, cache = TRUE, results = "hide"}
