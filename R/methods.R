@@ -33,7 +33,8 @@ pairs.basal_fit <- function(x, ...) {
 
 #' @exportS3Method base::print
 print.basal_check <- function(x, ...) {
-  print(x$pp_checks)
+  for (plot in x$pp_checks)
+    print(plot)
 }
 
 #' @exportS3Method graphics::pairs
