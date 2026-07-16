@@ -252,6 +252,19 @@ validate_transformation <- function(transformation) {
 }
 
 validate_second_stage <- function(spec, auxiliary_variables) {
+  if (spec$level == "area") {
+    message("Can't fit area-level models to zero observations, re-specifying as a unit-level.")
+    spec$level <- "unit"
+    if (!is.null(spec$obs_variability)) {
+      stop("Can't re-specify model as unit-level. Must provide un-aggregated data")
+    }
+    spec$level <- "unit"
+    spec$obs_variability <- NULL
+    if (spec$model_type == "FH") {
+      spec$model_type <- "BHF"
+    }
+  }
+  
   # if there is no specification, then inherit from response model
   if (is.null(spec$second_stage_spec)) {
     message("Specification for second stage inherited from this level")
@@ -327,23 +340,143 @@ validate_second_stage <- function(spec, auxiliary_variables) {
       }
     }
   }
-  if (spec$level == "area") {
-    message("Can't fit area-level models to zero observations, re-specifying as a unit-level.")
-    spec$level <- "unit"
-    if (!is.null(spec$obs_variability)) {
-      stop("Can't re-specify model as unit-level. Must provide un-aggregated data")
-    }
-    if (spec$model == "FH") {
-      spec$model <- "BHF"
-    }
-  }
   
   validate_single_stage_spec(
-    spec$second_stage_spec,
-    auxiliary_variables,
-    "BASAL_NONZERO_INDICATOR"
+    spec = spec$second_stage_spec,
+    auxiliary_variables = auxiliary_variables,
+    response_name = "BASAL_NONZERO_INDICATOR"
   )
   
   return (spec)
 }
 
+# fit_helpers.R
+
+#' Accept inputs for fitting a model
+#'
+#' @param spec a
+#'
+#' @param data a
+#'
+#' @param chains a
+#'
+#' @param iter a
+#'
+#' @param burn_in a
+#'
+#' @param thin a
+#'
+#' @param engine a
+#'
+#' @return a
+#'
+#' @noRd
+validate_fit_inputs <- function(spec,
+                                data,
+                                chains,
+                                iter,
+                                burn_in,
+                                thin,
+                                engine) {
+  
+  check_inherits("basal_spec", spec)
+  check_inherits("data.frame", data)
+  check_inherits("numeric", chains, iter, burn_in, thin)
+  
+  if (length(engine) != 1 || !is.character(engine) || is.na(engine)) {
+    stop("`engine` must be a single character string.")
+  }
+  if (engine != "brms") {
+    stop("Sorry, only `engine = \"brms\"` is currently supported.")
+  }
+  mcmc_args <- list(chains = chains, iter = iter, burn_in = burn_in, thin = thin)
+  bad_length <- names(mcmc_args)[lengths(mcmc_args) != 1]
+  if (length(bad_length) > 0) {
+    stop(
+      "The following argument", if (length(bad_length) > 1) "s must" else "must",
+      " have length one: ", paste0("`", bad_length, "`", collapse = ", "),"."
+    )
+  }
+  mcmc_args <- unlist(mcmc_args)
+  non_finite <- names(mcmc_args)[!is.finite(mcmc_args)]
+  if (length(non_finite) > 0) {
+    stop(
+      "The following argument", if (length(non_finite) > 1) "s are" else " is",
+      " not finite: ", paste0("`", non_finite, "`", collapse = ", "), "."
+    )
+  }
+  non_integer <- names(mcmc_args)[mcmc_args != floor(mcmc_args)]
+  if (length(non_integer) > 0) {
+    stop(
+      "The following argument", if (length(non_integer) > 1) "s must" else " must",
+      " be integer-valued: ", paste0("`", non_integer, "`", collapse = ", "), "."
+    )
+  }
+  positive_args <- mcmc_args[c("chains", "iter", "thin")]
+  non_positive <- names(positive_args)[positive_args <= 0]
+  if (length(non_positive) > 0) {
+    stop(
+      "The following argument", if (length(non_positive) > 1) "s must" else " must",
+      " be positive: ", paste0("`", non_positive, "`", collapse = ", "), "."
+    )
+  }
+  if (burn_in < 0) {
+    stop("`burn_in` must be non-negative.")
+  }
+  if (burn_in >= iter) {
+    stop("`burn_in` must be smaller than `iter`.")
+  }
+}
+
+
+#' Extract the response variable from a BASAL specification
+#'
+#' @param spec a
+#'
+#' @return a
+#'
+#' @noRd
+get_fit_response <- function(spec) {
+  
+  if (is.null(spec$formula)) {
+    response <- spec$default_model_data$response_name
+  } else if (inherits(spec$formula, "brmsformula")) {
+    response <- all.vars(spec$formula$formula[[2]])[1]
+  } else {
+    response <- all.vars(spec$formula[[2]])[1]
+  }
+  if (is.null(response) || length(response) != 1 || is.na(response) || response == "") {
+    stop("Unable to determine the response variable from `spec`.")
+  }
+  
+  return(response)
+}
+
+
+#' Check variables required by a model formula
+#'
+#' @param formula a
+#'
+#' @param data a
+#'
+#' @return a
+#'
+#' @noRd
+validate_formula_data <- function(formula, data) {
+  
+  if (inherits(formula, "brmsformula")) {
+    variables <- all.vars(formula$formula)
+  } else {
+    variables <- all.vars(formula)
+  }
+  variables <- variables[!(variables %in% c("BASAL_HT_SE"))]
+  missing <- setdiff(variables, colnames(data))
+  if (length(missing) == 1) {
+    stop(paste0("Variable ", missing," missing from your data."))
+  }
+  if (length(missing) > 1) {
+    stop(paste0("Variables ", paste0(missing, collapse = ", "), " missing from your data."))
+  }
+  
+  return(variables)
+}
