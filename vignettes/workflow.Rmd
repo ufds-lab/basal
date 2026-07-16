@@ -26,7 +26,7 @@ data("oregon_population", "oregon_sample")
 
 \section{Data Description}
 
-Here's some data. There will be a better section here, or no section, depending. Either way, these are FIA data like what we might use, but they are public. We have anumber of columns, of which I have selected the interesting ones.
+Here's some data. There will be a better section here, or no section, depending. Either way, these are FIA data like what we might use, but they are public. We have a number of columns, of which I have selected the interesting ones.
 
 ```{r}
 oregon_population = oregon_population |>
@@ -36,6 +36,7 @@ oregon_sample = oregon_sample |>
 ```
 
 To assist with stability and reduce variability of priors, we will scale the `elev` variable to have a smaller variance. We will discuss this more in depth in another vignette---`advanced_model_fitting`---but take it for granted here.
+
 ```{r}
 # sapply(oregon_sample, sd) # find variables with large variances
 
@@ -79,7 +80,7 @@ In the transition to the area-level model, while modeling assumptions may become
 
 ```{r}
 FH_spec <- specify(
-  model = "FH",
+  model = "FH", # only line that changes
   domain_name = "evt_class_cd",
   response_name = "biomass",
   auxiliary_variables = c("lfevc", "ppt")
@@ -193,8 +194,7 @@ estimate.basal_fit(
 )
 ```
 
-This allows us to make inferences like ``This model assigns 95% posterior probability to the event where the mean biomass in oregon is within the interval above''. Although, it's important to remember that this model is on modified data, where we excluded zeroes.
-
+This allows us to make inferences like ``This model assigns 95% posterior probability to the event where the mean biomass in Oregon is within the interval above''. Although, it's important to remember that this model is on modified data, where we excluded zeroes.
 
 \section{Zero Inflated Estimators/Two-Stage Models}
 
@@ -212,7 +212,7 @@ zi_BHF <- specify(
     transform = function (y) {y^(1/4)},
     inv_transform = function (y) {y^4}
   ),
-  model_stage = "zi"
+  model_stage = "zi" # add this to make zero-infalted
 )
 ```
 
@@ -281,7 +281,7 @@ zi_fit = fit.basal_spec(
 )
 ```
 
-and likewise we can view posterior predictives, which now creates plots for both models individually as well as the joint resposne and logistic model.
+and likewise we can view posterior predictives, which now creates plots for both models individually as well as the joint response and logistic model.
 
 ```{r}
 zi_check = check.basal_fit(

@@ -122,8 +122,9 @@ specify <- function(formula = NULL,
                     variable_transform = NULL,
                     family = stats::gaussian(),
                     model_stage = "single",
-                    specifying_second_stage_model = FALSE,
-                    second_stage_spec = NULL) {
+                    specifying_second_stage_model = FALSE, # should change this variable name
+                    second_stage_spec = NULL
+) {
 
   # If we have a custom model, the user must provide a formula and a level
   # If we have a non-custom model, the user must specify a model (type)
@@ -172,12 +173,15 @@ specify <- function(formula = NULL,
   }
 
   # correct/set variables depending on their level
+  # auto-aggregation related checks
   if (!is.null(spec$level) && spec$level == "unit" && !is.null(spec$obs_variability)) {
     message("Supplied variability of the observations. This isn't used ",
             "use `y | se(obs_variability) ~ <covariates>`",
             " to specify known variance.")
+    # re-export brms::se
     spec$obs_variability <- NULL
   }
+  # think about this below (check if we need is.null check) (leland)
   if (!is.null(spec$level) &&
       spec$level == "area" &&
       is.null(spec$domain_name) &&

@@ -31,7 +31,10 @@ check_inherits <- function(what, ...) {
 #' `NULL` to aggregate `data`.
 #' 
 #' @keywords internal
-agg_HT <- function(data, res, N, domain, agg_data = NULL) {
+agg_HT <- function(data, res, N, domain, agg_data = NULL, ...) {
+  # one day we would like to pass additional arguments to mase for things like
+  # survey weights and whatnot
+  # could be nice to allow the user to pick the direct estimator
   if (is.null(agg_data)) {
     make_aggs <- T
     agg_data <- data[1,]
@@ -55,7 +58,8 @@ agg_HT <- function(data, res, N, domain, agg_data = NULL) {
       mase::horvitzThompson(y = thedata[[res]],
                       N = N,
                       var_est = T,
-                      messages = F)
+                      messages = F,
+                      ...)
     if (make_aggs) {
       agg_data[i,] <- c(
         lapply(thedata, function(x) {
@@ -156,15 +160,16 @@ validate_single_stage_spec <- function(spec, auxiliary_variables, response_name)
     spec$response_name <- NULL
     spec$auxiliary_variables <- NULL
     spec$default_model_data <- NULL
-  } else if (spec$model_type != "aux_spec") {
+  } else {
     if (is.null(spec$domain_name) ||
         is.null(response_name) ||
         is.null(auxiliary_variables)) {
+      # make a better error message
       stop("Must provide domain, response, and auxiliary variable names for pre-set models.")
     }
     if (spec$model_type == "BHF") spec$level <- "unit"
     if (spec$model_type == "FH") spec$level <- "area"
-    spec$formula <- NULL;
+    spec$formula <- NULL
 
     spec$default_model_data <- list(
       response_name = response_name,
@@ -179,6 +184,10 @@ validate_single_stage_spec <- function(spec, auxiliary_variables, response_name)
 validate_GLM_two_stage_spec = function(spec, response_name, auxiliary_variables) {
   if (spec$family$family != "bernoulli") {
     spec$family <- brms::bernoulli()
+    if (!(spec$family$family %in% c("bernoulli", "gaussian"))) {
+      # more informative
+      warning("Your model family is being ignored, replaced with bernoulli, for logistic model.")
+    }
   }
   if (spec$model_type == "custom") {
     if (is.null(spec$formula) ||
@@ -202,8 +211,9 @@ validate_GLM_two_stage_spec = function(spec, response_name, auxiliary_variables)
     }
     if (!is.null(response_name)) {
       message(paste0(
-        "Response variables cannot be specified for the GLM, the response ",
-        "will be whether or not the response in the response model is nonzero."
+        "Response variables cannot be specified for the second-stage logistic ",
+        "model, the response will be whether or not the response in the ",
+        "response model is nonzero."
       ))
     }
     spec$default_model_data <- list(
@@ -231,9 +241,11 @@ validate_transformation <- function(transformation) {
         round(transformation$inv_transform(transformation$transform(i)),10) == i
     }
     if (!identity) {
+      # make this a better error message
       stop(paste0(
         "variable_transform$inv_transform isn't a right-inverse of ",
-        "variable_transform$transform on 0:512."
+        "variable_transform$transform on 0:512. ",
+        "Add override = TRUE somewhere, idk"
       ))
     }
   }
@@ -268,7 +280,7 @@ validate_second_stage <- function(spec, auxiliary_variables) {
              is.null(auxiliary_variables))) {
           stop(paste0(
             "Did not specify domain or auxiliary variables in ",
-            "the second stage model. This model is custom and you have not ",
+            "the logistic model. This model is custom and you have not ",
             "specified domain_name or auxiliary_variables. Please further ",
             "specify the second stage, set second stage to custom, ",
             "or set these variables here"
@@ -287,7 +299,7 @@ validate_second_stage <- function(spec, auxiliary_variables) {
         }
       } else {
         if (is.null(spec$second_stage_spec$formula)) {
-          message(paste0(
+          warning(paste0(
             "Can't inherit formula from model type ", spec$model_type, ". Setting second ",
             "stage model type to ", spec$model_type, ". To use custom second stage, set ",
             "the formula in the second stage."

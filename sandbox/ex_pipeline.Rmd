@@ -206,7 +206,7 @@ To do:
 2. (maybe) implement generics like `predict()`, `posterior_predict()`, or `post_epred()`
   - would make things like posterior predictive checks for two-stage models and similar things much much easier
   - While we're at it, we could extend `summary()` to `fit.basal` class
-3. Implement ZI estimator
+3. Add credible intervals by default
 
 
 Questions:
