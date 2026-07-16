@@ -12,7 +12,7 @@
 get_response_scale <- function(data, response) {
   
   response_sd <- sd(data[[response]], na.rm = TRUE)
-  if (!is.finite(response_sd) || response_sd <= 0) {
+  if (is.infinite(response_sd) || response_sd <= 0) {
     stop("Unable to calculate response standard deviation.")
   }
   
@@ -97,6 +97,7 @@ build_basal_priors <- function(
     if (!inherits(user_priors, "brmsprior")) {
       stop("`priors` must inherit from class 'brmsprior'.")
     }
+    # use validate_prior()
     return(user_priors)
   }
   

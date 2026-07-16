@@ -1,33 +1,33 @@
 #' Fit a Specified Small Area Estimation Model Object
 #'
-#' @param spec An object of class basal_spec containing initialized metadata states.
+#' @param spec An object of class `basal_spec` containing initialized metadata states.
 #'
 #' @param data A data.frame containing the response variable and all predictor covariates.
 #'
 #' @param population_size Number of plots like those sampled in data. Necessary
 #' for auto-aggregation in area-level models.
 #'
-#' @param priors Optional prior specification. If NULL, default priors are supplied.
+#' @param priors Optional prior specification. If `NULL`, default priors are supplied.
 #' 
 #' @param second_stage_priors Optional prior specification for the Bernoulli
-#' second-stage model in a two-stage zero-inflated specification. If NULL, 
+#' second-stage model in a two-stage zero-inflated specification. If `NULL`, 
 #' default priors are supplied.
 #'
-#' @param chains Numeric integer. Number of MCMC chains. Defaults to 3.
+#' @param chains Numeric integer. Number of MCMC chains. Defaults to `3`.
 #'
-#' @param iter Numeric integer. Total number of iterations per chain. Defaults to 6000.
+#' @param iter Numeric integer. Total number of iterations per chain. Defaults to `6000`.
 #'
-#' @param burn_in Numeric integer. Number of burn-in/burn_in iterations per chain. Defaults to 2000.
+#' @param burn_in Numeric integer. Number of burn-in/warmup iterations per chain. Defaults to `2000`.
 #'
-#' @param seed Numeric integer. Seed for random number generation. Defaults to 1.
+#' @param seed Numeric integer. Seed for random number generation. Defaults to `1`.
 #' 
-#' @param thin Thinning for the MCMC. The model keeps every one in every thin observations
+#' @param thin Thinning for the MCMC. The model keeps every one in every `thin` observations
 #' 
-#' @param engine Engine used for fitting model. Can only use engine = "brms" right now
+#' @param engine Engine used for fitting model. Can only use `engine = "brms"` right now
 #' 
 #' @param ncores number of cores to use to computed MCMC chains in parallel
 #' 
-#' @param nthreads number of cores to speed up individual MCMC chains
+#' @param nthreads number of cores to speed up individual MCMC chains. Chosen by default in conjunction with `ncores`.
 #'
 #' @param ... Additional arguments passed to the model fitting engine.
 #'
@@ -47,7 +47,7 @@ fit.basal_spec <- function(spec,
                            thin = 2,
                            engine = "brms",
                            ncores = default_ncores(),
-                           nthreads = 1,
+                           nthreads = "default",
                            ...) {
   
   func_call <- match.call()
@@ -65,7 +65,7 @@ fit.basal_spec <- function(spec,
   res <- get_fit_response(spec)
   second_stage_fit <- NULL
   unfiltered_data <- NULL
-  
+
   if (!is.null(spec$second_stage_spec)) {
     message(
       "Estimating two models for two-stage model. ",
@@ -78,7 +78,7 @@ fit.basal_spec <- function(spec,
     )
     
     second_stage_fit <- fit_second_stage(
-      spec = spec,
+      spec = spec$second_stage_spec,
       data = two_stage_data$unfiltered_data,
       priors = second_stage_priors,
       chains = chains,
@@ -93,7 +93,7 @@ fit.basal_spec <- function(spec,
     )
     
     unfiltered_data <- two_stage_data$unfiltered_data
-    data <- two_stage_data$positive_data
+    data <- two_stage_data$nonzero_data
   }
   
   if (spec$level == "area" && !is.null(spec$variable_transform)) {
