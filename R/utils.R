@@ -150,3 +150,11 @@ entropy = function (x, success = 1) {
   H[is.nan(H)] <- 0
   return (H)
 }
+
+lower_ci_quantile = function(x, ...) {
+  stats::quantile(x, 0.025, ...)
+}
+
+upper_ci_quantile = function(x, ...) {
+  stats::quantile(x, 0.975, ...)
+}

@@ -1,0 +1,126 @@
+---
+title: "Advanced Specification"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{workflow}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+mean = mean
+sd = sd
+quantile = quantile
+```
+
+```{r setup}
+library(basal)
+library(tidyverse)
+
+data("oregon_population", "oregon_sample")
+```
+
+\section{Data Description}
+
+Here's some data. There will be a better section here, or no section, depending. Either way, these are FIA data like what we might use, but they are public. We have a number of columns, of which I have selected the interesting ones.
+
+```{r}
+oregon_population = oregon_population |>
+  dplyr::select(c("countyfips", "tnt", "evt_class_cd", "ppt", "elev", "lfevc"))
+oregon_sample = oregon_sample |>
+  dplyr::select(c("biomass", "countyfips", "tnt", "evt_class_cd", "ppt", "elev", "lfevc"))
+```
+
+To assist with stability and reduce variability of priors, we will scale the `elev` variable to have a smaller variance. We will discuss this more in depth in another vignette---`advanced_model_fitting`---but take it for granted here.
+
+```{r}
+# sapply(oregon_sample, sd) # find variables with large variances
+
+oregon_population$elev = oregon_population$elev/sd(oregon_sample$elev)
+oregon_sample$elev = oregon_sample$elev/sd(oregon_sample$elev)
+
+oregon_population$ppt = oregon_population$ppt/sd(oregon_sample$ppt)
+oregon_sample$ppt = oregon_sample$ppt/sd(oregon_sample$ppt)
+```
+
+\section{Details of `specify`}
+While a model may be specified quite easily, there can be a good amount of nuance in a specification. We will start with a BHF and expand outwards into increasingly complex models. A basic BHF can be specified like below with `model = "BHF"`.
+
+```{r}
+bhf <- specify(
+  model = "BHF", 
+  auxiliary_variables = c("lfevc", "ppt"),
+  domain = "evt_class_cd", 
+  response = "biomass"
+)
+```
+
+Although, as alluded to in the vignette on basic workflow, a variable transformation is often useful for acceptable model fitness. This can be specified through supplying a transformation as well as an inverse transformation. The inverse transformation should be a left-inverse of the transformation. The response variable for the model is transformed before model fitting in `fit`, and then before returning values in `estimate`. If estimating a two-stage model, then the response values are transformed before weighting pixels by their probability of nonzero values. \textcolor{red}{I will add more to this once this is more interesting to talk about more.}
+
+```{r}
+bhf <- specify(
+  model = "BHF", 
+  auxiliary_variables = c("lfevc", "ppt"),
+  domain = "evt_class_cd", 
+  response = "biomass",
+  variable_transform = list(
+    transform = function (y) {y^(1/4)},
+    inv_transform = function (y) {y^4}
+  )
+)
+```
+
+
+
+
+
+\section{Modeling parameters of the model explicitly}
+A common issue with linear regression is heteroscedasticity, or data with different residual variances. Models which try to fix this are possible in the Bayesian context, and quite simple with `brms`, and by extension `basal`.
+
+```{r}
+logit_dvi = specify(
+  model = "BHF",
+  auxiliary_variables = c("lfevc", "ppt"),
+  domain = "evt_class_cd",
+  specifying_second_stage = TRUE
+)
+
+dvi_spec = specify(
+  brms::brmsformula(biomass ~ lfevc + ppt + (1 | evt_class_cd),
+              sigma ~ (1 | evt_class_cd)),
+  level = "unit",
+  variable_transform = list(
+    transform = function (y) {y^(1/4)},
+    inv_transform = function (y) {y^4}
+  ),
+  model_stage = "zi",
+  second_stage_spec = logit_dvi
+)
+
+dvi_fit = fit.basal_spec(
+  dvi_spec,
+  oregon_sample,
+  ncores = 3
+)
+
+check.basal_fit(
+  dvi_fit,
+)
+
+estimates <- estimate.basal_fit(
+  fit = dvi_fit,
+  newdata = oregon_population,
+  max_preds = 1e5,
+  ndraws = 800
+); estimates
+```
+
+```{r}
+estimates
+```
+
+

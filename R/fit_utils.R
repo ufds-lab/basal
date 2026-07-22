@@ -10,18 +10,18 @@ validate_fit_inputs <- function(spec,
 				ncores,
 				nthreads) {
   
-  parallel = do_parallell_settings(chains, ncores, nthreads)
+  parallel = do_parallel_settings(chains, ncores, nthreads)
   ncores = parallel$ncores
   nthreads = parallel$nthreads
-  if (!is.integer(ncores)) {
+  if ((ncores %% 1) != 0) {
     stop(
       "`ncores` must be an integer, but instead ", ncores, " was given."
-    ))
+    )
   }
-  if (nthreads != "default" && !is.integer(nthreads)) {
+  if (nthreads != "default" && ((nthreads %% 1) != 0)) {
     stop(
       "`nthreads` must be either \"default\" or an integer. Not ", nthreads, "."
-    ))
+    )
   }
 
   check_inherits("basal_spec", spec)
@@ -110,7 +110,7 @@ validate_formula_data <- function(formula, data) {
   variables <- variables[!(variables %in% c("BASAL_HT_SE"))]
   missing <- setdiff(variables, colnames(data))
   if (length(missing) == 1) {
-    stop("Variable ", missing," missing from your data."))
+    stop("Variable ", missing," missing from your data.")
   }
   if (length(missing) > 1) {
     stop("Variables ", paste0(missing, collapse = ", "), " missing from your data.")
@@ -454,7 +454,7 @@ prepare_two_stage_data <- function(data, response) {
   }
   unfiltered_data <- data
   nonzero_data <- data[!is.na(data[[response]]) & data[[response]] != 0,]
-  if (nrow(positive_data) == 0) {
+  if (nrow(nonzero_data) == 0) {
     stop("No nonzero observations were found for response variable ", response, ".")
   }
   return(
@@ -481,12 +481,12 @@ fit_second_stage <- function(spec,
                              nthreads,
                              ...) {
   
-  if (is.null(spec$second_stage_spec)) {
+  if (is.null(spec)) {
     return(NULL)
   }
   
   second_stage_fit <- fit.basal_spec(
-    spec = spec$second_stage_spec,
+    spec = spec,
     data = data,
     population_size = NULL,
     priors = priors,

@@ -21,12 +21,22 @@ estimate.basal_fit <- function(
     newdata = NULL,
     domain = "BASAL_INHERIT",
     stat = c(mean = base::mean, 
-             var = stats::var),
+             var = stats::var,
+            lower_95_ci = lower_ci_quantile,
+            upper_95_ci = upper_ci_quantile),
+    aggregation_statistic = c(mean = base::mean),
     ndraws = 1000,
-    max_preds = 1e5,
+    max_preds = "default",
     seed = NULL
 ) {
 
+  if (max_preds == "default") {
+    warning(
+      "For ease of computation, argument `max_preds = 1e5`. This sub-samples `newdata`. ",
+      "To disable or change this, use `max_preds = NULL` or another value."
+    )
+    max_preds <- 1e5
+  }
   two_stage <- !is.null(fit$second_stage_fit)
 
   if (is.null(newdata)) {
@@ -130,10 +140,10 @@ estimate.basal_fit <- function(
 
   preds <- nd_subset |>
     dplyr::group_by_at(domain) |>
-    dplyr::reframe(dplyr::across(paste0("rep", 1:ndraws), mean)) |>
+    dplyr::reframe(dplyr::across(paste0("rep", 1:ndraws), aggregation_statistic[[1]])) |>
     tidyr::pivot_longer(1 + 1:ndraws,
                         names_to = "draw",
-                        values_to = "predicted_mean")
+                        values_to = "predicted_stat")
 
   og_stat = stat
   # oftentimes, there will be weird NAs, and having functions which are slightly
@@ -160,17 +170,35 @@ estimate.basal_fit <- function(
     tmp <- stat[[i]](1:10)
   }
   
-  
   if (domain != "BASAL_OVERALL") {
     ret_preds <- preds |>
       dplyr::group_by_at(domain) |>
-      dplyr::mutate(dplyr::across(predicted_mean, stat)) |>
-      dplyr::select(-c(draw, predicted_mean)) |>
+      dplyr::mutate(dplyr::across(predicted_stat, stat)) |>
+      dplyr::select(-c(draw, predicted_stat)) |>
       dplyr::ungroup() |>
       unique()
+    base::colnames(ret_preds) = sapply(
+      colnames(ret_preds),
+      function(name) {
+        base::gsub("predicted_stat",
+                   paste0("predicted_", names(aggregation_statistic)[1]),
+                   x = name)
+      }
+    )
   } else {
-    ret_preds <- sapply(stat, function(stat) {stat(preds$predicted_mean)})
+    ret_preds <- sapply(stat, function(stat) {stat(preds$predicted_stat)})
+    base::names(ret_preds) = paste0("predicted_stat_", 
+                                    base::names(ret_preds))
+    base::names(ret_preds) = sapply(
+      base::names(ret_preds),
+      function(name) {
+        base::gsub("predicted_stat",
+                   paste0("predicted_", names(aggregation_statistic)[1]),
+                   x = name)
+      }
+    )
   }
+                                         
   
   ret <- list(
     fit = fit,

@@ -10,7 +10,8 @@ vignette: >
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
+  comment = "#>",
+  cache = TRUE
 )
 mean = mean
 sd = sd
@@ -168,18 +169,31 @@ estimate.basal_fit(
 )
 ```
 
-but we could also compute estimates on other small areas. For example, though we used county as the domain when specifying the model, we could estimate on the level of `countyfips`, the different counties, this is possibly more desirable for estimates.
+This gives the summary statistics about the predicted average value, the `predicted_mean`. By default, it has a point estimate and variance for the `predicted_mean`, as well as quantiles for a 95% credible interval. The interpretation of a credible interval is like a confidence interval, except we can work with probabilities. So an interpretation could be that ``The probability that the mean biomass is within the interval above for any of the counties is 95%''. There will be another interpretation with more explicit values shortly. We don't need to be restricted to the domain (if any) we used in specifying our model. For example, though we used county as the domain when specifying the model, we could estimate on the level of `countyfips`, the different counties, this is possibly more desirable for estimates.
 
 ```{r}
-estimate.basal_fit(
+e = estimate.basal_fit(
   BHF_fit_trans,
   oregon_population,
   domain = "countyfips"
 )$preds |>
   head(5)
+
+e %>%
+  dplyr::filter(countyfips %in% c(
+    41001, 41003, 41005, 41007, 41017
+  )) %>%
+  mutate(county = case_when(
+    countyfips == 41001 ~ "Baker",
+    countyfips == 41003 ~ "Benton",
+    countyfips == 41005 ~ "Clackamas",
+    countyfips == 41007 ~ "Clatsop",
+    countyfips == 41017 ~ "Deschutes"
+  )) %>%
+  dplyr::select(county, everything(), -countyfips)
 ```
 
-By default, `estimate()` provides estimates of the mean and variance, however, the estimated statistics can be changed by changing the `stat` argument. For example, to construct credible intervals, we can use a wrapper around the quantile function. In general, when providing functions in the form of `stat`, they should allow the additional argument `...`, or otherwise ignore `NA` values. Also in this case, since we are working with extreme quantiles, we increase the number of draws.
+By default, `estimate()` provides estimates of the mean and variance, however, the estimated statistics can be changed by changing the `stat` argument. For example, to construct credible intervals, we can use a wrapper around the quantile function. In general, when providing functions in the form of `stat`, they should allow the additional argument `...`, or otherwise ignore `NA` values. 
 
 ```{r}
 estimate.basal_fit(
@@ -187,14 +201,24 @@ estimate.basal_fit(
   oregon_population,
   domain = NULL,
   stat = c(mean = mean, se = sd, 
-           lower_CI = function(x, ...) {quantile(x, 0.025, ...)},
-           upper_CI = function(x, ...) {quantile(x, 0.975, ...)}),
-  ndraws = 5000,
-  max_preds = 1e4
+           lower_CI = function(x, ...) {quantile(x, 0.1, ...)},
+           upper_CI = function(x, ...) {quantile(x, 0.9, ...)})
 )
 ```
 
-This allows us to make inferences like ``This model assigns 95% posterior probability to the event where the mean biomass in Oregon is within the interval above''. Although, it's important to remember that this model is on modified data, where we excluded zeroes.
+This allows us to make inferences like ``This model assigns 80% posterior probability to the event where the mean biomass in Oregon is within the interval above''. Although, it's important to remember that this model is on modified data, where we excluded zeroes.
+
+One other thing we can do is use other aggregation statistics. Generally, it is the mean we wish to do inference on---that is, draw inference on the value of the mean or our understanding thereof. However, we can do inference on other statistics. For example, we could do inference on the variance or standard error of biomass values, rather than means of biomass values. Unlike the values for `stat` though, you can only use one aggregation statistic at a time.
+
+```{r}
+estimate.basal_fit(
+  BHF_fit_trans,
+  oregon_population,
+  ndraws = 800,
+  max_preds = 1e4,
+  aggregation_statistic = c(se = sd)
+)
+```
 
 \section{Zero Inflated Estimators/Two-Stage Models}
 
@@ -295,14 +319,14 @@ and finally, posterior estimation is just as before:
 estimate.basal_fit(
   zi_fit,
   oregon_population,
-  domain = NULL,
-  ndraws = 4000,
+  ndraws = 800,
   max_preds = 1e4,
-  stat = c(mean = mean, se = sd,
-           lower_CI = function(x, ...) {quantile(x, 0.025, ...)},
-           upper_CI = function(x, ...) {quantile(x, 0.975, ...)})
+  stat = c(mean = mean, var = var,
+           lower_80_ci = function(x, ...) {quantile(x, 0.01, ...)},
+           upper_80_ci = function(x, ...) {quantile(x, 0.9, ...)})
 )
 ```
+
 
 
 

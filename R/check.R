@@ -132,11 +132,11 @@ custom_pp_check <- function(
     pp <- brms::posterior_predict(object$model, ndraws = draws,
                                   newdata = object$data)
   } else {
-    pp <- brms::posterior_predict(object$model, ndraws = draws,
-                                  newdata = object$unfiltered_data,
-                                  allow_new_levels = T)
-    pp <- pp * brms::posterior_predict(object$second_stage_fit$model, ndraws = draws,
-                                      newdata = object$unfiltered_data)
+    probs <- brms::posterior_predict(object$second_stage_fit$model, ndraws = draws,
+                                     newdata = object$unfiltered_data)
+    pp <- probs * brms::posterior_predict(object$model, ndraws = draws,
+                                          newdata = object$unfiltered_data, 
+                                          allow_new_levels = T)
   }
   post_checks <- sapply(stat, function(fun) {
     apply(pp, MARGIN = 1, FUN = fun)

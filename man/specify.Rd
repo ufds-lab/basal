@@ -101,7 +101,6 @@ plot_spec_bhf <- specify(
 FH_spec <- specify(
   model = "FH",
   domain_name = "county",
-  response_name = "county",
   response_name = "obs_biomass",
   auxiliary_variables = c("evc", "evt")
  )

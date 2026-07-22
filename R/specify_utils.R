@@ -171,8 +171,12 @@ validate_second_stage <- function(spec, auxiliary_variables) {
     if (spec$second_stage_spec$model_type == spec$model_type) {
       if (spec$second_stage_spec$model_type == "custom") {
         if (is.null(spec$second_stage_spec$formula)) {
-          spec$second_stage_spec$formula <- spec$formula
-        }
+	  if (inherits(spec$formula, "brmsformula")) {
+            spec$second_stage_spec$formula <- spec$formula[[1]]
+          } else {
+	    spec$second_stage_spec$formula <- spec$formula
+	  }
+	}
         if (is.null(spec$second_stage_spec$level)) {
           spec$second_stage_spec$level <- spec$level
         }
@@ -188,11 +192,13 @@ validate_second_stage <- function(spec, auxiliary_variables) {
     }
   }
   
-  validate_single_stage_spec(
-    spec = spec$second_stage_spec,
-    auxiliary_variables = auxiliary_variables,
-    response_name = "BASAL_NONZERO_INDICATOR"
-  )
+  if (spec$second_stage_spec$model_type == "custom") {
+    validate_single_stage_spec(
+      spec = spec$second_stage_spec,
+      auxiliary_variables = spec$second_stage_spec$default_model_data$auxiliary_variables,
+      response_name = "BASAL_NONZERO_INDICATOR"
+    )
+  }
   
   return (spec)
 }

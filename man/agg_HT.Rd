@@ -4,7 +4,7 @@
 \alias{agg_HT}
 \title{Apply Direct Estimators to data}
 \usage{
-agg_HT(data, res, N, domain, agg_data = NULL)
+agg_HT(data, res, N, domain, agg_data = NULL, ...)
 }
 \arguments{
 \item{data}{Data to compute the direct estimators on}

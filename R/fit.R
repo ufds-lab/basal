@@ -59,7 +59,9 @@ fit.basal_spec <- function(spec,
     iter = iter,
     burn_in = burn_in,
     thin = thin,
-    engine = engine
+    engine = engine,
+    nthreads = nthreads,
+    ncores = ncores
   )
   
   res <- get_fit_response(spec)
@@ -106,7 +108,11 @@ fit.basal_spec <- function(spec,
   if (!is.null(spec$variable_transform)) {
     trans <- spec$variable_transform$transform
     data[[res]] <- trans(data[[res]])
+    if (!is.null(spec$second_stage_spec)) {
+      unfiltered_data[[res]] <- trans(unfiltered_data[[res]])
+    }
   }
+    
   
   area_data <- prepare_area_level_data(
     spec = spec,

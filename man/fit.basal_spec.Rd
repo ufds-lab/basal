@@ -9,6 +9,7 @@ fit.basal_spec(
   data,
   population_size = NULL,
   priors = NULL,
+  second_stage_priors = NULL,
   chains = 3,
   iter = 5000,
   burn_in = 1000,
@@ -16,7 +17,7 @@ fit.basal_spec(
   thin = 2,
   engine = "brms",
   ncores = default_ncores(),
-  nthreads = 1,
+  nthreads = "default",
   ...
 )
 }
@@ -25,18 +26,22 @@ fit.basal_spec(
 
 \item{data}{A data.frame containing the response variable and all predictor covariates.}
 
-\item{population_size}{Number of plots like those sampled in \code{data}. Necessary
+\item{population_size}{Number of plots like those sampled in data. Necessary
 for auto-aggregation in area-level models.}
 
-\item{priors}{Optional prior specification. If NULL, default priors are supplied.}
+\item{priors}{Optional prior specification. If \code{NULL}, default priors are supplied.}
 
-\item{chains}{Numeric integer. Number of MCMC chains. Defaults to 3.}
+\item{second_stage_priors}{Optional prior specification for the Bernoulli
+second-stage model in a two-stage zero-inflated specification. If \code{NULL},
+default priors are supplied.}
 
-\item{iter}{Numeric integer. Total number of iterations per chain. Defaults to 6000.}
+\item{chains}{Numeric integer. Number of MCMC chains. Defaults to \code{3}.}
 
-\item{burn_in}{Numeric integer. Number of burn-in/burn_in iterations per chain. Defaults to 2000.}
+\item{iter}{Numeric integer. Total number of iterations per chain. Defaults to \code{6000}.}
 
-\item{seed}{Numeric integer. Seed for random number generation. Defaults to 1.}
+\item{burn_in}{Numeric integer. Number of burn-in/warmup iterations per chain. Defaults to \code{2000}.}
+
+\item{seed}{Numeric integer. Seed for random number generation. Defaults to \code{1}.}
 
 \item{thin}{Thinning for the MCMC. The model keeps every one in every \code{thin} observations}
 
@@ -44,12 +49,12 @@ for auto-aggregation in area-level models.}
 
 \item{ncores}{number of cores to use to computed MCMC chains in parallel}
 
-\item{nthreads}{number of cores to speed up individual MCMC chains}
+\item{nthreads}{number of cores to speed up individual MCMC chains. Chosen by default in conjunction with \code{ncores}.}
 
 \item{...}{Additional arguments passed to the model fitting engine.}
 }
 \value{
-An object of class \code{basal_fit} containing the results.
+An object of class basal_fit containing the results.
 }
 \description{
 Fit a Specified Small Area Estimation Model Object

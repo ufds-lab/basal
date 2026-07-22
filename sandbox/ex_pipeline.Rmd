@@ -200,7 +200,6 @@ estimate_two_stage = estimate.basal_fit(
 ); estimate_two_stage
 ```
 
-
 To do:
 1. Allow user to specify priors
 2. (maybe) implement generics like `predict()`, `posterior_predict()`, or `post_epred()`
@@ -208,6 +207,7 @@ To do:
   - While we're at it, we could extend `summary()` to `fit.basal` class
 3. Add credible intervals by default
 4. See if we can add variable transformations to area level (I think we can -Leland)
+5. Bring things like `brmsformula` into this package (just export the function)
 
 
 Questions:
