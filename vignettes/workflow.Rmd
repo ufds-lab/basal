@@ -13,9 +13,6 @@ knitr::opts_chunk$set(
   comment = "#>",
   cache = TRUE
 )
-mean = mean
-sd = sd
-quantile = quantile
 ```
 
 ```{r setup}

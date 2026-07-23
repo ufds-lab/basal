@@ -12,9 +12,6 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
 )
-mean = mean
-sd = sd
-quantile = quantile
 ```
 
 ```{r setup}
@@ -23,6 +20,18 @@ library(tidyverse)
 
 data("oregon_population", "oregon_sample")
 ```
+
+
+
+
+
+This vignette is not yet finished. You can read it if you like, though the information may be outdated or not well presented.
+
+
+
+
+
+
 
 \section{Data Description}
 
@@ -82,14 +91,14 @@ bhf <- specify(
 A common issue with linear regression is heteroscedasticity, or data with different residual variances. Models which try to fix this are possible in the Bayesian context, and quite simple with `brms`, and by extension `basal`.
 
 ```{r}
-logit_dvi = specify(
+logit_svd = specify(
   model = "BHF",
   auxiliary_variables = c("lfevc", "ppt"),
   domain = "evt_class_cd",
   specifying_second_stage = TRUE
 )
 
-dvi_spec = specify(
+svd_spec = specify(
   brms::brmsformula(biomass ~ lfevc + ppt + (1 | evt_class_cd),
               sigma ~ (1 | evt_class_cd)),
   level = "unit",
@@ -98,21 +107,21 @@ dvi_spec = specify(
     inv_transform = function (y) {y^4}
   ),
   model_stage = "zi",
-  second_stage_spec = logit_dvi
+  second_stage_spec = logit_svd
 )
 
-dvi_fit = fit.basal_spec(
-  dvi_spec,
+svd_fit = fit.basal_spec(
+  svd_spec,
   oregon_sample,
   ncores = 3
 )
 
 check.basal_fit(
-  dvi_fit,
+  svd_fit,
 )
 
 estimates <- estimate.basal_fit(
-  fit = dvi_fit,
+  fit = svd_fit,
   newdata = oregon_population,
   max_preds = 1e5,
   ndraws = 800
