@@ -73,31 +73,6 @@ validate_GLM_two_stage_spec = function(spec, response_name, auxiliary_variables)
   return (spec)
 }
 
-#' @noRd
-validate_transformation <- function(transformation) {
-  if (!is.null(transformation)) {
-    check_inherits("list", transformation)
-    check_inherits("function",
-                   transformation$transform, transformation$inv_transform)
-
-    identity = TRUE
-    for (i in 0:512) { # somewhat arbitrary points, we want zero to be included though
-      # we only check that inv_transform is a left inverse of transform, because 
-      # we never go the other way
-      identity = identity &&
-        round(transformation$inv_transform(transformation$transform(i)),10) == i
-    }
-    if (!identity) {
-      # make this a better error message
-      stop(paste0(
-        "variable_transform$inv_transform isn't a right-inverse of ",
-        "variable_transform$transform on 0:512. ",
-        "Add override = TRUE somewhere, idk"
-      ))
-    }
-  }
-}
-
 validate_second_stage <- function(spec, auxiliary_variables) {
   if (spec$level == "area") {
     message("Can't fit area-level models to zero observations, re-specifying as a unit-level.")
@@ -202,3 +177,54 @@ validate_second_stage <- function(spec, auxiliary_variables) {
   
   return (spec)
 }
+
+#' @title Make Variable Transformation
+#' @param transform Function to transform the response
+#' @param inv_transform Right inverse of `transform` i.e., `inv_transform(transform(x)) == x`
+#' @param eval_grid Grid of values to ensure that the `transform` and `inv_transform` are consistent with each other
+#' @param override logical flag to indicate that the check on `eval_grid` should be ignored.
+#' 
+#' @return Object of type `BASAL_transformation`
+#' @export
+make_variable_transform <- function(transform,
+                                    inv_transform,
+                                    eval_grid = 0:512,
+                                    override = FALSE) {
+  transformation = list(
+    transform = transform,
+    inv_transform = inv_transform
+  )
+  validate_transformation(transformation, eval_grid, override)
+  
+  class(transformation) <- "BASAL_transformation"
+  return (transformation)
+}
+
+#' @noRd
+validate_transformation <- function(transformation,
+                                    eval_grid, override) {
+  if (!is.null(transformation)) {
+    check_inherits("list", transformation)
+    check_inherits("function",
+                   transformation$transform, transformation$inv_transform)
+
+    if (!override) {
+      identity = TRUE
+      for (i in eval_grid) { # somewhat arbitrary points, we want zero to be included though
+        # we only check that inv_transform is a left inverse of transform, because 
+        # we never go the other way
+        identity = identity &&
+          round(transformation$inv_transform(transformation$transform(i)),10) == i
+      }
+      if (!identity) {
+        stop(paste0(
+          "variable_transform$inv_transform isn't a right-inverse of ",
+          "variable_transform$transform on `eval_grid` (defaults to 0:512). To bypass the check ",
+          "create your variable transformation with: ",
+          "`create_variable_transformation(transform, inv_transform, override = TRUE)`."
+        ))
+      }
+    }
+  }
+}
+

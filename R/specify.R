@@ -32,9 +32,9 @@
 #' @param auxiliary_variables Character vector containing names of covariates for
 #' the response. Defaults to using all other variables if unspecified in preset models.
 #'
-#' @param variable_transform a list specifying a variable transformation
-#' `transform` and inverse variable transformation `inv_transform`. These will be
-#' evaluated at points c(0,1) to ensure they work correctly.
+#' @param variable_transform Either an object of class `BASAL_transformation` from
+#' `make_variable_transform()` or a list specifying a variable transformation
+#' `transform` and inverse variable transformation `inv_transform`. 
 #'
 #' @param family GLM family type, specifying error distributions and links. See `help(stats::glm)`
 #' 
@@ -194,7 +194,11 @@ specify <- function(formula = NULL,
   }
 
   # validate the variable transformation --- make sure we have a left-inverse
-  validate_transformation(spec$variable_transform)
+  if (!is.null(spec$variable_transform) && 
+      !inherits(spec$variable_transform, "BASAL_transformation")) {
+    spec$variable_transform <- make_variable_transform(spec$variable_transform$transform,
+                                                       spec$variable_transform$inv_transform)
+  }
   
   if (spec$model_stage == "zi" && !specifying_second_stage_model) {
     spec <- validate_second_stage(spec, auxiliary_variables)

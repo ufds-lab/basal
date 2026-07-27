@@ -15,7 +15,7 @@ fit.basal_spec(
   burn_in = 1000,
   seed = NULL,
   thin = 2,
-  engine = "brms",
+  engine = engine_brms(),
   ncores = default_ncores(),
   nthreads = "default",
   ...

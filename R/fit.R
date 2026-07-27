@@ -45,7 +45,7 @@ fit.basal_spec <- function(spec,
                            burn_in = 1000,
                            seed = NULL,
                            thin = 2,
-                           engine = "brms",
+                           engine = engine_brms(),
                            ncores = default_ncores(),
                            nthreads = "default",
                            ...) {
@@ -64,7 +64,14 @@ fit.basal_spec <- function(spec,
     ncores = ncores
   )
   
+  spec <- validate_engine(engine, spec)
+  
+  vars <- all_model_vars(spec)
   res <- get_fit_response(spec)
+  
+  validate_model_variables(vars, data)
+  data <- data[, vars]
+  
   second_stage_fit <- NULL
   unfiltered_data <- NULL
 
@@ -122,22 +129,14 @@ fit.basal_spec <- function(spec,
   )
   
   data <- area_data$data
-  res <- area_data$response
-  unaggregated_data <- area_data$full_data
   
-  formula_info <- build_basal_formula(spec = spec, response = res)
-  formula <- formula_info$formula
-  valid_formula <- formula_info$valid_formula
-  
-  vars <- validate_formula_data(
-    formula = formula,
-    data = data
-  )
+  formula <- build_basal_formula(spec = spec, response = res)
   
   predictors <- vars[!(vars %in% c(res, "BASAL_HT_SE"))]
   
   model_priors <- build_basal_priors(
-    formula = valid_formula,
+    spec = spec,
+    formula = formula,
     data = data,
     family = spec$family,
     response = res,
@@ -153,8 +152,9 @@ fit.basal_spec <- function(spec,
   ncores <- parallel_settings$ncores
   nthreads <- parallel_settings$nthreads
   
-  raw_model <- fit_brms_model(
-    formula = valid_formula,
+  raw_model <- fit_basal_model(
+    spec = spec,
+    formula = formula,
     data = data,
     priors = model_priors,
     family = spec$family,
@@ -178,7 +178,8 @@ fit.basal_spec <- function(spec,
       response = res,
       predictors = predictors
     ),
-    second_stage_fit = second_stage_fit
+    second_stage_fit = second_stage_fit,
+    engine = engine
   )
   
   if (!is.null(second_stage_fit)) {
@@ -186,6 +187,6 @@ fit.basal_spec <- function(spec,
   }
   
   return(
-    structure(out, class = "basal_fit")
+    structure(out, class = c(paste0(engine$name, "_fit"), "basal_fit"))
   )
 }

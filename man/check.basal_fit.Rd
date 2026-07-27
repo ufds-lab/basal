@@ -6,12 +6,12 @@
 \usage{
 check.basal_fit(
   fit,
-  stat = c(ecdf = stats::ecdf),
+  stat = c(ecdf = ecdf),
   include_base_pp_check = TRUE,
   draws = 50,
   trace_plots = FALSE,
   two_stage_stat = c(proportion_positive = prop_positive),
-  join_two_stage_stat = c(joined_ecdf = stats::ecdf)
+  join_two_stage_stat = c(joined_ecdf = ecdf)
 )
 }
 \arguments{

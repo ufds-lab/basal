@@ -15,7 +15,9 @@ Imports:
     ggplot2,
     mase,
     tidyr,
-    bayesplot
+    bayesplot,
+    stats,
+    base
 Suggests: 
     knitr,
     rmarkdown

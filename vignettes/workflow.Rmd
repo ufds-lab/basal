@@ -144,7 +144,8 @@ And we can then fit a model and check the posterior predictives:
 ```{r, cache = TRUE, results = "hide"}
 BHF_fit_trans = fit.basal_spec(
   BHF_spec_trans,
-  oregon_sample[oregon_sample$biomass != 0,]
+  oregon_sample[oregon_sample$biomass != 0,],
+  engine = engine_rstanarm()
 )
 ```
 
@@ -153,6 +154,7 @@ check.basal_fit(
   BHF_fit_trans
 )
 ```
+
 
 All of these plots are much more reassuring. The empirical pdf and cdf both closely match the data with only slight deviations.
 

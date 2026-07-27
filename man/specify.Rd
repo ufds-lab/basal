@@ -50,9 +50,9 @@ response. Only required for preset framework.}
 \item{auxiliary_variables}{Character vector containing names of covariates for
 the response. Defaults to using all other variables if unspecified in preset models.}
 
-\item{variable_transform}{a list specifying a variable transformation
-\code{transform} and inverse variable transformation \code{inv_transform}. These will be
-evaluated at points c(0,1) to ensure they work correctly.}
+\item{variable_transform}{Either an object of class \code{BASAL_transformation} from
+\code{make_variable_transform()} or a list specifying a variable transformation
+\code{transform} and inverse variable transformation \code{inv_transform}.}
 
 \item{family}{GLM family type, specifying error distributions and links. See \code{help(stats::glm)}}
 

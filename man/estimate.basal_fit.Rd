@@ -8,9 +8,9 @@ estimate.basal_fit(
   fit,
   newdata = NULL,
   domain = "BASAL_INHERIT",
-  stat = c(mean = base::mean, var = stats::var, lower_95_ci = lower_ci_quantile,
-    upper_95_ci = upper_ci_quantile),
-  aggregation_statistic = c(mean = base::mean),
+  stat = c(mean = mean, var = var, lower_95_ci = lower_ci_quantile, upper_95_ci =
+    upper_ci_quantile),
+  aggregation_statistic = c(mean = mean),
   ndraws = 1000,
   max_preds = "default",
   seed = NULL
