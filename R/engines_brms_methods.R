@@ -45,20 +45,15 @@ get_fit_response.brms_spec <- function(spec, response = NULL) {
 all_model_vars.brms_spec <- function (spec, ss = FALSE) {
   if (spec$model_type == "custom") {
     if (inherits(spec$formula, "brmsformula")) {
-      tmp_vars <- all.vars(spec$formula$formula)
-      if (ss) {
-	tmp_vars <- tmp_vars[tmp_vars != spec$formula$formula[[2]]]
-      }
-
-      model_variables <- tmp_vars
-
+      model_variables <- all.vars(spec$formula$formula)
+      
       # now recurse through sub-equations, if there are any
       if (!is.null(spec$formula$pforms)) {
-	for (sub_form in formula$pforms) {
-	  sub_vars <- all.vars(sub_form)
-	  sub_vars <- sub_vars[sub_vars != sub_form[[2]]]
-	  model_variables <- c(variables, sub_vars)
-	}
+        for (sub_form in formula$pforms) {
+          sub_vars <- all.vars(sub_form)
+          sub_vars <- sub_vars[sub_vars != sub_form[[2]]]
+          model_variables <- c(variables, sub_vars)
+        }
       }
     } else {
       return (NextMethod("all_model_vars"))
@@ -70,16 +65,16 @@ all_model_vars.brms_spec <- function (spec, ss = FALSE) {
       spec$default_model_data$auxiliary_variables
     )
   }
-
+  
   if (!is.null(spec$second_stage_spec)) {
     model_variables <- c(
       model_variables,
       all_model_vars(spec$second_stage_spec)
     )
   }
-
+  
   model_variables <- unique(model_variables)
-
+  
   return (model_variables)
 }
 
@@ -198,7 +193,6 @@ build_basal_priors.brms_spec <- function (
     priors[sd_mask, ]$source <- "default (basal)"
   }
 
-  browser()
   if (priors$source[1] != "user") {
     reg_coef_mask <- priors$class == "b" & priors$coef != "" & default_priors
     default_predictors <- priors$coef[reg_coef_mask]

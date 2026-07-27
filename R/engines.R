@@ -2,25 +2,29 @@
 #' @description Internal function for ensuring an engine is able to fit a specification
 #' noRd
 validate_engine <- function(engine, spec) {
-  valid_engines = c("brms", "rstanarm") # MAKE THIS A PUBLIC VARIABLE - MAYBE PUT IN DATA
+  if (!inherits(engine, "basal_engine")) {
+    stop("Engines should be specified by a `basal::engine_*()` function.")
+  }
+  
   name <- engine$name
-  if (!(name %in% valid_engines)) {
-    stop("Engine ", name, " is not a registered engine with basal.")
+  if (!(name %in% basal_engines)) {
+    stop("Engine ", name, " is not a registered engine with basal. ",
+         "Valid engines for `basal` are: ", paste(basal_engines, collapse = ", "), ".")
   }
 
   if (!(is.null(spec$formula) || class(spec$formula)[1] %in% engine$formula_types)) {
     stop("Cannot fit a custom model using a formula of class ", class(spec$formula)[1],
-	 " with engine ", name, ". Can only use formulae of class ", 
+	 " with engine ", name, ". Can only use formulae of class: ", 
           paste(engine$formula_types, collapse = ","), ".")
   }
 
   if (!(spec$level %in% engine$level)) {
-    stop("Cannot fit a(n) ", spec$level, "-level model with engine ", name, ". Can only fit models with level ",
+    stop("Cannot fit a(n) ", spec$level, "-level model with engine ", name, ". Can only fit models with level: ",
          paste(engine$level, collapse = ","), ".")
   }
 
   if (!(spec$model_type %in% engine$model)) {
-    stop("Cannot fit a ", spec$model_type, " model with ", name, ". Can only fit model types ",
+    stop("Cannot fit a ", spec$model_type, " model with ", name, ". Can only fit model types: ",
          paste(engine$model, collapse = ","), ".")
   }
 
@@ -30,7 +34,7 @@ validate_engine <- function(engine, spec) {
   }
 
   if (!(spec$family$family %in% engine$glm_families)) {
-    stop("Cannot use family equal to ", spec$family, " with engine ", name, ". Can only use families ",
+    stop("Cannot use family equal to ", spec$family, " with engine ", name, ". Can only use families: ",
 	 paste(engine$glm_families, collapse = ","), ".")
   }
 
@@ -64,11 +68,7 @@ get_fit_response.default <- function(spec, response = NULL) {
 #' @noRd
 all_model_vars.default <- function (spec, ss = FALSE) {
   if (spec$model_type == "custom") {
-    tmp_vars <- all.vars(spec$formula)
-    if (ss) {
-      tmp_vars <- tmp_vars[tmp_vars != spec$formula[[2]]]
-    }
-    model_variables <- tmp_vars
+    model_variables <- all.vars(spec$formula)
     # it's unnecessary to include res in the above, but I'm doing it
     # just in case. We will call unique() anyway
   } else {
@@ -85,7 +85,6 @@ all_model_vars.default <- function (spec, ss = FALSE) {
       all_model_vars(spec$second_stage_spec)
     )
   }
-
   model_variables <- unique(model_variables)
 
   return (model_variables)

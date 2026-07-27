@@ -150,6 +150,11 @@ BHF_fit_trans = fit.basal_spec(
 ```
 
 ```{r}
+rstanarm::prior_summary(BHF_fit_trans$model)
+```
+
+
+```{r}
 check.basal_fit(
   BHF_fit_trans
 )

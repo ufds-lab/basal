@@ -69,6 +69,10 @@ fit.basal_spec <- function(spec,
   vars <- all_model_vars(spec)
   res <- get_fit_response(spec)
   
+  if (!is.null(spec$second_stage_spec)) {
+    data[["BASAL_NONZERO_INDICATOR"]] = "tmp"
+  }
+  
   validate_model_variables(vars, data)
   data <- data[, vars]
   

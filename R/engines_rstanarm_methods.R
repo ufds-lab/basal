@@ -41,7 +41,8 @@ build_basal_priors.rstanarm_spec <- function (
   # gellman mentioned that gamma family distributions might not be the best
   # for some of these things. So we might change this to half-cauchy
   
-  # right now do nothing because I want to see what default priors are like
+  # If the user specifies a prior
+  
   return (NULL)
 }
 
