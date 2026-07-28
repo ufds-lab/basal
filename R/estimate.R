@@ -142,8 +142,7 @@ estimate.basal_fit <- function(
     second_stage_weights = t(
       brms::posterior_epred(fit$second_stage_fit$model,
                             newdata = nd_subset,
-                            ndraws = ndraws,
-                            allow_new_levels = TRUE)
+                            ndraws = ndraws)
     )
     post_preds = post_preds * second_stage_weights
   }
