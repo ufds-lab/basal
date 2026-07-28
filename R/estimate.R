@@ -113,11 +113,23 @@ estimate.basal_fit <- function(
     names(training_se) <- fit$data[[domain]]
     nd_subset$`BASAL_HT_SE` <- training_se[nd_subset[[domain]]]
   }
-
-  post_preds <- t(brms::posterior_epred(fit$model,
-                                        newdata = nd_subset,
-                                        ndraws = ndraws,
-                                        allow_new_levels = TRUE))
+  
+  post_preds <- try(
+    t(brms::posterior_epred(fit$model,
+                            newdata = nd_subset,
+                            ndraws = ndraws)
+    ), silent = T
+  )
+  if (inherits(post_preds, "try-error")) {
+    text = post_preds[[1]] |> 
+      gsub(".*Levels", "Levels", x = _) |> 
+      gsub(" Consider.*", "", x = _)
+    warning("Estimating on new levels: ", text)
+    post_preds <- t(brms::posterior_epred(fit$model,
+                                          newdata = nd_subset,
+                                          ndraws = ndraws,
+                                          allow_new_levels = TRUE))
+  }
 
   if (!is.null(fit$spec$variable_transform)) {
     inv_trans <- fit$spec$variable_transform$inv_transform
@@ -125,6 +137,8 @@ estimate.basal_fit <- function(
   }
 
   if (two_stage) {
+    # no new error is needed for the logistic model because if the logistic model
+    # will have new levels then the gaussian model definitely needs new levels
     second_stage_weights = t(
       brms::posterior_epred(fit$second_stage_fit$model,
                             newdata = nd_subset,
