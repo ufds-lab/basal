@@ -83,7 +83,7 @@ check.basal_fit <- function(
     )
     
     if (!is.null(join_two_stage_stat)) {
-      ret$pp_check$joined <- build_pp_checks(
+      ret$pp_checks$joined <- build_pp_checks(
         fit = fit,
         draws = draws,
         stat = join_two_stage_stat,

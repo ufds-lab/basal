@@ -58,7 +58,8 @@ build_pp_checks <- function(
     fit,
     draws,
     stat,
-    include_base_pp_check = TRUE
+    include_base_pp_check = TRUE,
+    joined_two_stage = FALSE
 ) {
   checks <- list()
   
@@ -68,7 +69,12 @@ build_pp_checks <- function(
   }
   
   if (!is.null(stat)) {
-    extra_checks <- custom_pp_check(fit = fit, draws = draws, stat = stat)
+    extra_checks <- custom_pp_check(
+      fit = fit, 
+      draws = draws, 
+      stat = stat, 
+      joined_two_stage = joined_two_stage
+    )
     checks[names(extra_checks)] <- extra_checks
   }
   
