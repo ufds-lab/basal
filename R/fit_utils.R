@@ -7,8 +7,8 @@ validate_fit_inputs <- function(spec,
                                 burn_in,
                                 thin,
                                 engine,
-				ncores,
-				nthreads) {
+                                ncores,
+                                nthreads) {
   
   parallel = do_parallel_settings(chains, ncores, nthreads)
   ncores = parallel$ncores

@@ -115,7 +115,8 @@ fit.basal_spec <- function(spec,
       "because transforming direct estimates also requires transforming their ",
       "sampling standard errors."
     )
-  }  
+  }
+
   if (!is.null(spec$variable_transform)) {
     trans <- spec$variable_transform$transform
     data[[res]] <- trans(data[[res]])

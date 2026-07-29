@@ -149,3 +149,44 @@ fit_basal_model.default <- function (spec, ...) {
        ". ")
 }
 
+#' Call `pp_check()` 
+#' @exportS3Method basal::get_model_pp_check
+#' @noRd
+get_model_pp_check.default <- function (fit, model, ...) {
+  return (bayesplot::pp_check(model, ...))
+}
+
+#' Get rhat value for model parameters
+#' @noRd
+#' @exportS3Method basal::get_model_rhat
+get_model_rhat.default <- function (fit, ...) {
+  return (bayesplot::rhat(fit$model, ...))
+}
+
+#' Get effective sample size ratio for model parameters
+#' @noRd
+#' @exportS3Method basal::get_model_neff_ratio
+get_model_neff_ratio.default <- function (fit, ...) {
+  return (bayesplot::rhat(fit$model, ...))
+}
+
+#' Get all model variable names
+#' @noRd
+#' @exportS3Method basal::get_all_variable_names
+get_all_variable_names.default <- function (fit, ...) {
+  return (names(fit$model$coefficients))
+}
+
+#' Get posterior predictions
+#' @noRd
+#' @exportS3Method basal::get_posterior_predict 
+get_posterior_predict.default <- function (
+    fit, model, draws, newdata, ...
+) {
+  rstantools::posterior_predict(
+    model,
+    draws = draws,
+    newdata = newdata,
+    ...
+  )
+}

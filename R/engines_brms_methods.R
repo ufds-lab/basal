@@ -261,3 +261,42 @@ fit_basal_model.brms_spec <- function(
   )
   return (raw_model)
 }
+
+#' Call `pp_check()` 
+#' @exportS3Method basal::get_model_pp_check
+#' @noRd
+get_model_pp_check.brms_fit <- function(
+    fit,
+    model,
+    ...
+) {
+    return (brms::pp_check(model, ...))
+}
+
+#' Call `pp_check()` 
+#' @exportS3Method basal::get_model_pp_check
+#' @noRd
+get_model_pp_check.brms_fit <- function (fit, model, nreps, ...) {
+  return (bayesplot::pp_check(model, ndraws = nreps, ...))
+}
+
+#' Get rhat value for model parameters
+#' @noRd
+#' @exportS3Method basal::get_model_rhat
+get_model_rhat.brms_fit <- function (fit, ...) {
+  return (brms::rhat(fit$model, ...))
+}
+
+#' Get effective sample size ratio for model parameters
+#' @noRd
+#' @exportS3Method basal::get_model_neff_ratio
+get_model_neff_ratio.brms_fit <- function (fit, ...) {
+  return (brms::rhat(fit$model, ...))
+}
+
+#' Get all model variable names
+#' @noRd
+#' @exportS3Method basal::get_all_variable_names
+get_all_variable_names.brms_fit <- function (fit, ...) {
+  return (rownames(brms::posterior_summary(fit$model)))
+}

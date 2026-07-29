@@ -78,6 +78,12 @@ agg_HT <- function(data, res, N, domain, agg_data = NULL, ...) {
         NA, NA, NA, NA, NA # add NA at the end for BASAL_HT_ESTIMATOR, BASAL_HT_SE, and BASAL_N
       )
     }
+    
+    warning("Aggregating sample data for auxiliary variables. If you want to use ",
+            "averages of population data for auxiliary variables, ",
+            "aggregate the data first, and then pass intot the thing. Make this better Leland.")
+    
+    stop("Make a function to aggregate the data, Leland")
 
     agg_data[agg_data[[domain]] == thedomain,"BASAL_HT_ESTIMATOR"] <- est$pop_mean
     agg_data[agg_data[[domain]] == thedomain,"BASAL_HT_SE"] <- sqrt(est$pop_mean_var)

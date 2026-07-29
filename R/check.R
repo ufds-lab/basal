@@ -62,37 +62,37 @@ check.basal_fit <- function(
   )
   
   ret$pp_checks$response <- build_pp_checks(
-    object = fit,
+    fit = fit,
     draws = draws,
     stat = stat,
     include_base_pp_check = include_base_pp_check
   )
   
   ret$convergence$response <- build_convergence_checks(
-    object = fit,
+    fit = fit,
     trace_plots = trace_plots
   )
   
   if (has_second_stage) {
     
     ret$pp_checks$second_stage <- build_pp_checks(
-      object = fit$second_stage_fit,
+      fit = fit$second_stage_fit,
       draws = draws,
       stat = two_stage_stat,
       include_base_pp_check = FALSE
     )
     
     if (!is.null(join_two_stage_stat)) {
-      ret$pp_checks$joined <- custom_pp_check(
-        object = fit,
+      ret$pp_check$joined <- build_pp_checks(
+        fit = fit,
         draws = draws,
         stat = join_two_stage_stat,
-        joined_two_stage = TRUE
+        include_base_pp_check = FALSE
       )
     }
     
     ret$convergence$second_stage <- build_convergence_checks(
-      object = fit$second_stage_fit,
+      fit = fit$second_stage_fit,
       trace_plots = trace_plots
     )
   }

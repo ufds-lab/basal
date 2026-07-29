@@ -6,12 +6,12 @@
 \usage{
 check.basal_fit(
   fit,
-  stat = c(ecdf = ecdf),
+  stat = c(ecdf = stats::ecdf),
   include_base_pp_check = TRUE,
   draws = 50,
   trace_plots = FALSE,
   two_stage_stat = c(proportion_positive = prop_positive),
-  join_two_stage_stat = c(joined_ecdf = ecdf)
+  join_two_stage_stat = c(joined_ecdf = stats::ecdf)
 )
 }
 \arguments{
@@ -34,6 +34,9 @@ are not included in the object.}
 
 \item{join_two_stage_stat}{Like \code{stat} but used for the response aggregated
 from the multi-stage model.}
+}
+\value{
+An object of class \code{basal_check}.
 }
 \description{
 Posterior Predictive and Regression checks from fit \code{basal} model.

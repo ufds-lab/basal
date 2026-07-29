@@ -2,7 +2,7 @@
 #' @description
 #' The `rstanarm` engine allows for fitting standard unit-level models. It allows
 #' both custom and BHF models.
-#' 
+#' @export
 engine_rstanarm <- function() {
   engine <- list()
   engine$priority = 2

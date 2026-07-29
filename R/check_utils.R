@@ -1,5 +1,4 @@
-#' Validate
-#'
+#' Validate arguments to check()
 #' @noRd
 validate_check_inputs <- function(
     fit,
@@ -7,7 +6,6 @@ validate_check_inputs <- function(
     include_base_pp_check,
     trace_plots
 ) {
-  
   check_inherits("basal_fit", fit)
   
   if (!is.numeric(draws) || length(draws) != 1 ||  !is.finite(draws) || draws <= 0 || draws != floor(draws)) {
@@ -19,14 +17,12 @@ validate_check_inputs <- function(
   if (!is.logical(trace_plots) || length(trace_plots) != 1 || is.na(trace_plots)) {
     stop("`trace_plots` must be either TRUE or FALSE.")
   }
-  return(invisible(T))
 }
 
 
 #' Prepare Statistics for Posterior Predictive Checks
 #' @noRd
-#' 
-prepare_check_stats <- function(stat, argument = "stat") {
+prepare_check_stats <- function(stat, argument) {
   
   if (is.null(stat)) {
     return(NULL)
@@ -35,7 +31,7 @@ prepare_check_stats <- function(stat, argument = "stat") {
     stat <- as.list(stat)
   }
   
-  valid_functions <- vapply(stat,is.function,logical(1))
+  valid_functions <- vapply(stat, is.function, logical(1))
   if (!all(valid_functions)) {
     stop("Every element of `", argument, "` must be a function.")
   }
@@ -56,42 +52,46 @@ prepare_check_stats <- function(stat, argument = "stat") {
   return(stat)
 }
 
-
-#' Construct Posterior Predictive Checks for One Model
+#' Default method for constructing Posterior Predictive Checks for one model
 #' @noRd
-#' 
 build_pp_checks <- function(
-    object,
+    fit,
     draws,
     stat,
     include_base_pp_check = TRUE
 ) {
-  
   checks <- list()
   
   if (include_base_pp_check) {
-    checks$epdf <- brms::pp_check(object$model, ndraws = draws) +
+    checks$epdf <- get_model_pp_check(fit, fit$model, nreps = draws) +
       ggplot2::labs(title = paste0("Posterior predictive distributions for epdf of response."))
   }
   
   if (!is.null(stat)) {
-    extra_checks <- custom_pp_check(object = object, draws = draws, stat = stat)
+    extra_checks <- custom_pp_check(fit = fit, draws = draws, stat = stat)
     checks[names(extra_checks)] <- extra_checks
   }
   
   return(checks)
 }
 
+#' build posterior predictive checks
+#' @noRd
+get_model_pp_check <- function (
+    fit, ...
+) {
+  UseMethod("get_model_pp_check")
+}
 
 #' Construct Convergence Diagnostics
 #' @noRd
 build_convergence_checks <- function(
-    object,
+    fit,
     trace_plots = FALSE
 ) {
   
   convergence <- list()
-  convergence$rhat <- brms::rhat(object$model)
+  convergence$rhat <- get_model_rhat(fit)
   
   if (sum(convergence$rhat > 1.1, na.rm = T) > 0) {
     warning(
@@ -100,61 +100,68 @@ build_convergence_checks <- function(
     )
   }
   
-  convergence$neff <- brms::neff_ratio(object$model) * nrow(as.data.frame(object$model))
-  if (sum(convergence$neff < 200, na.rm = T) > 0) {
+  convergence$neff_ratio <- get_model_neff_ratio(fit)
+  if (sum(convergence$neff_ratio < 0.2, na.rm = T) > 0) {
     warning(
       "Possible issue in convergence. ",
       "Check effective sample sizes with summary() and plots from pairs()."
     )
   }
   if (trace_plots) {
-    convergence$trace <- build_trace_plots(object = object)
+    convergence$trace <- build_trace_plots(fit = fit)
   }
   
   return(convergence)
 }
 
+#' Get rhat value for model parameters
+#' @noRd
+get_model_rhat <- function (
+    fit, ...
+) {
+  UseMethod("get_model_rhat")
+}
+
+#' Get effective sample size ratio for model parameters
+#' @noRd
+get_model_neff_ratio <- function (
+    fit, ...
+) {
+  UseMethod("get_model_neff_ratio")
+}
 
 #' Construct Trace Plots
 #' @noRd
-#' 
-build_trace_plots <- function(object) {
+build_trace_plots <- function(fit) {
   
-  parameter_names <- rownames(brms::posterior_summary(object$model))
+  parameter_names <- get_all_variable_names(fit)
   trace <- vector(mode = "list", length = length(parameter_names))
   names(trace) <- parameter_names
   
   for (parameter in parameter_names) {
-    trace[[parameter]] <- bayesplot::mcmc_trace(object$model,pars = parameter
-    )
+    trace[[parameter]] <- bayesplot::mcmc_trace(fit$model, pars = parameter)
   }
   
   return(trace)
 }
 
-#' @title Custom posterior predictions
-#'
-#' @param object Object of type `fit.basal_spec`
-#'
-#' @param draws Number of draws to draw from the posterior predictive distribution
-#'
-#' @param stat (possible list of) function to apply to draws from posterior
-#' predictive distribution
-#' 
-#' @param joined_two_stage Boolean indicating whether to compute PPD from the joined
-#' two stage model
-#' 
+#' Construct trace plots
 #' @noRd
-#' 
-custom_pp_check <- function(
-    object,
+get_all_variable_names <- function (fit, ...) {
+  UseMethod("get_all_variable_names")
+}
+
+#' @title Custom posterior predictions
+#' @noRd
+custom_pp_check <- function (
+    fit,
     draws,
     stat,
     joined_two_stage = FALSE
 ) {
   
   prediction_data <- get_pp_check_data(
-    object = object,
+    fit = fit,
     draws = draws,
     joined_two_stage = joined_two_stage
   )
@@ -163,13 +170,11 @@ custom_pp_check <- function(
   pp <- prediction_data$pp
   
   y_stats <- lapply(stat, function(fun) {
-      fun(y)
-    }
-  )
+    fun(y)
+  })
   post_checks <- lapply(stat, function(fun) {
-      apply(pp, MARGIN = 1,FUN = fun)
-    }
-  )
+    apply(pp, MARGIN = 1,FUN = fun)
+  })
   
   plot_list <- vector(mode = "list", length = length(stat))
   names(plot_list) <- names(stat)
@@ -187,37 +192,39 @@ custom_pp_check <- function(
 }
 
 #' Obtain Data for Posterior Predictive Checks
-#'
 #' @noRd
 get_pp_check_data <- function(
-    object,
+    fit,
     draws,
     joined_two_stage = FALSE
 ) {
   
   if (!joined_two_stage) {
     
-    y <- object$data[[object$params$response]]
+    y <- fit$data[[fit$params$response]]
     
-    pp <- brms::posterior_predict(
-      object$model,
-      ndraws = draws,
-      newdata = object$data
+    pp <- get_posterior_predict(
+      fit,
+      fit$model,
+      draws = draws,
+      newdata = fit$data
     )
     
   } else {
-    y <- object$unfiltered_data[[object$params$response]]
+    y <- fit$unfiltered_data[[fit$params$response]]
     
-    occurrence_draws <- brms::posterior_predict(
-      object$second_stage_fit$model,
-      ndraws = draws,
-      newdata = object$unfiltered_data,
+    occurrence_draws <- get_posterior_predict(
+      fit,
+      fit$second_stage_fit$model,
+      draws = draws,
+      newdata = fit$unfiltered_data,
       allow_new_levels = TRUE
     )
-    response_draws <- brms::posterior_predict(
-      object$model,
-      ndraws = draws,
-      newdata = object$unfiltered_data,
+    response_draws <- get_posterior_predict(
+      fit,
+      fit$model,
+      draws = draws,
+      newdata = fit$unfiltered_data,
       allow_new_levels = TRUE
     )
     
@@ -227,8 +234,16 @@ get_pp_check_data <- function(
   return(list(y = y, pp = pp))
 }
 
+#' Get posterior predictions
+#' We need this for (some, e.g., `stLMM` in the future) non-stan packages
+#' @noRd
+get_posterior_predict <- function (
+    fit, ...
+) {
+  UseMethod("get_posterior_predict")
+}
+
 #' Construct a custom posterior predictive plot
-#'
 #' @noRd
 build_custom_pp_plot <- function(
     post_data,
@@ -284,3 +299,4 @@ build_custom_pp_plot <- function(
   
   return(plot)
 }
+
