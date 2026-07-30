@@ -300,17 +300,6 @@ fit_basal_model.brms_spec <- function(
 #' Call `pp_check()` 
 #' @exportS3Method basal::get_model_pp_check
 #' @noRd
-get_model_pp_check.brms_fit <- function(
-    fit,
-    model,
-    ...
-) {
-    return (brms::pp_check(model, ...))
-}
-
-#' Call `pp_check()` 
-#' @exportS3Method basal::get_model_pp_check
-#' @noRd
 get_model_pp_check.brms_fit <- function (fit, model, nreps, ...) {
   return (bayesplot::pp_check(model, ndraws = nreps, ...))
 }
@@ -326,7 +315,7 @@ get_model_rhat.brms_fit <- function (fit, ...) {
 #' @noRd
 #' @exportS3Method basal::get_model_neff_ratio
 get_model_neff_ratio.brms_fit <- function (fit, ...) {
-  return (brms::rhat(fit$model, ...))
+  return (brms::neff_ratio(fit$model, ...))
 }
 
 #' Get all model variable names
@@ -334,4 +323,44 @@ get_model_neff_ratio.brms_fit <- function (fit, ...) {
 #' @exportS3Method basal::get_all_variable_names
 get_all_variable_names.brms_fit <- function (fit, ...) {
   return (rownames(brms::posterior_summary(fit$model)))
+}
+
+#' Get posterior expected predictions
+#' @noRd
+#' @exportS3Method basal::get_posterior_epred
+get_posterior_epred.brms_fit <- function(
+    fit,
+    newdata,
+    ndraws,
+    allow_new_levels = FALSE,
+    ...
+) {
+  brms::posterior_epred(
+    fit$model,
+    newdata = newdata,
+    ndraws = ndraws,
+    allow_new_levels = allow_new_levels,
+    ...
+  )
+}
+
+#' Get number of posterior draws
+#' @noRd
+#' @exportS3Method basal::get_available_draws
+get_available_draws.brms_fit <- function(
+    fit,
+    ...
+) {
+  nrow(as.data.frame(fit$model))
+}
+
+#' Get grouping variables
+#' @noRd
+#' @exportS3Method basal::get_grouping_variables
+get_grouping_variables.brms_fit <- function(
+    fit,
+    ...
+) {
+  group_coefs <- unique(fit$model$prior[, 4])
+  group_coefs[group_coefs != ""]
 }
