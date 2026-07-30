@@ -204,7 +204,6 @@ get_pp_check_data <- function(
     draws,
     joined_two_stage = FALSE
 ) {
-  
   if (!joined_two_stage) {
     
     y <- fit$data[[fit$params$response]]
@@ -257,7 +256,6 @@ build_custom_pp_plot <- function(
     y,
     stat_name
 ) {
-  
   if (is.numeric(y_stat)) {
     post_data <- unlist(post_data)
     y_stat <- unlist(y_stat)

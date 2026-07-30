@@ -102,7 +102,8 @@ Once a model has been specified, its parameters can be estimated through the `fi
 ```{r, cache = TRUE, results = "hide"}
 BHF_fit <- fit.basal_spec(
   BHF_spec_mixed,
-  oregon_sample
+  oregon_sample,
+  engine = engine_rstanarm()
 )
 ```
 
@@ -301,7 +302,11 @@ Then this may be estimated as normal.
 ```{r, cache = TRUE, results = "hide"}
 zi_fit = fit.basal_spec(
   zi_BHF,
-  data = oregon_sample
+  data = oregon_sample,
+  iter = 10,
+  burn_in = 5,
+  ncores = 1,
+  engine = engine_brms()
 )
 ```
 

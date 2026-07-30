@@ -213,10 +213,52 @@ get_all_variable_names.default <- function (fit, ...) {
 get_posterior_predict.default <- function (
     fit, model, draws, newdata, ...
 ) {
-  rstantools::posterior_predict(
-    model,
-    draws = draws,
+  return (
+    rstantools::posterior_predict(
+      model,
+      draws = draws,
+      newdata = newdata,
+      ...
+    )
+  )
+}
+
+#' Get posterior expected predictions
+#' @noRd
+#' @exportS3Method basal::get_posterior_epred
+get_posterior_epred.default <- function(
+    fit,
+    newdata,
+    ndraws,
+    allow_new_levels = FALSE,
+    ...
+) {
+  rstantools::posterior_epred(
+    fit$model,
     newdata = newdata,
+    ndraws = ndraws,
+    allow_new_levels = allow_new_levels,
     ...
   )
 }
+
+#' Get number of posterior draws
+#' @noRd
+#' @exportS3Method basal::get_available_draws
+get_available_draws.default <- function(
+    fit,
+    ...
+) {
+  nrow(as.data.frame(fit$model))
+}
+
+#' Get grouping variables
+#' @noRd
+#' @exportS3Method basal::get_grouping_variables
+get_grouping_variables.brms_fit <- function(
+    fit,
+    ...
+) {
+  return (names(coef(zi_fit$model)))
+}
+
