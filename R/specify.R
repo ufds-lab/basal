@@ -52,10 +52,9 @@
 #' @return Object of type `basal_spec`.
 #'
 #' @examples
-#' plot_spec <- specify(
-#'   formula = obs_biomass ~ evc + evt + (1 | county),
+#' plot_spec_bhf <- specify(
+#'   obs_biomass ~ evc + evt + (1 | county),
 #'   level = "unit",
-#'   model = "custom",
 #'   variable_transform = list(
 #'     transform = function (y) {y^(1/3)},
 #'     inv_transform = function (y) {y^3}
@@ -64,6 +63,13 @@
 #'
 #' # gives equivalent specification to above
 #' # this is not the same object though
+#' plot_spec_bhf <- specify(
+#'   obs_biomass ~ evc + evt, 
+#'   domain_name = "county",
+#'   model = "BHF"
+#' )
+#'
+#' # gives equivalent specification to above
 #' plot_spec_bhf <- specify(
 #'   model = "BHF",
 #'   domain_name = "county",
@@ -141,7 +147,6 @@ specify <- function(formula = NULL,
     default_model_data <- NULL
   } # housekeeping provided parameters
   
-  
   spec <- list(
     call = func_call,
     formula = formula,
@@ -164,26 +169,21 @@ specify <- function(formula = NULL,
 
   if (model != "aux_spec") {
     spec <- validate_single_stage_spec(spec = spec, 
-                                      auxiliary_variables = auxiliary_variables,
-                                      response_name = response_name)
-  } else if (model == "aux_spec") {
-    spec <- validate_GLM_two_stage_spec(spec = spec, 
                                        auxiliary_variables = auxiliary_variables,
                                        response_name = response_name)
+  } else if (model == "aux_spec") {
+    spec <- validate_GLM_two_stage_spec(spec = spec, 
+                                        auxiliary_variables = auxiliary_variables,
+                                        response_name = response_name)
   }
 
   # correct/set variables depending on their level
   # auto-aggregation related checks
   if (!is.null(spec$level) && spec$level == "unit" && !is.null(spec$obs_variability)) {
-    message("Supplied variability of the observations. This isn't used ",
-            "use `y | se(obs_variability) ~ <covariates>`",
-            " to specify known variance.")
-    # re-export brms::se
+    message("Supplied variability of the observations. This isn't supported for unit-level models")
     spec$obs_variability <- NULL
   }
-  # think about this below (check if we need is.null check) (leland)
-  if (!is.null(spec$level) &&
-      spec$level == "area" &&
+  if (spec$level == "area" &&
       is.null(spec$domain_name) &&
       is.null(spec$obs_variability) &&
       !specifying_second_stage_model) {

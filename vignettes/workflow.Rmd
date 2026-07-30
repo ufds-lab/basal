@@ -72,34 +72,36 @@ BHF_spec_manual <- specify(
 )
 ```
 
+or, a hybrid case between the two of these:
+
+```{r}
+BHF_spec_mixed <- specify(
+  biomass ~ lfevc + ppt,
+  domain_name = "evt_class_cd",
+  model = "BHF"
+)
+```
+
+
 The second specification is both simpler and more complex. It requires less input from the user provided they know how to express their modelling assumptions in a form like that of `\{lme4\}`. Simultaneously, though, it may be more ambiguous to express a model by a formula. Either way, these two models will impose the same modeling assumptions and will ultimately be indistinguishable.
 
 In the transition to the area-level model, while modeling assumptions may become more stringent, the burden on the user changes only marginally. When estimating a FH model, for example, one may use almost identical code as the BHF model, substituting only `model = "BHF"` for `model = "FH"`.
 
 ```{r}
 FH_spec <- specify(
+  biomass ~ lfevc + ppt,
   model = "FH", # only line that changes
-  domain_name = "evt_class_cd",
-  response_name = "biomass",
-  auxiliary_variables = c("lfevc", "ppt")
-)
-```
-
-From this, the engine will understand that, as the FH is an area-level model, it is estimating the direct estimators, and the variance of these estimators should be known from the estimation procedure. It will compute the direct estimators for the given response, and impose the restriction that the variance of these estimators is known. Accordingly though, it must know what domain to aggregate over. In the case of the named FH model, this is not an issue as the domain name must already be provided, but for a custom model, the user must provide this as well:
-
-```{r}
-FH_spec_manual <- specify(
-  biomass ~ lfevc + ppt + (1 | evt_class_cd),
-  level = "area",
   domain_name = "evt_class_cd"
 )
 ```
+
+From this, the engine will understand that, as the FH is an area-level model, it is estimating the direct estimators, and the variance of these estimators should be known from the estimation procedure. It will compute the direct estimators for the given response, and impose the restriction that the variance of these estimators is known. Accordingly though, it must know what domain to aggregate over.
 
 Once a model has been specified, its parameters can be estimated through the `fit()` function. While there are many options for `fit()`, the only necessary ones are a previously specified model, and a dataset. The columns in the dataset must correspond to the variables in the formula or various variable names listed in `specify()`, although aside from area-level models, not much is needed.
 
 ```{r, cache = TRUE, results = "hide"}
 BHF_fit <- fit.basal_spec(
-  BHF_spec,
+  BHF_spec_mixed,
   oregon_sample
 )
 ```
@@ -128,10 +130,9 @@ In general, it is easier to see if posterior predictives agree with data using t
 
 ```{r}
 BHF_spec_trans <- specify(
+  biomass ~ lfevc + ppt,
   model = "BHF",
   domain_name = "evt_class_cd",
-  response_name = "biomass",
-  auxiliary_variables = c("lfevc", "ppt"),
   variable_transform = list(
     transform = function (y) {y^(1/4)},
     inv_transform = function (y) {y^4}
@@ -148,11 +149,6 @@ BHF_fit_trans = fit.basal_spec(
   engine = engine_rstanarm()
 )
 ```
-
-```{r}
-rstanarm::prior_summary(BHF_fit_trans$model)
-```
-
 
 ```{r}
 check.basal_fit(
@@ -330,7 +326,6 @@ estimate.basal_fit(
            upper_80_ci = function(x, ...) {quantile(x, 0.9, ...)})
 )
 ```
-
 
 
 

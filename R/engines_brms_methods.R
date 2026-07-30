@@ -20,8 +20,43 @@ engine_brms <- function() {
     "gaussian", "bernoulli", "exponential"
   )
   
+  engine$logistic_family <- brms::bernoulli()
+  
   class(engine) <- "basal_engine"
   return (engine)
+}
+
+#' Get the response formula from a formula
+#' @exportS3Method basal::get_response_formula
+#' @noRd
+get_response_formula.brmsformula <- function (formula) {
+  return (formula$formula)
+}
+
+#' Set the response value of a specification
+#' @noRd
+#' @exportS3Method basal::set_spec_response
+set_spec_response.brms_spec <- function (spec, response) {
+  if (spec$model_type == "custom") {
+    tmp_formula <- formula(paste0(response, " ~ 1"))
+    # the formula `formula(~x1 + x2)`, for example, is valid, and in this case
+    # the second entry of the formula are the covariates rather than the response
+    # so we move them to the standard place in a formula with a response and covariates
+    if (inherits(spec$formula, "brmsformula")) {
+      if (length(spec$formula$formula) == 2) {
+        spec$formula$formula[[3]] <- spec$formula$formula[[2]] 
+      }
+      spec$formula$formula[[2]] <- tmp_formula[[2]]
+    } else {
+      if (length(spec$formula) == 2) {
+        spec$formula[[3]] <- spec$formula[[2]] 
+      }
+      spec$formula[[2]] <- tmp_formula[[2]]
+    }
+  } else {
+    spec$default_model_data$response_name <- response
+  }
+  return (spec)
 }
 
 #' Extract the response variables
@@ -45,29 +80,29 @@ get_fit_response.brms_spec <- function(spec, response = NULL) {
 all_model_vars.brms_spec <- function (spec, ss = FALSE) {
   if (spec$model_type == "custom") {
     if (inherits(spec$formula, "brmsformula")) {
-      model_variables <- all.vars(spec$formula$formula)
+      model_variables <- list(all.vars(spec$formula$formula))
+      if (length(spec$formula$formula == 2)) {
+        # then the response is NULL
+        model_variables <- union(model_variables, list(NULL))
+      }
       
       # now recurse through sub-equations, if there are any
       if (!is.null(spec$formula$pforms)) {
         for (sub_form in formula$pforms) {
           sub_vars <- all.vars(sub_form)
           sub_vars <- sub_vars[sub_vars != sub_form[[2]]]
-          model_variables <- c(variables, sub_vars)
+          model_variables <- union(model_variables, sub_vars)
         }
       }
     } else {
       return (NextMethod("all_model_vars"))
     }
   } else {
-    model_variables <- c(
-      spec$default_model_data$response_name,
-      spec$default_model_data$domain_name,
-      spec$default_model_data$auxiliary_variables
-    )
+    return (NextMethod("all_model_vars"))
   }
   
   if (!is.null(spec$second_stage_spec)) {
-    model_variables <- c(
+    model_variables <- union(
       model_variables,
       all_model_vars(spec$second_stage_spec)
     )

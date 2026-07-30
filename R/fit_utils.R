@@ -67,6 +67,15 @@ validate_fit_inputs <- function(spec,
   }
 }
 
+#' Add the (possibly) engine-specific family to the second stage logit model
+#' @noRd
+add_engine_logit_family <- function (spec, engine) {
+  if (!is.null(engine$logistic_family)) {
+    spec$second_stage_spec$family <- engine$logistic_family
+  }
+  return (spec)
+}
+
 #' Generic; get response from a model specification
 #' @noRd
 get_fit_response <- function (spec, ...) {
@@ -82,10 +91,13 @@ all_model_vars <- function (spec, ...) {
 #' Ensure all variables are present in the data
 #' @noRd
 validate_model_variables <- function(variables, data) {
+  variables = unlist(variables)
   missing <- setdiff(variables, colnames(data))
   if (length(missing) == 1) {
     stop("Variable ", missing," missing from your data.")
   }
+  
+  return (data[, variables])
 }
 
 #' Parallel settings for model fitting
@@ -250,8 +262,12 @@ prepare_area_level_data <- function(spec,
 
 #' Prepare data for a two-stage model
 #' @noRd
-prepare_two_stage_data <- function(data, response) {
-  data$BASAL_NONZERO_INDICATOR <- as.numeric(data[[response]] != 0)
+prepare_two_stage_data <- function(data, response, spec) {
+  ss_res = try(get_fit_response(spec$second_stage_spec), silent = TRUE)
+  if (inherits(ss_res, "try-error")) {
+    ss_res = response
+  }
+  data$BASAL_NONZERO_INDICATOR <- as.numeric(data[[ss_res]] != 0)
   indicator_values <- unique(stats::na.omit(data$BASAL_NONZERO_INDICATOR))
   if (length(indicator_values) < 2) {
     stop("The two-stage zero-inflated model requires zero and nonzero observations.")
@@ -269,6 +285,11 @@ prepare_two_stage_data <- function(data, response) {
   )
 }
 
+#' Set the response value of a specification
+#' @noRd
+set_spec_response <- function (spec, response) {
+  UseMethod("set_spec_response")
+}
 
 #' Fit the second stage of a two-stage model
 #' @noRd

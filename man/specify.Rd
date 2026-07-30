@@ -74,10 +74,9 @@ Object of type \code{basal_spec}.
 Specify a Small Area Estimation Model
 }
 \examples{
-plot_spec <- specify(
-  formula = obs_biomass ~ evc + evt + (1 | county),
+plot_spec_bhf <- specify(
+  obs_biomass ~ evc + evt + (1 | county),
   level = "unit",
-  model = "custom",
   variable_transform = list(
     transform = function (y) {y^(1/3)},
     inv_transform = function (y) {y^3}
@@ -86,6 +85,13 @@ plot_spec <- specify(
 
 # gives equivalent specification to above
 # this is not the same object though
+plot_spec_bhf <- specify(
+  obs_biomass ~ evc + evt, 
+  domain_name = "county",
+  model = "BHF"
+)
+
+# gives equivalent specification to above
 plot_spec_bhf <- specify(
   model = "BHF",
   domain_name = "county",

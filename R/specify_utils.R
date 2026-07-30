@@ -8,14 +8,25 @@ validate_single_stage_spec <- function(spec, auxiliary_variables, response_name)
     spec$auxiliary_variables <- NULL
     spec$default_model_data <- NULL
   } else {
-    if (is.null(spec$domain_name) ||
-        is.null(response_name) ||
-        is.null(auxiliary_variables)) {
-      # make a better error message
-      stop("Must provide domain, response, and auxiliary variable names for pre-set models.")
-    }
     if (spec$model_type == "BHF") spec$level <- "unit"
     if (spec$model_type == "FH") spec$level <- "area"
+    
+    if (!is.null(spec$formula)) {
+      spec$model_type <- "custom"
+      spec$formula <- 
+        formula(paste0(capture.output(spec$formula), " + (1 | ", spec$domain_name, ")"))
+      return (
+        validate_single_stage_spec(spec, auxiliary_variables, response_name)
+      )
+    }
+    
+    if (is.null(spec$domain_name)) {
+      stop("Must provide domain name for ", spec$model_type, " model.")
+    } else if (is.null(auxiliary_variables)) {
+      stop("Must provide `auxiliary_variables` or `formula` for ", spec$model_types, " model.")
+    } else if (is.null(response_name)) {
+      stop("Must provide `response_name` or `formula`.")
+    }
     spec$formula <- NULL
 
     spec$default_model_data <- list(
@@ -29,12 +40,13 @@ validate_single_stage_spec <- function(spec, auxiliary_variables, response_name)
 
 #' @noRd
 validate_GLM_two_stage_spec = function(spec, response_name, auxiliary_variables) {
-  if (spec$family$family != "bernoulli") {
-    spec$family <- brms::bernoulli()
-    if (!(spec$family$family %in% c("bernoulli", "gaussian"))) {
-      # more informative
-      warning("Your model family is being ignored, replaced with bernoulli, for logistic model.")
-    }
+  # We can't set the family to binomial() automatically because brms *doesn't use
+  # a binomial family for logistic regression* (???) Instead, we will have to 
+  # set this within fit() after an engine has been chosen
+  if (spec$family$family != "gaussian") {
+    spec$family$family = "BASAL_LOGIT_FAMILY"
+    message("Specified family ignored for logit model. This will automatically ",
+            "set within fit(), after an engine has been chosen.")
   }
   if (spec$model_type == "custom") {
     if (is.null(spec$formula) ||
@@ -49,22 +61,22 @@ validate_GLM_two_stage_spec = function(spec, response_name, auxiliary_variables)
     if (spec$level == "area") {
       stop("Can't specify area-level models for the second stage.")
     }
+    
+    if (!is.null(spec$formula)) {
+      
+    }
+    
     if (is.null(spec$domain_name) ||
-        is.null(auxiliary_variables) ) {
+        (is.null(auxiliary_variables) &&
+         is.null(spec$formula))) {
       message(paste0(
-        "One or both of domain_name or auxiliary_variables are ",
+        "One or both of domain or auxiliary variables are ",
         "missing. These will be inherited from the first stage"
       ))
     }
-    if (!is.null(response_name)) {
-      message(paste0(
-        "Response variables cannot be specified for the second-stage logistic ",
-        "model, the response will be whether or not the response in the ",
-        "response model is nonzero."
-      ))
-    }
+    
     spec$default_model_data <- list(
-      response_name = "BASAL_NONZERO_INDICATOR",
+      response_name = response_name,
       domain_name = spec$domain_name,
       auxiliary_variables = auxiliary_variables
     )
@@ -73,9 +85,17 @@ validate_GLM_two_stage_spec = function(spec, response_name, auxiliary_variables)
   return (spec)
 }
 
+#' Get just the response model from a formula
+#' Only necessary because of types of formulae which
+#' specify multiple different relations at once (e.g., brmsformula)
+#' @noRd
+get_response_formula <- function (formula) {
+  UseMethod("get_response_formula")
+}
+
 validate_second_stage <- function(spec, auxiliary_variables) {
   if (spec$level == "area") {
-    message("Can't fit area-level models to zero observations, re-specifying as a unit-level.")
+    warning("Can't fit area-level models to zero observations, re-specifying as a unit-level.")
     spec$level <- "unit"
     if (!is.null(spec$obs_variability)) {
       stop("Can't re-specify model as unit-level. Must provide un-aggregated data")
@@ -91,7 +111,7 @@ validate_second_stage <- function(spec, auxiliary_variables) {
   if (is.null(spec$second_stage_spec)) {
     message("Specification for second stage inherited from this level")
     spec$second_stage_spec <- specify(
-      formula = spec$formula,
+      formula = get_response_formula(spec$formula),
       level = spec$level,
       model = spec$model_type,
       obs_variability = NULL,
@@ -99,7 +119,6 @@ validate_second_stage <- function(spec, auxiliary_variables) {
       response_name = spec$response_name,
       auxiliary_variables = auxiliary_variables,
       variable_transform = NULL,
-      family = brms::bernoulli(),
       model_stage = spec$model_stage,
       specifying_second_stage_model = TRUE,
       second_stage_spec = NULL
@@ -111,16 +130,16 @@ validate_second_stage <- function(spec, auxiliary_variables) {
       if (spec$second_stage_spec$model_type != "custom") {
         if ((is.null(spec$second_stage_spec$default_model_data$domain_name) &&
              is.null(spec$domain_name)) ||
-            (is.null(spec$second_stage_spec$default_model_data$auxiliary_variables) &&
-             is.null(auxiliary_variables))) {
+            ((is.null(spec$second_stage_spec$default_model_data$auxiliary_variables) &&
+              is.null(auxiliary_variables)) &&
+              is.null(spec$second_stage_spec$formula) &&
+              is.null(spec$formula))) {
           stop(paste0(
             "Did not specify domain or auxiliary variables in ",
-            "the logistic model. This model is custom and you have not ",
-            "specified domain_name or auxiliary_variables. Please further ",
-            "specify the second stage, set second stage to custom, ",
-            "or set these variables here"
+            "the logistic model. This model is not custom but you have not ",
+            "specified domain_name or auxiliary_variables (or formula). Please further ",
+            "specify the second stage or set these variables in the non-logit specification"
           ))
-          
         }  else {
           if (!is.null(spec$domain_name) && 
               is.null(spec$second_stage_spec$default_model_data$domain_name)) {
@@ -130,6 +149,10 @@ validate_second_stage <- function(spec, auxiliary_variables) {
           if (!is.null(auxiliary_variables) &&
               is.null(spec$second_stage_spec$default_model_data$auxiliary_variables)) {
             spec$second_stage_spec$default_model_data$auxiliary_variables <- auxiliary_variables
+          } else if (!is.null(spec$formula) &&
+                     is.null(spec$second_stage_spec$formula) &&
+                     is.null(spec$second_stage_spec$default_model_data$auxiliary_variables)) {
+            spec$second_stage_spec$formula <- spec$formula
           }
         }
       } else {
@@ -146,12 +169,8 @@ validate_second_stage <- function(spec, auxiliary_variables) {
     if (spec$second_stage_spec$model_type == spec$model_type) {
       if (spec$second_stage_spec$model_type == "custom") {
         if (is.null(spec$second_stage_spec$formula)) {
-	  if (inherits(spec$formula, "brmsformula")) {
-            spec$second_stage_spec$formula <- spec$formula[[1]]
-          } else {
-	    spec$second_stage_spec$formula <- spec$formula
-	  }
-	}
+          spec$second_stage_spec$formula <- get_response_formula(spec$formula)
+        }
         if (is.null(spec$second_stage_spec$level)) {
           spec$second_stage_spec$level <- spec$level
         }
@@ -167,11 +186,21 @@ validate_second_stage <- function(spec, auxiliary_variables) {
     }
   }
   
-  if (spec$second_stage_spec$model_type == "custom") {
-    validate_single_stage_spec(
-      spec = spec$second_stage_spec,
-      auxiliary_variables = spec$second_stage_spec$default_model_data$auxiliary_variables,
-      response_name = "BASAL_NONZERO_INDICATOR"
+  # at this point, the logit specification should pass the test forced 
+  # to the single-stage model. This will also re-specify a few models (e.g.,
+  # BHF or FH with formulae -> custom model) for ease of use in fit()
+  if (spec$second_stage_spec$model_type != "custom") {
+    tmp <- spec$second_stage_spec$default_model_data$response_name
+    spec$second_stage_spec$default_model_data$response_name <- "BASAL_TMP_VAR"
+    spec$second_stage_spec <- validate_single_stage_spec(
+      spec$second_stage_spec,
+      spec$second_stage_spec$default_model_data$auxiliary_variables,
+      "BASAL_TMP_VAR"
+    )
+    spec$second_stage_spec$default_model_data$response_name <- tmp
+  } else {
+    spec$second_stage_spec <- validate_single_stage_spec(
+      spec$second_stage_spec, NULL, "BASAL_TMP_VAR"
     )
   }
   

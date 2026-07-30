@@ -64,17 +64,16 @@ fit.basal_spec <- function(spec,
     ncores = ncores
   )
   
+  if (!is.null(spec$second_stage_spec)) {
+    spec <- add_engine_logit_family(spec, engine)
+  }
+  
   spec <- validate_engine(engine, spec)
   
   vars <- all_model_vars(spec)
   res <- get_fit_response(spec)
   
-  if (!is.null(spec$second_stage_spec)) {
-    data[["BASAL_NONZERO_INDICATOR"]] = "tmp"
-  }
-  
-  validate_model_variables(vars, data)
-  data <- data[, vars]
+  data <- validate_model_variables(vars, data)
   
   second_stage_fit <- NULL
   unfiltered_data <- NULL
@@ -87,7 +86,13 @@ fit.basal_spec <- function(spec,
     
     two_stage_data <- prepare_two_stage_data(
       data = data,
-      response = res
+      response = res,
+      spec = spec
+    )
+    
+    spec$second_stage_spec <- set_spec_response(
+      spec$second_stage_spec,
+      "BASAL_NONZERO_INDICATOR"
     )
     
     second_stage_fit <- fit_second_stage(
