@@ -2,9 +2,6 @@
 
 S3method(basaal::all_model_vars,default)
 S3method(basal::all_model_vars,brms_spec)
-S3method(basal::build_basal_priors,brms_spec)
-S3method(basal::build_basal_priors,default)
-S3method(basal::build_basal_priors,rstanarm_spec)
 S3method(basal::build_bhf_formula,default)
 S3method(basal::build_custom_formula,brms_spec)
 S3method(basal::build_custom_formula,default)

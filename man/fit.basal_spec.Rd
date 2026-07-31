@@ -8,7 +8,7 @@ fit.basal_spec(
   spec,
   data,
   population_size = NULL,
-  priors = NULL,
+  priors = specify_priors(),
   second_stage_priors = NULL,
   chains = 3,
   iter = 5000,

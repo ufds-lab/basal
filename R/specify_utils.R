@@ -13,8 +13,11 @@ validate_single_stage_spec <- function(spec, auxiliary_variables, response_name)
     
     if (!is.null(spec$formula)) {
       spec$model_type <- "custom"
+      if (!inherits(spec$formula, "formula")) {
+        stop("Must use base-R formula when specifying a formula for a BHF or FH.")
+      }
       spec$formula <- 
-        formula(paste0(capture.output(spec$formula), " + (1 | ", spec$domain_name, ")"))
+        formula(paste0(capture.output(spec$formula)[1], " + (1 | ", spec$domain_name, ")"))
       return (
         validate_single_stage_spec(spec, auxiliary_variables, response_name)
       )
@@ -58,12 +61,21 @@ validate_GLM_two_stage_spec = function(spec, response_name, auxiliary_variables)
   } else {
     if (spec$model_type == "BHF") spec$level <- "unit"
     if (spec$model_type == "FH") spec$level <- "area"
-    if (spec$level == "area") {
-      stop("Can't specify area-level models for the second stage.")
-    }
     
     if (!is.null(spec$formula)) {
-      
+      spec$model_type <- "custom"
+      if (!inherits(spec$formula, "formula")) {
+        stop("Must use base-R formula when specifying a formula for a BHF or FH.")
+      }
+      if (is.null(spec$domain_name)) {
+        stop("If you wish to specify a BHF with a formula, provide the domain name. ",
+             "The domain cannot otherwise be easily inferred from the response model.")
+      }
+      spec$formula <- 
+        formula(paste0(capture.output(spec$formula)[1], " + (1 | ", spec$domain_name, ")"))
+      return (
+        validate_GLM_two_stage_spec(spec, auxiliary_variables, response_name)
+      )
     }
     
     if (is.null(spec$domain_name) ||
@@ -80,6 +92,10 @@ validate_GLM_two_stage_spec = function(spec, response_name, auxiliary_variables)
       domain_name = spec$domain_name,
       auxiliary_variables = auxiliary_variables
     )
+  }
+  
+  if (spec$level == "area") {
+    stop("Can't specify area-level models for the second stage.")
   }
   
   return (spec)
