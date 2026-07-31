@@ -233,12 +233,14 @@ get_posterior_epred.default <- function(
     allow_new_levels = FALSE,
     ...
 ) {
-  rstantools::posterior_epred(
-    fit$model,
-    newdata = newdata,
-    ndraws = ndraws,
-    allow_new_levels = allow_new_levels,
-    ...
+  return (
+    rstantools::posterior_epred(
+      fit$model,
+      newdata = newdata,
+      ndraws = ndraws,
+      allow_new_levels = allow_new_levels,
+      ...
+    )
   )
 }
 
@@ -255,10 +257,10 @@ get_available_draws.default <- function(
 #' Get grouping variables
 #' @noRd
 #' @exportS3Method basal::get_grouping_variables
-get_grouping_variables.brms_fit <- function(
+get_grouping_variables.default <- function(
     fit,
     ...
 ) {
-  return (names(coef(zi_fit$model)))
+  return (names(stats::coef(zi_fit$model)))
 }
 

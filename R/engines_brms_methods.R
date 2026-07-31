@@ -313,6 +313,28 @@ get_posterior_predict.brms_fit <- function (
   )
 }
 
+#' Get posterior expected predictions
+#' @noRd
+#' @exportS3Method basal::get_posterior_epred
+get_posterior_epred.brms_fit <- function(
+    fit,
+    newdata,
+    ndraws,
+    allow_new_levels = FALSE,
+    ...
+) {
+  return (
+    rstantools::posterior_epred(
+      fit$model,
+      newdata = newdata,
+      ndraws = ndraws,
+      allow_new_levels = allow_new_levels,
+      ...
+    )
+  )
+}
+
+
 #' Call `pp_check()` 
 #' @exportS3Method basal::get_model_pp_check
 #' @noRd

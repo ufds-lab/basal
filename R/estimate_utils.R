@@ -1,7 +1,7 @@
 #' Validate Inputs to estimate()
 #' @noRd
 #' 
-validate_estimate_inputs <- function(
+validate_estimate_inputs <- function (
     fit,
     newdata,
     domain,
@@ -14,7 +14,7 @@ validate_estimate_inputs <- function(
   
   check_inherits("basal_fit", fit)
   
-  if (!is.null(newdata) && !inherits(newdata, "data.frame")) {
+  if (!is.null(newdata) && !inherits(newdata, "data.frame") && inherits(try(as.data.frame(newdata)), "try-error")) {
     stop("`newdata` must be a data frame or `NULL`.")
   }
   if (!is.null(domain) && !is.character(domain)) {
@@ -27,7 +27,7 @@ validate_estimate_inputs <- function(
     stop("`seed` must be a single finite number or `NULL`.")
   }
   if (!is.character(max_preds) && !is.null(max_preds) && !is.numeric(max_preds)) {
-    stop("`max_preds` must be \"default\", a positive number, `Inf`, or `NULL`.")
+    stop("`max_preds` must be \"default\", a positive integer, `Inf`, or `NULL`.")
   }
   if (is.character(max_preds) && (length(max_preds) != 1 || max_preds != "default")) {
     stop("The only character value supported for `max_preds` is \"default\".")
@@ -51,7 +51,7 @@ validate_estimate_inputs <- function(
 #' Validate Functions Supplied to estimate()
 #'
 #' @noRd
-validate_estimate_functions <- function(
+validate_estimate_functions <- function (
     functions,
     argument
 ) {
@@ -77,7 +77,7 @@ validate_estimate_functions <- function(
 #' Prepare Maximum Number of Predictions
 #' @noRd
 #' 
-prepare_max_preds <- function(max_preds) {
+prepare_max_preds <- function (max_preds) {
   
   if (max_preds == "default") {
     warning(
@@ -90,83 +90,84 @@ prepare_max_preds <- function(max_preds) {
     return(NULL)
   }
   
-  return(max_preds)
+  return (max_preds)
 }
 
 #' Prepare Data for Estimation
 #' @noRd
 #' 
-prepare_estimate_data <- function(
+prepare_estimate_data <- function (
     fit,
     newdata,
     two_stage
 ) {
   
   if (!is.null(newdata)) {
-    return(newdata)
+    return (newdata)
   }
   
   if (two_stage) {
-    return(fit$unfiltered_data)
+    return (fit$unfiltered_data)
   }
   
-  return(fit$data)
+  return (fit$data)
 }
 
 #' Prepare Domain for Estimation
 #'
 #' @noRd
-prepare_estimate_domain <- function(
+prepare_estimate_domain <- function (
     fit,
     newdata,
     domain
 ) {
 
   if (is.null(domain)) {
-    domain <- "BASAL_OVERALL"
-    newdata[[domain]] <- "overall"
     return(list(domain = domain, newdata = newdata)
     )
   }
-  if (domain == "BASAL_INHERIT") {
-    domain <- infer_estimate_domain(fit)
-    if (!(domain %in% colnames(newdata))) {
+  if (any(domain == "BASAL_INHERIT")) {
+    newdomain <- infer_estimate_domain(fit)
+    if (!(newdomain %in% colnames(newdata))) {
       stop("Domain ", domain, ", inferred as the domain for estimates, is not present in newdata.")
     }
+    domain[domain == "BASAL_INHERIT"] <- newdomain
 
-    message("Assuming domain is ", domain, ".")
+    message("Assuming domain is ", newdomain, ".")
   }
 
   missing_domains <- setdiff(domain, colnames(newdata))
   if (length(missing_domains) > 0) {
-    stop("Provided domain", if (length(missing_domains) > 1) "s are" else " is",
-      " not present in newdata: ", paste0("`", missing_domains, "`", collapse = ", "),
-      ". If you want estimates over the whole region, set `domain = NULL`."
+    stop("Provided domain", 
+         if (length(missing_domains) > 1) "s are" else " is",
+         " not present in newdata: ", paste0("`", missing_domains, "`", collapse = ", "),
+         ". If you want estimates over the whole region, set `domain = NULL`."
     )
   }
 
-  return(list(domain = domain, newdata = newdata)
-  )
+  return (list(domain = domain, newdata = newdata))
 }
 
 #' Infer Domain from a Fitted Model
 #' @noRd
 #'
-infer_estimate_domain <- function(fit) {
+infer_estimate_domain <- function (fit) {
   
   if (!is.null(fit$spec$domain_name)) {
-    return(fit$spec$domain_name)
+    return (fit$spec$domain_name)
   }
   
-  if (!is.null(fit$spec$default_model_data$domain_name)) {
-    return(fit$spec$default_model_data$domain_name)
+  if (!is.null(fit$spec$default_model_data) && !is.null(fit$spec$default_model_data$domain_name)) {
+    return (fit$spec$default_model_data$domain_name)
   }
   
   group_coefs <- get_grouping_variables(fit)
   group_coefs <- group_coefs[group_coefs != ""]
   
   if (length(group_coefs) == 1) {
-    return(group_coefs[1])
+    return (group_coefs[1])
+  } else {
+    stop("Only one domain is currently supported.")
   }
   
   stop(
@@ -175,38 +176,51 @@ infer_estimate_domain <- function(fit) {
   )
 }
 
-
+get_grouping_variables <- function (fit, ...) {
+  UseMethod("get_grouping_variables")
+}
 
 #' Validate Number of Posterior Draws
 #' @noRd
 #' 
-validate_estimate_draws <- function(
+validate_estimate_draws <- function (
     fit,
     ndraws
 ) {
   
   available_draws <- get_available_draws(fit)
   if (ndraws > available_draws) {
-    stop(
-      "Can't estimate more quantities than obtained via MCMC. ",
-      "Increase the number of chains or number of iterations."
+    warning(
+      "ndraws is greater than the number of posterior draws.",
+      "Can't request more posterior draws than obtained via MCMC. ",
+      "Setting ndraws to ", available_draws, ", the number of MCMC draws.",
+      "Increase the number of chains or number of iterations, or decrease thinning for more draws."
     )
+    ndraws <- available_draws
   }
   if (!is.null(fit$second_stage_fit)) {
     second_stage_draws <- get_available_draws(fit$second_stage_fit)
     if (ndraws > second_stage_draws) {
-      stop(
-        "Can't request more posterior draws than are available from ",
-        "the second-stage model."
+      warning(
+        "ndraws is greater than the number of posterior draws for the second-stage (logit) model.",
+        "Can't request more posterior draws than obtained via MCMC. ",
+        "Setting ndraws to ", available_draws, ", the number of MCMC draws.",
+        "Increase the number of chains or number of iterations, or decrease thinning for more draws."
       )
+      ndraws <- second_stage_draws
     }
   }
+}
+
+
+get_available_draws <- function(fit, ...) {
+  UseMethod("get_available_draws")
 }
 
 #' Subset Prediction Data
 #' @noRd
 #' 
-subset_prediction_data <- function(
+subset_prediction_data <- function (
     newdata,
     max_preds
 ) {
@@ -214,24 +228,24 @@ subset_prediction_data <- function(
   if (is.null(max_preds) || nrow(newdata) <= max_preds) {
     return(newdata)
   }
-  return(newdata |> 
-           dplyr::slice_sample(n = max_preds)
+  return (
+    newdata |> dplyr::slice_sample(n = max_preds)
   )
 }
 
 #' Prepare Area-Level Prediction Data
 #' @noRd
 #' 
-prepare_area_prediction_data <- function(
+prepare_area_prediction_data <- function (
     fit,
     newdata,
     domain,
     two_stage
 ) {
   
-  response_area_level <- fit$spec$level == "area"
-  second_stage_area_level <- two_stage &&
-    fit$spec$second_stage_spec$level == "area"
+  response_area_level <- (fit$spec$level == "area")
+  second_stage_area_level <- (two_stage &&
+    fit$spec$second_stage_spec$level == "area")
   
   if (!response_area_level && !second_stage_area_level) {
     return(newdata)
@@ -253,13 +267,13 @@ prepare_area_prediction_data <- function(
   names(training_se) <- fit$data[[domain]]
   newdata$BASAL_HT_SE <- training_se[newdata[[domain]]]
   
-  return(newdata)
+  return (newdata)
 }
 
 #' Obtain Posterior Expected Predictions
 #'
 #' @noRd
-get_estimate_predictions <- function(
+get_estimate_predictions <- function (
     fit,
     newdata,
     ndraws
@@ -286,13 +300,18 @@ get_estimate_predictions <- function(
     )
   }
   
-  return(t(post_preds))
+  return (t(post_preds))
 }
+
+get_posterior_epred <- function(fit, ...) {
+  UseMethod("get_posterior_epred")
+}
+
 
 #' Aggregate Posterior Predictions
 #'
 #' @noRd
-aggregate_posterior_predictions <- function(
+aggregate_posterior_predictions <- function (
     newdata,
     post_preds,
     domain,
@@ -312,7 +331,7 @@ aggregate_posterior_predictions <- function(
       values_to = "predicted_stat"
     )
   
-  return(preds)
+  return (preds)
 }
 
 #' Prepare Summary Statistics
@@ -333,7 +352,7 @@ prepare_estimate_stats <- function(stat) {
   for (i in seq_along(stat)) {
     
     fun <- og_stat[[i]]
-    res <- try(fun(c(1, 2, 3), na.rm = TRUE), silent = TRUE)
+    res <- try(fun(1:3, na.rm = TRUE), silent = TRUE)
     if (!inherits(res, "try-error")) {
       fun_wrapper <- function(thefun) {
         function(x, ...) {
@@ -347,16 +366,16 @@ prepare_estimate_stats <- function(stat) {
     # if part of this changes, then the first time they are run
     # they will access this variable at runtime, not define-time.
     # We are evaluating the functions here so they work as hoped
-    tmp <- stat[[i]](1:10)
+    tmp <- stat[[i]](1:3)
   }
   
-  return(stat)
+  return (stat)
 }
 
 #' Summarize Posterior Predictions
 #'
 #' @noRd
-summarize_estimate_predictions <- function(
+summarize_estimate_predictions <- function (
     preds,
     domain,
     stat,
@@ -393,16 +412,4 @@ summarize_estimate_predictions <- function(
   }
   
   return(ret_preds)
-}
-
-get_posterior_epred <- function(fit, ...) {
-  UseMethod("get_posterior_epred")
-}
-
-get_available_draws <- function(fit, ...) {
-  UseMethod("get_available_draws")
-}
-
-get_grouping_variables <- function(fit, ...) {
-  UseMethod("get_grouping_variables")
 }

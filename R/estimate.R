@@ -45,6 +45,10 @@ estimate.basal_fit <- function(
     seed = seed
   )
   
+  if (!is.null(seed)) {
+    set.seed(seed)
+  }
+  
   max_preds <- prepare_max_preds(max_preds)
   two_stage <- !is.null(fit$second_stage_fit)
   
@@ -53,10 +57,6 @@ estimate.basal_fit <- function(
     newdata = newdata,
     two_stage = two_stage
   )
-  
-  if (!is.null(seed)) {
-    set.seed(seed)
-  }
   
   domain_info <- prepare_estimate_domain(
     fit = fit,
