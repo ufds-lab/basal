@@ -62,7 +62,7 @@ set_spec_response.brms_spec <- function (spec, response) {
 #' Extract the response variables
 #' @exportS3Method basal::get_fit_response
 #' @noRd
-get_fit_response.brms_spec <- function(spec, response = NULL) {
+get_fit_response.brms_spec <- function(spec, response = NULL, ...) {
   if (is.null(response)) {
     if (inherits(spec$formula, "brmsformula")) {
       response <- all.vars(spec$formula$formula[[2]])[1]
@@ -77,7 +77,7 @@ get_fit_response.brms_spec <- function(spec, response = NULL) {
 #' Extract all variables from a model
 #' @exportS3Method basal::all_model_vars
 #' @noRd
-all_model_vars.brms_spec <- function (spec, ss = FALSE) {
+all_model_vars.brms_spec <- function (spec, ss = FALSE, ...) {
   if (spec$model_type == "custom") {
     if (inherits(spec$formula, "brmsformula")) {
       model_variables <- list(all.vars(spec$formula$formula))
@@ -117,7 +117,7 @@ all_model_vars.brms_spec <- function (spec, ss = FALSE) {
 #' Build a formula for a Fay-Herriot model
 #' @exportS3Method basal::build_fh_formula
 #' @noRd
-build_fh_formula.brms_spec <- function (spec, response) {
+build_fh_formula.brms_spec <- function (spec, response, ...) {
   if (spec$family$family == "gaussian") {
     formula <- stats::formula(
       paste0(response, " | se(BASAL_HT_SE) ~ ", paste0(spec$default_model_data$auxiliary_variables, collapse = " + "),
@@ -131,7 +131,7 @@ build_fh_formula.brms_spec <- function (spec, response) {
 #' Build a formula for a custom model
 #' @exportS3Method basal::build_custom_formula
 #' @noRd
-build_custom_formula.brms_spec <- function(spec, response) {
+build_custom_formula.brms_spec <- function(spec, response, ...) {
   formula <- spec$formula
   if (inherits(formula, "brmsformula")) {
     if (spec$level == "area") {

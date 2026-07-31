@@ -5,7 +5,7 @@
 \alias{oregon_sample}
 \title{Oregon sample data}
 \format{
-An object of class \code{data.frame} with 9996 rows and 13 columns.
+An object of class \code{data.frame} with 9996 rows and 6 columns.
 }
 \usage{
 oregon_sample

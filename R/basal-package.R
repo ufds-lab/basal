@@ -13,8 +13,10 @@
 #' @importFrom rstanarm normal
 #' @importFrom rstanarm student_t
 #' @importFrom stats ecdf
+#' @importFrom stats formula
 #' @importFrom stats quantile
 #' @importFrom stats sd
+#' @importFrom stats var
 ## usethis namespace: end
 NULL
 

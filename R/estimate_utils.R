@@ -347,7 +347,7 @@ prepare_estimate_stats <- function(stat) {
   # oftentimes, there will be weird NAs, and having functions which are slightly
   # robust is nice. Simultaneously I don't want to put this onto the user.
   # So I'm going to try to automatically do it, but this only works if users
-  # add a ... argument (e.g., funciton(x, ...)), in which case I try inserting
+  # add a ... argument (e.g., function(x, ...)), in which case I try inserting
   # an na.rm = TRUE argument
   for (i in seq_along(stat)) {
     
@@ -388,7 +388,7 @@ summarize_estimate_predictions <- function (
     ret_preds <- preds |>
       dplyr::group_by_at(domain) |>
       dplyr::mutate(dplyr::across(predicted_stat, stat)) |>
-      dplyr::select(-c(draw, predicted_stat)) |>
+      dplyr::select(-draw, -predicted_stat) |>
       dplyr::ungroup() |>
       unique()
     

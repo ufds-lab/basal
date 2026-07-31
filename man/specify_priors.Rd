@@ -2,16 +2,16 @@
 % Please edit documentation in R/fit_utils.R
 \name{specify_priors}
 \alias{specify_priors}
-\title{Prior specification
-Prior specification is done on an engine-specific basis.
-For information on setting priors for a particular engine,
-the help pages for prior specification for those engines will be sufficient.}
+\title{Prior specification}
 \usage{
 specify_priors(...)
 }
-\description{
-Prior specification
+\arguments{
+\item{...}{prior objects to pass to the engine
 Prior specification is done on an engine-specific basis.
 For information on setting priors for a particular engine,
-the help pages for prior specification for those engines will be sufficient.
+the help pages for prior specification for those engines will be sufficient.}
+}
+\description{
+Prior specification
 }

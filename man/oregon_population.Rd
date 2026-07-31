@@ -5,7 +5,7 @@
 \alias{oregon_population}
 \title{Oregon population data}
 \format{
-An object of class \code{data.frame} with 1000000 rows and 11 columns.
+An object of class \code{data.frame} with 1000000 rows and 5 columns.
 }
 \usage{
 oregon_population

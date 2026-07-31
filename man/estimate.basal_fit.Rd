@@ -19,12 +19,15 @@ estimate.basal_fit(
 \arguments{
 \item{fit}{object of type \code{basal_fit}.}
 
-\item{newdata}{data to predict data on. If NULL, fit on training data.}
+\item{newdata}{data to predict data on. If \code{NULL}, fit on training data.}
 
 \item{domain}{(vector of) names of areas to aggregate estimates on. If \code{NULL},
 aggregate all the data together.}
 
 \item{stat}{Named vector of function(s) to apply to posterior predictions.}
+
+\item{aggregation_statistic}{Statistic to conduct inference on. Statistic will
+be computed over population data, stratifying by \code{domain}}
 
 \item{ndraws}{number of draws from the posterior predictive distribution.}
 

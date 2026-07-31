@@ -1,18 +1,21 @@
 #' Posterior estimation of summary statistics
 #'
-#' @param fit object of type `basal_fit`.
+#' @param fit object of type \code{basal_fit}.
 #'
-#' @param newdata data to predict data on. If NULL, fit on training data.
+#' @param newdata data to predict data on. If \code{NULL}, fit on training data.
 #'
-#' @param domain (vector of) names of areas to aggregate estimates on. If `NULL`,
+#' @param domain (vector of) names of areas to aggregate estimates on. If \code{NULL},
 #' aggregate all the data together.
 #'
 #' @param stat Named vector of function(s) to apply to posterior predictions.
+#' 
+#' @param aggregation_statistic Statistic to conduct inference on. Statistic will
+#' be computed over population data, stratifying by \code{domain}
 #'
 #' @param ndraws number of draws from the posterior predictive distribution.
 #'
 #' @param max_preds maximum number of points to make predictions on. Capped to
-#' avoid R session crashing. A value of `NULL` or `Inf` will predict on all.
+#' avoid R session crashing. A value of \code{NULL} or \code{Inf} will predict on all.
 #'
 #' @param seed The seed for random number generation in posterior prediction.
 #' 

@@ -6,6 +6,11 @@
 \usage{
 validate_engine(engine, spec)
 }
+\arguments{
+\item{engine}{An object of class \code{BASAL_engine}}
+
+\item{spec}{An object of class \code{BASAL_spec}}
+}
 \description{
 Internal function for ensuring an engine is able to fit a specification
 noRd

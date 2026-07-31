@@ -1,4 +1,6 @@
 #' @title Validate an engine
+#' @param engine An object of class \code{BASAL_engine}
+#' @param spec An object of class \code{BASAL_spec}
 #' @description Internal function for ensuring an engine is able to fit a specification
 #' noRd
 validate_engine <- function(engine, spec) {
@@ -74,7 +76,7 @@ set_spec_response.default <- function (spec, response) {
 #' Default method for computing model response
 #' @exportS3Method basal::get_fit_response
 #' @noRd
-get_fit_response.default <- function(spec, response = NULL) {
+get_fit_response.default <- function(spec, response = NULL, ...) {
   if (is.null(response)) {
     if (is.null(spec$formula)) {
       response <- spec$default_model_data$response_name
@@ -92,7 +94,7 @@ get_fit_response.default <- function(spec, response = NULL) {
 #' Default method for computing model variables
 #' @exportS3Method basaal::all_model_vars
 #' @noRd
-all_model_vars.default <- function (spec, ss = FALSE) {
+all_model_vars.default <- function (spec, ss = FALSE, ...) {
   if (spec$model_type == "custom") {
     model_variables <- list(all.vars(spec$formula))
     if (length(spec$formula == 2)) {
@@ -124,7 +126,7 @@ all_model_vars.default <- function (spec, ss = FALSE) {
 #' Build a formula for a Fay-Herriot model
 #' @exportS3Method basal::build_fh_formula
 #' @noRd
-build_fh_formula.default <- function(spec, response) {
+build_fh_formula.default <- function(spec, response, ...) {
   formula <- stats::formula(paste0(
     response, " ~ ", 
     paste0(spec$default_model_data$auxiliary_variables, collapse = " + "), " + ",
@@ -137,7 +139,7 @@ build_fh_formula.default <- function(spec, response) {
 #' Build a Formula for a BHF Model
 #' @exportS3Method basal::build_bhf_formula
 #' @noRd
-build_bhf_formula.default <- function (spec) {
+build_bhf_formula.default <- function (spec, ...) {
   formula <- stats::formula(paste0(
     spec$default_model_data$response_name, " ~ ",
     paste0(spec$default_model_data$auxiliary_variables, collapse = " + "), " + ",
@@ -150,7 +152,7 @@ build_bhf_formula.default <- function (spec) {
 #' Build a formula for a custom model
 #' @exportS3Method basal::build_custom_formula
 #' @noRd
-build_custom_formula.default <- function(spec, response) {
+build_custom_formula.default <- function(spec, response, ...) {
   return (spec$formula)
 }
 

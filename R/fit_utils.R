@@ -1,4 +1,5 @@
 #' @title Prior specification
+#' @param ... prior objects to pass to the engine
 #' Prior specification is done on an engine-specific basis.
 #' For information on setting priors for a particular engine,
 #' the help pages for prior specification for those engines will be sufficient.

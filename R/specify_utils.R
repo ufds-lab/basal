@@ -17,7 +17,7 @@ validate_single_stage_spec <- function(spec, auxiliary_variables, response_name)
         stop("Must use base-R formula when specifying a formula for a BHF or FH.")
       }
       spec$formula <- 
-        formula(paste0(capture.output(spec$formula)[1], " + (1 | ", spec$domain_name, ")"))
+        formula(paste0(utils::capture.output(spec$formula)[1], " + (1 | ", spec$domain_name, ")"))
       return (
         validate_single_stage_spec(spec, auxiliary_variables, response_name)
       )
@@ -72,7 +72,7 @@ validate_GLM_two_stage_spec = function(spec, response_name, auxiliary_variables)
              "The domain cannot otherwise be easily inferred from the response model.")
       }
       spec$formula <- 
-        formula(paste0(capture.output(spec$formula)[1], " + (1 | ", spec$domain_name, ")"))
+        formula(paste0(utils::capture.output(spec$formula)[1], " + (1 | ", spec$domain_name, ")"))
       return (
         validate_GLM_two_stage_spec(spec, auxiliary_variables, response_name)
       )
