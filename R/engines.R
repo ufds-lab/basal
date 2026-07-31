@@ -154,20 +154,6 @@ build_custom_formula.default <- function(spec, response) {
   return (spec$formula)
 }
 
-#' Default method for creating `basal` priors
-#' @exportS3Method basal::build_basal_priors
-#' @noRd
-build_basal_priors.default <- function (
-  spec,
-  formula,
-  data,
-  family,
-  response,
-  user_priors = NULL
-) {
-  return (NULL)
-}
-
 #' Default method for fitting a model; errors as a default, should not be called
 #' This might be unnecessary (with no default, ommitting an implementation will error)
 #' but is useful in that this R file is a template for creating an engine

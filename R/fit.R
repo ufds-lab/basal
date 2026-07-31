@@ -38,7 +38,7 @@
 fit.basal_spec <- function(spec,
                            data,
                            population_size = NULL,
-                           priors = NULL,
+                           priors = specify_priors(),
                            second_stage_priors = NULL,
                            chains = 3,
                            iter = 5000,
@@ -144,15 +144,6 @@ fit.basal_spec <- function(spec,
   
   predictors <- vars[!(vars %in% c(res, "BASAL_HT_SE"))]
   
-  model_priors <- build_basal_priors(
-    spec = spec,
-    formula = formula,
-    data = data,
-    family = spec$family,
-    response = res,
-    user_priors = priors
-  )
-  
   parallel_settings <- do_parallel_settings(
     chains = chains,
     ncores = ncores,
@@ -166,7 +157,7 @@ fit.basal_spec <- function(spec,
     spec = spec,
     formula = formula,
     data = data,
-    priors = model_priors,
+    priors = priors,
     family = spec$family,
     chains = chains,
     iter = iter,

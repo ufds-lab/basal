@@ -1,3 +1,11 @@
+#' @title Prior specification
+#' Prior specification is done on an engine-specific basis.
+#' For information on setting priors for a particular engine,
+#' the help pages for prior specification for those engines will be sufficient.
+specify_priors <- function (...) {
+  return (list(...))
+}
+
 #' Accept inputs for fitting a model
 #' @noRd
 validate_fit_inputs <- function(spec,
@@ -172,12 +180,6 @@ get_scale <- function (data, variable) {
   }
   
   return (var_sd)
-}
-
-#' Generic; create an object for a backend to specify priors
-#' @noRd
-build_basal_priors <- function (spec, ...) {
-  UseMethod("build_basal_priors")
 }
 
 #' Prepare data for an area-Level model

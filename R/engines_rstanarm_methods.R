@@ -21,31 +21,6 @@ engine_rstanarm <- function() {
   return (engine)
 }
 
-#' Default method for creating `basal` priors
-#' @exportS3Method basal::build_basal_priors
-#' @noRd
-build_basal_priors.rstanarm_spec <- function (
-  spec,
-  formula,
-  data,
-  family,
-  response,
-  user_priors = NULL
-) {
-  # there are only a few (4) different priors one can specify for an rstanarm model
-    # there is a prior on an intercept (if it exists)
-    # there is a prior on regression coefficients
-    # there is a prior on the variance
-  # I think most of the time the default priors are reasonable,
-  # though I think the default (univariate) variance is exponential, and
-  # gellman mentioned that gamma family distributions might not be the best
-  # for some of these things. So we might change this to half-cauchy
-  
-  # If the user specifies a prior
-  
-  return (NULL)
-}
-
 #' Fit a BASAL model Using `rstanarm`
 #' @exportS3Method basal::fit_basal_model
 #' @noRd
@@ -74,6 +49,8 @@ fit_basal_model.rstanarm_spec <- function(
     warmup = burn_in,
     cores = ncores
   )
+  
+  model_args <- union(model_args, priors)
   
   if (!is.null(seed)) {
     model_args$seed <- seed
