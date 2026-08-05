@@ -48,9 +48,9 @@ When modeling in `basal`, every model starts with a specification which will det
 ```{r}
 BHF_spec <- specify(
   model = "BHF",
-  domain_name = "evt_class_cd",
+  domain_name = "evt",
   response_name = "biomass",
-  auxiliary_variables = c("ppt", "lfevc")
+  auxiliary_variables = c("ppt", "evc")
 )
 ```
 
@@ -58,7 +58,7 @@ From this, the level of the model as well as the relationship between the respon
 
 ```{r}
 BHF_spec_manual <- specify(
-  biomass ~ lfevc + ppt + (1 | evt_class_cd),
+  biomass ~ evc + ppt + (1 | evt),
   level = "unit"
 )
 ```
@@ -67,8 +67,8 @@ or, a hybrid case between the two of these:
 
 ```{r}
 BHF_spec_mixed <- specify(
-  biomass ~ lfevc + ppt,
-  domain_name = "evt_class_cd",
+  biomass ~ evc + ppt,
+  domain_name = "evt",
   model = "BHF"
 )
 ```
@@ -80,9 +80,9 @@ In the transition to the area-level model, while modeling assumptions may become
 
 ```{r}
 FH_spec <- specify(
-  biomass ~ lfevc + ppt,
+  biomass ~ evc + ppt,
   model = "FH", # only line that changes
-  domain_name = "evt_class_cd"
+  domain_name = "evt"
 )
 ```
 
@@ -122,9 +122,9 @@ In general, it is easier to see if posterior predictives agree with data using t
 
 ```{r}
 BHF_spec_trans <- specify(
-  biomass ~ lfevc + ppt,
+  biomass ~ evc + ppt,
   model = "BHF",
-  domain_name = "evt_class_cd",
+  domain_name = "evt",
   variable_transform = list(
     transform = function (y) {y^(1/4)},
     inv_transform = function (y) {y^4}
@@ -162,25 +162,12 @@ estimate(
 This gives the summary statistics about the predicted average value, the `predicted_mean`. By default, it has a point estimate and variance for the `predicted_mean`, as well as quantiles for a 95% credible interval. The interpretation of a credible interval is like a confidence interval, except we can work with probabilities. So an interpretation could be that ``The probability that the mean biomass is within the interval above for any of the counties is 95%''. There will be another interpretation with more explicit values shortly. We don't need to be restricted to the domain (if any) we used in specifying our model. For example, though we used county as the domain when specifying the model, we could estimate on the level of `countyfips`, the different counties, this is possibly more desirable for estimates.
 
 ```{r}
-e = estimate(
+estimate(
   BHF_fit_trans,
   oregon_population,
-  domain = "countyfips"
+  domain = "county"
 )$preds |>
   head(5)
-
-e %>%
-  dplyr::filter(countyfips %in% c(
-    41001, 41003, 41005, 41007, 41017
-  )) %>%
-  mutate(county = case_when(
-    countyfips == 41001 ~ "Baker",
-    countyfips == 41003 ~ "Benton",
-    countyfips == 41005 ~ "Clackamas",
-    countyfips == 41007 ~ "Clatsop",
-    countyfips == 41017 ~ "Deschutes"
-  )) %>%
-  dplyr::select(county, everything(), -countyfips)
 ```
 
 By default, `estimate()` provides estimates of the mean and variance, however, the estimated statistics can be changed by changing the `stat` argument. For example, to construct credible intervals, we can use a wrapper around the quantile function. In general, when providing functions in the form of `stat`, they should allow the additional argument `...`, or otherwise ignore `NA` values. 
@@ -219,9 +206,9 @@ In order to fit this in `basal`, we use two model specifications and fit each on
 ```{r}
 zi_BHF <- specify(
   model = "BHF",
-  domain_name = "evt_class_cd",
+  domain_name = "evt",
   response_name = "biomass",
-  auxiliary_variables = c("lfevc", "ppt"),
+  auxiliary_variables = c("evc", "ppt"),
   variable_transform = list(
     transform = function (y) {y^(1/4)},
     inv_transform = function (y) {y^4}
@@ -235,16 +222,16 @@ This will fit a logistic model of the form of a BHF with similar variables (spec
 ```{r}
 second_stage <- specify(
   model = "BHF",
-  domain_name = "evt_class_cd",
-  auxiliary_variables = c("lfevc", "ppt"),
+  domain_name = "evt",
+  auxiliary_variables = c("evc", "ppt"),
   specifying_second_stage_model = TRUE
 )
 
 zi_BHF <- specify(
   model = "BHF",
-  domain_name = "evt_class_cd",
+  domain_name = "evt",
   response_name = "biomass",
-  auxiliary_variables = c("lfevc", "ppt"),
+  auxiliary_variables = c("evc", "ppt"),
   variable_transform = list(
     transform = function (y) {y^(1/4)},
     inv_transform = function (y) {y^4}
@@ -259,9 +246,9 @@ While most of these choices will not affect the models past parametric form or c
 ```{r}
 zi_BHF <- specify(
   model = "BHF",
-  domain_name = "evt_class_cd",
+  domain_name = "evt",
   response_name = "biomass",
-  auxiliary_variables = c("lfevc", "ppt"),
+  auxiliary_variables = c("evc", "ppt"),
   variable_transform = list(
     transform = function (y) {y^(1/4)},
     inv_transform = function (y) {y^4}

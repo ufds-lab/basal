@@ -19,7 +19,8 @@ Imports:
     stats,
     base,
     rstanarm,
-    rstantools
+    rstantools,
+    generics
 Suggests: 
     knitr,
     rmarkdown,

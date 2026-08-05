@@ -3,6 +3,7 @@
 
 ## usethis namespace: start
 #' @importFrom brms prior
+#' @importFrom generics fit
 #' @importFrom rstanarm cauchy
 #' @importFrom rstanarm decov
 #' @importFrom rstanarm default_prior_coef
