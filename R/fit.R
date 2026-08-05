@@ -33,7 +33,7 @@
 #'
 #' @return An object of class basal_fit containing the results.
 #'
-#' @export
+#' @exportS3Method generics::fit
 #'
 fit.basal_spec <- function(spec,
                            data,

@@ -135,7 +135,7 @@ fh  <- specify(
   response = "biomass"
 )
 
-fit_fh <- fit.basal_spec(
+fit_fh <- fit(
   fh, oregon_sample,
   population_size = nrow(oregon_population)
 )
@@ -240,7 +240,7 @@ drv_spec = specify(
   variable_transform = transform
 )
 
-drv_fit = fit.basal_spec(
+drv_fit = fit(
   drv_spec, oregon_sample[oregon_sample$biomass != 0,]
 )
 ```

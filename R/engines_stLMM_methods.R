@@ -6,7 +6,7 @@
 #' 
 #' @return Object of class `basal_engine`
 #' @export
-engine_brms <- function() {
+engine_stLMM <- function() {
   stop("Unable to use stLMM as an engine yet.")
   engine <- list()
   engine$priority = 10
@@ -20,7 +20,6 @@ engine_brms <- function() {
   engine$glm_families <- c(
     "gaussian", "binomial"
   )
-  
   engine$logistic_family <- stats::binomial()
   
   class(engine) <- "basal_engine"
@@ -119,7 +118,7 @@ fit_basal_model.stLMM <- function (
   stop("Add default prior for random effects")
   stop("Thinning is currently not supported")
   
-  model_fit <- stLMM(
+  model_fit <- stLMM::stLMM(
     formula,
     data = data,
     family = family,

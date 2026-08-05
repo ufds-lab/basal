@@ -47,7 +47,6 @@ validate_GLM_two_stage_spec = function(spec, response_name, auxiliary_variables)
   # a binomial family for logistic regression* (???) Instead, we will have to 
   # set this within fit() after an engine has been chosen
   if (spec$family$family != "gaussian") {
-    spec$family$family = "BASAL_LOGIT_FAMILY"
     message("Specified family ignored for logit model. This will automatically ",
             "set within fit(), after an engine has been chosen.")
   }

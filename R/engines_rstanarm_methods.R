@@ -14,8 +14,9 @@ engine_rstanarm <- function() {
   engine$model_stage <- c("single", "zi")
   
   engine$glm_families <- c(
-    "gaussian", "bernoulli", "exponential", "poisson", "neg_binomial_2"
+    "gaussian", "binomial", "exponential", "poisson", "neg_binomial_2"
   )
+  engine$logistic_family <- stats::binomial()
   
   class(engine) <- "basal_engine"
   return (engine)
@@ -39,6 +40,7 @@ fit_basal_model.rstanarm_spec <- function(
     nthreads,
     ...
 ) {
+  
   model_args <- list(
     formula = formula,
     data = data,
@@ -50,10 +52,17 @@ fit_basal_model.rstanarm_spec <- function(
     cores = ncores
   )
   
-  model_args <- union(model_args, priors)
+  names <- names(model_args)
+  if (!is.null(priors) && !identical(priors, list())) {
+    model_args <- union(model_args, priors)
+    names <- c(names, "priors")
+    names(model_args) <- names
+    
+  }
   
   if (!is.null(seed)) {
     model_args$seed <- seed
+    names <- c(names, "seed")
   }
 
   extra_args <- list(...)

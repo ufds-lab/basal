@@ -4,7 +4,7 @@
 \alias{fit.basal_spec}
 \title{Fit a Specified Small Area Estimation Model Object}
 \usage{
-fit.basal_spec(
+\method{fit}{basal_spec}(
   spec,
   data,
   population_size = NULL,

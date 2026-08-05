@@ -192,6 +192,16 @@ fit_basal_model.brms_spec <- function(
     nthreads,
     ...
 ) {
+  if (!is.null(priors) && length(priors) > 1) {
+    stop("Can't assign multiple prior objects with brms, concatenate them with ",
+         "c(prior(...), prior(...), ..., prior(...))")
+  } else if (identical(priors, list())) {
+    priors <- brms::default_prior(
+      formula, data, family = family
+    )
+  }
+  
+  
   brm_args <- list(
     formula = formula,
     data = data,
@@ -204,15 +214,6 @@ fit_basal_model.brms_spec <- function(
     cores = ncores,
     threads = nthreads
   )
-  
-  if (!is.null(priors) && length(priors) > 1) {
-    stop("Can't assign multiple prior objects with brms, concatenate them with ",
-         "c(prior(...), prior(...), ..., prior(...))")
-  }
-  
-  if (!is.null(priors) && !inherits(priors, "brmsprior")) {
-    stop("Must use brmspriors with the brms engines")
-  }
   
   if (!is.null(seed)) {
     brm_args$seed <- seed

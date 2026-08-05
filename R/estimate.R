@@ -21,7 +21,7 @@
 #' 
 #' @export
 #' 
-estimate.basal_fit <- function(
+estimate <- function(
     fit,
     newdata = NULL,
     domain = "BASAL_INHERIT",

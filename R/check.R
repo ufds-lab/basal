@@ -23,7 +23,7 @@
 #' @return An object of class `basal_check`.
 #'
 #' @export
-check.basal_fit <- function(
+check <- function(
     fit,
     stat = c(ecdf = stats::ecdf),
     include_base_pp_check = TRUE,

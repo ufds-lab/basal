@@ -17,22 +17,13 @@ knitr::opts_chunk$set(
 
 ```{r setup}
 library(basal)
-library(ggplot2)
 
 data("oregon_population", "oregon_sample")
 ```
 
 \section{Data Description}
 
-Here's some data. There will be a better section here, or no section, depending. Either way, these are FIA data like what we might use, but they are public. We have a number of columns, of which I have selected the interesting ones.
-
-```{r}
-oregon_population = oregon_population |>
-  dplyr::select(c("countyfips", "tnt", "evt_class_cd", "ppt", "elev", "lfevc"))
-oregon_sample = oregon_sample |>
-  dplyr::select(c("biomass", "countyfips", "tnt", "evt_class_cd", "ppt", "elev", "lfevc"))
-```
-
+We use the oregon population and oregon sample data which have,respectively, auxiliary variables measured at the pixel-level throughout Oregon, and tagged observations of biomass with auxiliary data measured sparsely throughout Oregon.
 To assist with stability and reduce variability of priors, we will scale the `elev` variable to have a smaller variance. We will discuss this more in depth in another vignette---`advanced_model_fitting`---but take it for granted here.
 
 ```{r}
@@ -100,17 +91,17 @@ From this, the engine will understand that, as the FH is an area-level model, it
 Once a model has been specified, its parameters can be estimated through the `fit()` function. While there are many options for `fit()`, the only necessary ones are a previously specified model, and a dataset. The columns in the dataset must correspond to the variables in the formula or various variable names listed in `specify()`, although aside from area-level models, not much is needed.
 
 ```{r, cache = TRUE, results = "hide"}
-BHF_fit <- fit.basal_spec(
+BHF_fit <- fit(
   BHF_spec_mixed,
   oregon_sample,
-  engine = engine_rstanarm()
+  engine = engine_brms()
 )
 ```
 
 For area level models, in order to compute direct estimates, the size of the population must be given.
 
 ```{r, cache = TRUE, results = "hide"}
-# FH_fit <- fit.basal_spec(
+# FH_fit <- fit(
 #   FH_spec,
 #   oregon_sample,
 #   population_size = nrow(oregon_population)
@@ -120,7 +111,7 @@ For area level models, in order to compute direct estimates, the size of the pop
 With these models in hand, it is best practices to ensure the model specification and subsequent MCMC posterior approximation is accurate, which we do with the `check()` function.
 
 ```{r}
-check.basal_fit(BHF_fit)
+check(BHF_fit)
 ```
 
 The output from these functions shows statistics computed from the original population (black) as well as statistics computed from posterior predictive populations (blue). The first plot shows the empirical density of both the provided data and predicted data from the posterior predictive distribution. The second shows the empirical cdf. These are both related and show the same information in different ways. In both, we see a significant deviation of our posterior predictive samples from the observed sample indicating that our model does not explain the data very well. These may be less familiar than things like histograms, but often provide easier methods to compare different distributions, namely allowing plots showing multiple distributions at once. We are looking for these plots to line up well.
@@ -144,7 +135,7 @@ BHF_spec_trans <- specify(
 And we can then fit a model and check the posterior predictives:
 
 ```{r, cache = TRUE, results = "hide"}
-BHF_fit_trans = fit.basal_spec(
+BHF_fit_trans = fit(
   BHF_spec_trans,
   oregon_sample[oregon_sample$biomass != 0,],
   engine = engine_rstanarm()
@@ -152,9 +143,7 @@ BHF_fit_trans = fit.basal_spec(
 ```
 
 ```{r}
-check.basal_fit(
-  BHF_fit_trans
-)
+check(BHF_fit_trans)
 ```
 
 
@@ -164,7 +153,7 @@ The final step is to compute estimates, for which we need some new data.
 We could provide the initial data, but here we provide population data. Without specifying domains, the code will use the domains in the model specification:
 
 ```{r}
-estimate.basal_fit(
+estimate(
   BHF_fit_trans,
   oregon_population
 )
@@ -173,7 +162,7 @@ estimate.basal_fit(
 This gives the summary statistics about the predicted average value, the `predicted_mean`. By default, it has a point estimate and variance for the `predicted_mean`, as well as quantiles for a 95% credible interval. The interpretation of a credible interval is like a confidence interval, except we can work with probabilities. So an interpretation could be that ``The probability that the mean biomass is within the interval above for any of the counties is 95%''. There will be another interpretation with more explicit values shortly. We don't need to be restricted to the domain (if any) we used in specifying our model. For example, though we used county as the domain when specifying the model, we could estimate on the level of `countyfips`, the different counties, this is possibly more desirable for estimates.
 
 ```{r}
-e = estimate.basal_fit(
+e = estimate(
   BHF_fit_trans,
   oregon_population,
   domain = "countyfips"
@@ -197,7 +186,7 @@ e %>%
 By default, `estimate()` provides estimates of the mean and variance, however, the estimated statistics can be changed by changing the `stat` argument. For example, to construct credible intervals, we can use a wrapper around the quantile function. In general, when providing functions in the form of `stat`, they should allow the additional argument `...`, or otherwise ignore `NA` values. 
 
 ```{r}
-estimate.basal_fit(
+estimate(
   BHF_fit_trans,
   oregon_population,
   domain = NULL,
@@ -212,7 +201,7 @@ This allows us to make inferences like ``This model assigns 80% posterior probab
 One other thing we can do is use other aggregation statistics. Generally, it is the mean we wish to do inference on---that is, draw inference on the value of the mean or our understanding thereof. However, we can do inference on other statistics. For example, we could do inference on the variance or standard error of biomass values, rather than means of biomass values. Unlike the values for `stat` though, you can only use one aggregation statistic at a time.
 
 ```{r}
-estimate.basal_fit(
+estimate(
   BHF_fit_trans,
   oregon_population,
   ndraws = 800,
@@ -286,9 +275,9 @@ While most of these choices will not affect the models past parametric form or c
 ```{r}
 zi_BHF <- specify(
   model = "BHF",
-  domain_name = "evt_class_cd",
+  domain_name = "evt",
   response_name = "biomass",
-  auxiliary_variables = c("lfevc", "ppt"),
+  auxiliary_variables = c("evc", "ppt"),
   variable_transform = list(
     transform = function (y) {y^(1/4)},
     inv_transform = function (y) {y^4}
@@ -300,28 +289,23 @@ zi_BHF <- specify(
 Then this may be estimated as normal.
 
 ```{r, cache = TRUE, results = "hide"}
-zi_fit = fit.basal_spec(
+zi_fit = fit(
   zi_BHF,
   data = oregon_sample,
-  iter = 10,
-  burn_in = 5,
-  ncores = 1,
-  engine = engine_brms()
+  engine = engine_rstanarm()
 )
 ```
 
 and likewise we can view posterior predictives, which now creates plots for both models individually as well as the joint response and logistic model.
 
 ```{r}
-zi_check = check.basal_fit(
-  zi_fit
-)
+check(zi_fit)
 ```
 
 and finally, posterior estimation is just as before:
 
 ```{r}
-estimate.basal_fit(
+estimate(
   zi_fit,
   oregon_population,
   ndraws = 800,
@@ -331,8 +315,6 @@ estimate.basal_fit(
            upper_80_ci = function(x, ...) {quantile(x, 0.9, ...)})
 )
 ```
-
-
 
 \section{Notes}
 
