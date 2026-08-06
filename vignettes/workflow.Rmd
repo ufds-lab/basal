@@ -94,7 +94,7 @@ Once a model has been specified, its parameters can be estimated through the `fi
 BHF_fit <- fit(
   BHF_spec_mixed,
   oregon_sample,
-  engine = engine_brms()
+  engine = engine_rstanarm()
 )
 ```
 
@@ -295,11 +295,9 @@ and finally, posterior estimation is just as before:
 estimate(
   zi_fit,
   oregon_population,
+  domain = "county",
   ndraws = 800,
-  max_preds = 1e4,
-  stat = c(mean = mean, var = var,
-           lower_80_ci = function(x, ...) {quantile(x, 0.01, ...)},
-           upper_80_ci = function(x, ...) {quantile(x, 0.9, ...)})
+  max_preds = 1e4
 )
 ```
 
