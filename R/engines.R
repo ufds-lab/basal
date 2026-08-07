@@ -225,7 +225,7 @@ get_posterior_epred.default <- function(
     rstantools::posterior_epred(
       fit$model,
       newdata = newdata,
-      ndraws = ndraws,
+      draws = ndraws,
       allow_new_levels = allow_new_levels,
       ...
     )

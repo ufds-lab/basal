@@ -2,7 +2,7 @@
 
 `basal` is still under development. Please us at your own risk!
 
-# `basal`: *Ba*yesian *S*mall *A*rea Estimation *L*ibrary
+# `basal`: `Ba`yesian `S`mall `A`rea Estimation `L`ibrary
 This package is intended to provide tools for Bayesian modeling within the small area estimation context.
 
 ## Modeling Design and Example

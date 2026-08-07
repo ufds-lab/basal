@@ -81,7 +81,7 @@ prepare_max_preds <- function (max_preds) {
   
   if (max_preds == "default") {
     warning(
-      "For ease of computation, argument `max_preds = 1e5`. This sub-samples `newdata`. ",
+      "For ease of computation, argument `max_preds` is set to `1e5`. This sub-samples `newdata`. ",
       "To disable or change this, use `max_preds = NULL` or another value."
     )
     return(1e5)
@@ -123,7 +123,8 @@ prepare_estimate_domain <- function (
 ) {
 
   if (is.null(domain)) {
-    return(list(domain = domain, newdata = newdata)
+    newdata$BASAL_OVERALL = "0"
+    return(list(domain = "BASAL_OVERALL", newdata = newdata)
     )
   }
   if (any(domain == "BASAL_INHERIT")) {
