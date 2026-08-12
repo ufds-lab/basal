@@ -54,5 +54,5 @@ Or, to build and install locally, run:
 ```r
 git clone git@github.com:ufds-lab/basal.git
 cd basal
-R CMD intall .
+R CMD install .
 ```
