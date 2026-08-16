@@ -26,19 +26,21 @@ test_specify <- function () {
         for (model_stage in c("single", "zi")) {
           for (sssm in c(TRUE, FALSE)) {
             for (level in c("unit", "area")) {
-              if (level == "area") {
-                domain_name = "evt_class_cd"
+              domain_name <- if (model_type != "custom" || level == "area") {
+                "evt_class_cd"
+              } else {
+                NULL
               }
-              expect_error = FALSE
+              expecting_error = FALSE
               if ((level == "area" || model_type == "FH") && sssm && model_type != "BHF") {
-                expect_error = TRUE
+                expecting_error = TRUE
               } else if (sssm && !is.null(args$formula) && is.null(domain_name) && model_type != "custom") {
-                expect_error = TRUE
+                expecting_error = TRUE
               } else if (model_type == "custom" && is.null(args$formula) && !sssm) {
-                expect_error = TRUE
+                expecting_error = TRUE
               } else if ((model_type == "FH" || (model_type == "custom" && level == "area")) && 
                          is.null(domain_name) && !sssm) {
-                expect_error = TRUE
+                expecting_error = TRUE
               }
               if (expect_error) {
                 testthat::expect_error(
@@ -77,4 +79,55 @@ test_specify <- function () {
   }
 }
 
+testthat::test_that("specify handles argument combinations", {
+  test_specify()
+})
 
+testthat::test_that("preset specifications are correct", {
+  
+  bhf <- basal::specify(
+    model = "BHF",
+    response_name = "biomass",
+    auxiliary_variables = "ppt",
+    domain_name = "evt_class_cd"
+  )
+  
+  testthat::expect_s3_class(bhf, "basal_spec")
+  testthat::expect_equal(bhf$model_type, "BHF")
+  testthat::expect_equal(bhf$level, "unit")
+  testthat::expect_equal(bhf$domain_name, "evt_class_cd")
+  testthat::expect_equal(bhf$default_model_data$response_name, "biomass")
+  
+  fh <- basal::specify(
+    model = "FH",
+    response_name = "biomass",
+    auxiliary_variables = "ppt",
+    domain_name = "evt_class_cd"
+  )
+  
+  testthat::expect_equal(fh$model_type, "FH")
+  testthat::expect_equal(fh$level, "area")
+})
+
+
+testthat::test_that("Second-stage specification inherits model information", {
+  
+  second_stage <- basal::specify(
+    model = "BHF",
+    specifying_second_stage_model = TRUE
+  )
+  
+  zi_spec <- basal::specify(
+    model = "BHF",
+    response_name = "biomass",
+    auxiliary_variables = "ppt",
+    domain_name = "evt_class_cd",
+    model_stage = "zi",
+    second_stage_spec = second_stage
+  )
+  
+  testthat::expect_s3_class(zi_spec$second_stage_spec, "basal_spec")
+  testthat::expect_equal(zi_spec$second_stage_spec$domain_name, "evt_class_cd")
+  testthat::expect_equal(zi_spec$second_stage_spec$default_model_data$auxiliary_variables, "ppt")
+  testthat::expect_equal(zi_spec$second_stage_spec$level, "unit")
+})
