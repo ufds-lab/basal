@@ -1,4 +1,5 @@
 #' @export
+#' @noRd
 generics::fit
 
 #' @export 

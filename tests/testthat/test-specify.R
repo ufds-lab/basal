@@ -38,12 +38,15 @@ test_specify <- function () {
                 expecting_error = TRUE
               } else if (model_type == "custom" && is.null(args$formula) && !sssm) {
                 expecting_error = TRUE
-              } else if ((model_type == "FH" || (model_type == "custom" && level == "area")) && 
+              } else if ((model_type == "FH" || (level == "area" && model_type != "BHF")) && 
                          is.null(domain_name) && !sssm) {
                 expecting_error = TRUE
+              } else if ((model_type == "FH" || (level == "area" && model_type != "BHF")) &&
+                        !is.null(transform) && (sssm || model_stage != "zi")) {
+                expecting_error = TRUE
               }
-              if (expect_error) {
-                testthat::expect_error(
+              if (expecting_error) {
+                t = try(testthat::expect_error(
                   basal::specify(
                     formula = args$formula,
                     response_name = args$response_name,
@@ -55,9 +58,12 @@ test_specify <- function () {
                     specifying_second_stage_model = sssm,
                     level = level
                   )
-                )
+                ))
+                if (inherits(t, "try-error")) {
+                  browser()
+                }
               } else {
-                testthat::expect_no_error(
+                t = try(testthat::expect_no_error(
                   basal::specify(
                     formula = args$formula,
                     response_name = args$response_name,
@@ -69,7 +75,10 @@ test_specify <- function () {
                     specifying_second_stage_model = sssm,
                     level = level
                   )
-                )
+                ))
+                if (inherits(t, "try-error")) {
+                  browser()
+                }
               }
             }
           }
@@ -130,4 +139,5 @@ testthat::test_that("Second-stage specification inherits model information", {
   testthat::expect_equal(zi_spec$second_stage_spec$domain_name, "evt_class_cd")
   testthat::expect_equal(zi_spec$second_stage_spec$default_model_data$auxiliary_variables, "ppt")
   testthat::expect_equal(zi_spec$second_stage_spec$level, "unit")
+  testthat::expect_equal(zi_spec$second_stage$model_type, "BHF")
 })

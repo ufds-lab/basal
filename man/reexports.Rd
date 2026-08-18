@@ -3,7 +3,6 @@
 \docType{import}
 \name{reexports}
 \alias{reexports}
-\alias{fit}
 \alias{prior}
 \alias{cauchy}
 \alias{decov}
@@ -22,8 +21,6 @@ below to see their documentation.
 
 \describe{
   \item{brms}{\code{\link[brms:prior]{prior()}}}
-
-  \item{generics}{\code{\link[generics:fit]{fit()}}}
 
   \item{rstanarm}{\code{\link[rstanarm:cauchy]{cauchy()}}, \code{\link[rstanarm:decov]{decov()}}, \code{\link[rstanarm:default_prior_coef]{default_prior_coef()}}, \code{\link[rstanarm:default_prior_intercept]{default_prior_intercept()}}, \code{\link[rstanarm:dirichlet]{dirichlet()}}, \code{\link[rstanarm:exponential]{exponential()}}, \code{\link[rstanarm:lkj]{lkj()}}, \code{\link[rstanarm:normal]{normal()}}, \code{\link[rstanarm:student_t]{student_t()}}}
 }}

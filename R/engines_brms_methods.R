@@ -120,7 +120,7 @@ all_model_vars.brms_spec <- function (spec, ss = FALSE, ...) {
 build_fh_formula.brms_spec <- function (spec, response, ...) {
   if (spec$family$family == "gaussian") {
     formula <- stats::formula(
-      paste0(response, " | se(BASAL_HT_SE) ~ ", paste0(spec$default_model_data$auxiliary_variables, collapse = " + "),
+      paste0(response, " | se(DIR_MEAN_SE) ~ ", paste0(spec$default_model_data$auxiliary_variables, collapse = " + "),
              " + ", "(1 | ", spec$default_model_data$domain_name, ")"
     ))
   }
@@ -148,7 +148,7 @@ build_custom_formula.brms_spec <- function(spec, response, ...) {
   
   if (spec$level == "area") {
     if (spec$family$family == "gaussian") {
-      tmp_formula <- stats::as.formula(paste0(response, " | se(BASAL_HT_SE) ~ 1"))
+      tmp_formula <- stats::as.formula(paste0(response, " | se(DIR_MEAN_SE) ~ 1"))
 
       if (length(all.vars(formula[[2]])) > 1) {
         stop(

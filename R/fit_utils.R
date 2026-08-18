@@ -112,7 +112,7 @@ validate_model_variables <- function(variables, data) {
 #' Parallel settings for model fitting
 #' @noRd
 do_parallel_settings <- function(chains, ncores, nthreads) {
-
+  
   # A thread here is used to speed up within-chain computations.
   # A core is used to run another chain in parallel
   if (nthreads != "default") {
@@ -205,17 +205,17 @@ prepare_area_level_data <- function(spec,
   if (is.null(spec$obs_variability)) {
     if (is.null(population_size)) {
       stop(
-	"Population size is required for auto-aggregation (computation of ",
-	"direct estimator) in area-level models."
+        "Population size is required for auto-aggregation (computation of ",
+        "direct estimator) in area-level models."
       )
     }
-    data <- agg_HT(
+    data <- aggregate_data(
       data = data,
-      res = response,
-      N = population_size,
-      domain = spec$domain_name
+      response = response,
+      population_size = population_size,
+      domain_name = spec$domain_name
     )
-    response <- "BASAL_HT_ESTIMATOR"
+    response <- "DIR_MEAN_ESTIMATOR"
   } else {
     obs_var <- spec$obs_variability
     if (is.numeric(obs_var)) {
@@ -224,7 +224,7 @@ prepare_area_level_data <- function(spec,
           "`obs_variability` must have length one or the same number of rows as data."
         )
       }
-      data$BASAL_HT_SE <- obs_var
+      data$DIR_MEAN_SE <- obs_var
     } else if (is.character(obs_var)) {
       if (length(obs_var) != 1) {
         stop(
@@ -236,25 +236,26 @@ prepare_area_level_data <- function(spec,
           "`obs_variability` must be a vector of standard errors or a column in the data."
         )
       }
-      data$BASAL_HT_SE <- data[[obs_var]]
+      data$DIR_MEAN_SE <- data[[obs_var]]
     } else {
       stop(
         "`obs_variability` must be a numeric vector or the name of a column in data."
       )
     }
   }
-  if (!("BASAL_HT_SE" %in% colnames(data))) {
-    stop("Unable to construct `BASAL_HT_SE` for the area-level model.")
+  if (!("DIR_MEAN_SE" %in% colnames(data))) {
+    stop("Unable to construct the estimated variance of the direct estimator, ",
+         "`DIR_MEAN_SE` for the area-level model.")
   }
-  valid_se <- is.finite(data$BASAL_HT_SE) &
-    data$BASAL_HT_SE > 0
+  valid_se <- is.finite(data$DIR_MEAN_SE) &
+    data$DIR_MEAN_SE > 0
   data <- data[valid_se, , drop = FALSE]
   if (nrow(data) == 0) {
     stop(
       "No observations with positive, finite standard errors remain for the area-level model."
     )
   }
-
+  
   return(
     list(
       data = data,

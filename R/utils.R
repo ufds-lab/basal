@@ -17,82 +17,157 @@ check_inherits <- function(what, ...) {
 #' @title Apply Direct Estimators to data
 #' 
 #' @description 
-#' Apply Horvitz-Thompson (or Post-Stratified) estimators to different domains.
+#' Apply direct estimators to different domains. Currently only the Horvitz-Thompson
+#' is supported
 #' 
 #' @param data Data to compute the direct estimators on
 #' 
-#' @param res Variable to estimate
+#' @param response Variable to estimate
 #' 
-#' @param N population size
+#' @param population_size population size 
+#' (i.e., the number of (possibly unsampled)) plots/units/individuals
 #' 
-#' @param domain Domains to compute the direct estimators over
+#' @param domain_name The name of the domain to compute direct estimators across
 #' 
-#' @param agg_data Dataset with aggregated observations for other variables, or
-#' `NULL` to aggregate `data`.
+#' @returns A dataframe with values for auxiliary variables, as well as new values
+#' \itemize{
+#'  \item \code{DIR_MEAN_ESTIMATOR}: The direct estimate for the average of the response
+#'  \item \code{DIR_MEAN_SE}: The estimated variance of the above estimate
+#'  \item \code{DIR_SUM_ESTIMATOR}: The direct estimate for the sum of the response
+#'  \item \code{DIR_SUM_SE}: The estimated variance of the above estimate
+#'  \item \code{DIR_N}: The number of observations of the response
+#' }
 #' 
-#' @keywords internal
-agg_HT <- function(data, res, N, domain, agg_data = NULL, ...) {
+#' @export
+aggregate_data <- function(
+    data, response, population_size, domain_name, population_data = NULL, ...
+) {
   # one day we would like to pass additional arguments to mase for things like
   # survey weights and whatnot
   # could be nice to allow the user to pick the direct estimator
-  if (is.null(agg_data)) {
-    make_aggs <- T
-    agg_data <- data[1,]
-  }
-  if ("BASAL_HT_ESTIMATOR" %in% colnames(data) ||
-      "BASAL_HT_SE" %in% colnames(data) ||
-      "BASAL_N" %in% colnames(data)) {
-    stop("Variables with 'BASAL' prefix are protected. Please rename these.")
-  }
-  agg_data$`BASAL_HT_ESTIMATOR` <- NA
-  agg_data$`BASAL_HT_SUM_ESTIMATOR` <- NA
-  agg_data$`BASAL_HT_SE` <- NA
-  agg_data$`BASAL_HT_SUM_SE` <- NA
-  agg_data$`BASAL_N` <- NA
+  
+  ready_data <- prepare_agg_data(
+    data, response, population_size, domain_name, population_data, ...
+  )
+  
+  auto_agg = ready_data$auto_agg
+  data = ready_data$data
+  population_data = ready_data$population_data
+  agg_data = ready_data$agg_data
 
-  unique_domains <- unique(data[[domain]])
+  unique_domains <- unique(data[[domain_name]])
+  
+  warning_list = list()
   for (i in 1:length(unique_domains)) {
     thedomain <- unique_domains[i]
-    thedata <- data[data[[domain]] == thedomain,]
+    thedata <- data[data[[domain_name]] == thedomain,]
+    thepopdata <- population_data[population_data[[domain_name]] == thedomain,]
     est <-
-      mase::horvitzThompson(y = thedata[[res]],
-                      N = N,
+      mase::horvitzThompson(y = thedata[[response]],
+                      N = population_size,
                       var_est = T,
                       messages = F,
                       ...)
-    if (make_aggs) {
-      agg_data[i,] <- c(
-        lapply(thedata, function(x) {
-          if (is.numeric(x)) {
-            return (mean(x))
-          } else {
-            levels <- unique(x)
-            if (length(levels) != 1) {
-              warning(
-                "Detected multiple levels in non-numeric data. Arbitrarily choosing a value."
+    agg_data[i,] <- c(
+      lapply(colnames(thepopdata), function(name) {
+        x = thedata[,name]
+        if (is.numeric(x)) {
+          return (mean(x))
+        } else {
+          levels <- unique(x)
+          if (length(levels) != 1) {
+            warning_list <- union(
+              warning_list,
+              paste0(
+                "Detected multiple levels in non-numeric data in column ", name, 
+                ". Arbitrarily choosing the value ", x[1], "."
               )
-            }
-            return (x[1])
+            )
           }
-        }),
-        NA, NA, NA, NA, NA # add NA at the end for BASAL_HT_ESTIMATOR, BASAL_HT_SE, and BASAL_N
-      )
-    }
+          return (x[1])
+        }
+      }),
+      NA, NA, NA, NA, NA 
+      # add NA at the end for 
+      #BASAL_HT_ESTIMATOR, BASAL_HT_SE, BASAL_SUM_ESTIMATOR, BASAL_SUM_SE, and BASAL_N
+    )
     
-    warning("Aggregating sample data for auxiliary variables. If you want to use ",
-            "averages of population data for auxiliary variables, ",
-            "aggregate the data first, and then pass intot the thing. Make this better Leland.")
+    # so we don't include multiples of a warning
+    lapply(warning_list, function(warning) {warning(warning)})
     
-    stop("Make a function to aggregate the data, Leland")
-
-    agg_data[agg_data[[domain]] == thedomain,"BASAL_HT_ESTIMATOR"] <- est$pop_mean
-    agg_data[agg_data[[domain]] == thedomain,"BASAL_HT_SE"] <- sqrt(est$pop_mean_var)
-    agg_data[agg_data[[domain]] == thedomain,"BASAL_HT_SUM_ESTIMATOR"] <- est$pop_total
-    agg_data[agg_data[[domain]] == thedomain,"BASAL_HT_SUM_SE"] <- sqrt(est$pop_total_var)
-    agg_data[agg_data[[domain]] == thedomain,"BASAL_N"] <- nrow(thedata)
-#    agg_data[agg_data$domain == thedomain,]$n_zero <- nrow(thedata[(thedata[[res]] == 0),])
+    agg_data[agg_data[[domain_name]] == thedomain,"DIR_MEAN_ESTIMATOR"] <- est$pop_mean
+    agg_data[agg_data[[domain_name]] == thedomain,"DIR_MEAN_SE"] <- sqrt(est$pop_mean_var)
+    agg_data[agg_data[[domain_name]] == thedomain,"DIR_SUM_ESTIMATOR"] <- est$pop_total
+    agg_data[agg_data[[domain_name]] == thedomain,"DIR_SUM_SE"] <- sqrt(est$pop_total_var)
+    agg_data[agg_data[[domain_name]] == thedomain,"DIR_N"] <- nrow(thedata)
+#    agg_data[agg_data$domain == thedomain,]$n_zero <- nrow(thedata[(thedata[[response]] == 0),])
   }
   return(agg_data)
+}
+
+#' Prepare data for aggregation
+#' @noRd
+prepare_agg_data <- function (
+    data, response, population_size, domain_name, population_data, ...
+) {
+  if (!is.null(population_data)) {
+    auto_agg <- FALSE
+    domains_1 <- unique(data[[domain_name]])
+    domains_2 <- unique(populationa_data[[domain_name]])
+    if (length(setdiff(domains_1, domains_2)) != 0) {
+      if (setdiff(colnames(population_data), colnames(data)) != 0) {
+        warning("Missing domains ", 
+                setdiff(domains_1, domains_2),
+                " from the population data. Removing these columns from observed data.")
+        data <- data[data[[domain_name]] %in% domains_2,]
+      } else {
+        warning("Missing domains ",
+                setdiff(domains_1, domains_2),
+                " from the population data. Using existing values in the observed data.")
+        population_data <- rbind(
+          population_data,
+          data[data[[domain]] %in% setdiff(domains_1, domains_2), colnames(population_data)]
+        )
+      }
+    }
+    if (length(setdiff(domains_2, domains_1)) != 0) {
+      warning("Domains present in population data that aren't present in ",
+              "observed data. Removing these observations")
+      population_data <- population_data[population_data[[domain]] %in% domains_1,]
+    }
+  } else {
+    auto_agg <- TRUE
+    population_data <- data[,colnames(data) != response]
+  }
+  agg_data <- population_data[1,]
+  if ("DIR_MEAN_ESTIMATOR" %in% colnames(data) ||
+      "DIR_MEAN_SE" %in% colnames(data) ||      
+      "DIR_SUM_ESTIMATOR" %in% colnames(data) ||
+      "DIR_SUM_SE" %in% colnames(data) ||
+      "DIR_N" %in% colnames(data)) {
+    stop("Variables with 'DIR' prefix are protected. Please rename these.")
+  }
+  agg_data$`DIR_MEAN_ESTIMATOR` <- NA
+  agg_data$`DIR_SUM_ESTIMATOR` <- NA
+  agg_data$`DIR_MEAN_SE` <- NA
+  agg_data$`DIR_SUM_SE` <- NA
+  agg_data$`DIR_N` <- NA
+  
+  if (!auto_agg) {
+    warning(
+      "Aggregating sample data for auxiliary variables. If you want to use ",
+      "averages of population data for auxiliary variables, ",
+      "aggregate the data first using `prepare_agg_data()`, ",
+      "and then use this as the training data in fit()."
+    )
+  }
+  
+  return (list(
+    auto_agg = auto_agg,
+    data = data,
+    population_data = population_data,
+    agg_data = agg_data
+  ))
 }
 
 #' @title default_ncores

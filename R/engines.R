@@ -34,12 +34,12 @@ validate_engine <- function(engine, spec) {
     stop("Cannot fit models with stage ", spec$model_stage, " with engine ", name, ". Can only fit stages: ",
 	 paste(engine$model_stage, collapse = ","), ".")
   }
-
+  
   if (!(spec$family$family %in% engine$glm_families)) {
     stop("Cannot use family equal to ", spec$family, " with engine ", name, ". Can only use families: ",
-	 paste(engine$glm_families, collapse = ","), ".")
+         paste(engine$glm_families, collapse = ","), ".")
   }
-
+  
   class(spec) <- c(paste0(name, "_spec"), class(spec))
   if (!is.null(spec$second_stage_spec)) {
     spec$second_stage_spec <- validate_engine(engine, spec$second_stage_spec)
@@ -110,7 +110,7 @@ all_model_vars.default <- function (spec, ss = FALSE, ...) {
       spec$default_model_data$auxiliary_variables
     )
   }
-
+  
   if (!is.null(spec$second_stage_spec)) {
     model_variables <- c(
       model_variables,
@@ -118,7 +118,7 @@ all_model_vars.default <- function (spec, ss = FALSE, ...) {
     )
   }
   model_variables <- unique(model_variables)
-
+  
   return (model_variables)
 }
 
@@ -132,7 +132,7 @@ build_fh_formula.default <- function(spec, response, ...) {
     paste0(spec$default_model_data$auxiliary_variables, collapse = " + "), " + ",
     "(1 | ",  spec$default_model_data$domain_name, ")"
   ))
-
+  
   return (formula)
 }
 
@@ -249,6 +249,6 @@ get_grouping_variables.default <- function(
     fit,
     ...
 ) {
-  return (names(stats::coef(zi_fit$model)))
+  return (names(stats::coef(fit$model)))
 }
 

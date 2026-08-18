@@ -203,6 +203,10 @@ specify <- function(formula = NULL,
   if (spec$model_stage == "zi" && !specifying_second_stage_model) {
     spec <- validate_second_stage(spec, auxiliary_variables)
   }
+
+  if (spec$level == "area" && !is.null(spec$variable_transform)) {
+    stop("Can't specify variable transforms with area-level models")
+  }
   return(
     structure(spec, class = "basal_spec")
   )

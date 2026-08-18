@@ -34,6 +34,7 @@
 #' @return An object of class basal_fit containing the results.
 #'
 #' @exportS3Method generics::fit
+#' @aliases fit
 #'
 fit.basal_spec <- function(spec,
                            data,
@@ -77,7 +78,7 @@ fit.basal_spec <- function(spec,
   
   second_stage_fit <- NULL
   unfiltered_data <- NULL
-
+  
   if (!is.null(spec$second_stage_spec)) {
     message(
       "Estimating two models for two-stage model. ",
@@ -121,7 +122,7 @@ fit.basal_spec <- function(spec,
       "sampling standard errors."
     )
   }
-
+  
   if (!is.null(spec$variable_transform)) {
     trans <- spec$variable_transform$transform
     data[[res]] <- trans(data[[res]])
@@ -129,7 +130,7 @@ fit.basal_spec <- function(spec,
       unfiltered_data[[res]] <- trans(unfiltered_data[[res]])
     }
   }
-    
+  
   
   area_data <- prepare_area_level_data(
     spec = spec,
@@ -139,10 +140,11 @@ fit.basal_spec <- function(spec,
   )
   
   data <- area_data$data
+  res <- area_data$response
   
   formula <- build_basal_formula(spec = spec, response = res)
   
-  predictors <- vars[!(vars %in% c(res, "BASAL_HT_SE"))]
+  predictors <- vars[!(vars %in% c(res, "DIR_MEAN_SE"))]
   
   parallel_settings <- do_parallel_settings(
     chains = chains,
