@@ -7,8 +7,8 @@
 aggregate_data(
   data,
   response,
-  population_size,
   domain_name,
+  population_size = NULL,
   population_data = NULL,
   ...
 )
@@ -18,10 +18,10 @@ aggregate_data(
 
 \item{response}{Variable to estimate}
 
+\item{domain_name}{The name of the domain to compute direct estimators across}
+
 \item{population_size}{population size
 (i.e., the number of (possibly unsampled)) plots/units/individuals}
-
-\item{domain_name}{The name of the domain to compute direct estimators across}
 }
 \value{
 A dataframe with values for auxiliary variables, as well as new values

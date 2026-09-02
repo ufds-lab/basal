@@ -117,6 +117,10 @@ all_model_vars.default <- function (spec, ss = FALSE, ...) {
       all_model_vars(spec$second_stage_spec)
     )
   }
+  if (!is.null(spec$obs_variability)) {
+    model_variables <- union(model_variables, spec$obs_variability)
+  }
+
   model_variables <- unique(model_variables)
   
   return (model_variables)

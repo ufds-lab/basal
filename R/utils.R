@@ -40,7 +40,7 @@ check_inherits <- function(what, ...) {
 #' 
 #' @export
 aggregate_data <- function(
-    data, response, population_size, domain_name, population_data = NULL, ...
+    data, response, domain_name, population_size = NULL, population_data = NULL, ...
 ) {
   # one day we would like to pass additional arguments to mase for things like
   # survey weights and whatnot
@@ -54,6 +54,7 @@ aggregate_data <- function(
   data = ready_data$data
   population_data = ready_data$population_data
   agg_data = ready_data$agg_data
+  population_size = ready_data$population_size
 
   unique_domains <- unique(data[[domain_name]])
   
@@ -102,7 +103,21 @@ aggregate_data <- function(
     agg_data[agg_data[[domain_name]] == thedomain,"DIR_N"] <- nrow(thedata)
 #    agg_data[agg_data$domain == thedomain,]$n_zero <- nrow(thedata[(thedata[[response]] == 0),])
   }
-  return(agg_data)
+  
+  vec <- agg_data$DIR_MEAN_SE
+  names(vec) <- agg_data[[domain_name]]
+  
+  population_data$DIR_MEAN_SE <- vec[population_data[[domain_name]]]
+
+  vec[1:length(vec)] <- agg_data$DIR_SUM_SE
+  population_data$DIR_SUM_SE <- vec[population_data[[domain_name]]]
+  
+  population_data = population_data[!is.na(population_data$DIR_MEAN_SE),]
+  
+  return(list(
+    aggregate_obs = agg_data,
+    aggregate_pop = population_data
+  ))
 }
 
 #' Prepare data for aggregation
@@ -111,9 +126,17 @@ prepare_agg_data <- function (
     data, response, population_size, domain_name, population_data, ...
 ) {
   if (!is.null(population_data)) {
+    if (is.null(population_size)) {
+      population_size = nrow(population_data)
+    }
+  } else if (is.null(population_size)) {
+    stop("Must provide either population data or population size.")
+  }
+  
+  if (!is.null(population_data)) {
     auto_agg <- FALSE
     domains_1 <- unique(data[[domain_name]])
-    domains_2 <- unique(populationa_data[[domain_name]])
+    domains_2 <- unique(population_data[[domain_name]])
     if (length(setdiff(domains_1, domains_2)) != 0) {
       if (setdiff(colnames(population_data), colnames(data)) != 0) {
         warning("Missing domains ", 
@@ -153,7 +176,7 @@ prepare_agg_data <- function (
   agg_data$`DIR_SUM_SE` <- NA
   agg_data$`DIR_N` <- NA
   
-  if (!auto_agg) {
+  if (auto_agg) {
     warning(
       "Aggregating sample data for auxiliary variables. If you want to use ",
       "averages of population data for auxiliary variables, ",
@@ -166,7 +189,8 @@ prepare_agg_data <- function (
     auto_agg = auto_agg,
     data = data,
     population_data = population_data,
-    agg_data = agg_data
+    agg_data = agg_data,
+    population_size = population_size
   ))
 }
 
@@ -232,10 +256,12 @@ entropy = function (x, success = 1) {
   return (H)
 }
 
+#' upper quantile for 95% CI
 lower_ci_quantile = function(x, ...) {
   stats::quantile(x, 0.025, ...)
 }
 
+#' lower quantile for 95% CI
 upper_ci_quantile = function(x, ...) {
   stats::quantile(x, 0.975, ...)
 }

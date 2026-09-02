@@ -29,6 +29,8 @@
 #' 
 #' @param nthreads number of cores to speed up individual MCMC chains. Chosen by default in conjunction with `ncores`.
 #'
+#' @param verbose Logical. If \code{TRUE}, fitting output is printed.
+#'
 #' @param ... Additional arguments passed to the model fitting engine.
 #'
 #' @return An object of class basal_fit containing the results.
@@ -49,6 +51,7 @@ fit.basal_spec <- function(spec,
                            engine = engine_brms(),
                            ncores = default_ncores(),
                            nthreads = "default",
+                           verbose = TRUE,
                            ...) {
   
   func_call <- match.call()
@@ -131,7 +134,6 @@ fit.basal_spec <- function(spec,
     }
   }
   
-  
   area_data <- prepare_area_level_data(
     spec = spec,
     data = data,
@@ -141,6 +143,7 @@ fit.basal_spec <- function(spec,
   
   data <- area_data$data
   res <- area_data$response
+  agg_domain <- area_data$agg_domain
   
   formula <- build_basal_formula(spec = spec, response = res)
   
@@ -187,6 +190,9 @@ fit.basal_spec <- function(spec,
   
   if (!is.null(second_stage_fit)) {
     out$unfiltered_data <- unfiltered_data
+  }
+  if (!is.null(agg_domain)) {
+    out$agg_domain <- agg_domain
   }
   
   return(

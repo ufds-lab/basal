@@ -19,6 +19,7 @@
   engine = engine_brms(),
   ncores = default_ncores(),
   nthreads = "default",
+  verbose = TRUE,
   ...
 )
 }
@@ -51,6 +52,8 @@ default priors are supplied.}
 \item{ncores}{number of cores to use to computed MCMC chains in parallel}
 
 \item{nthreads}{number of cores to speed up individual MCMC chains. Chosen by default in conjunction with \code{ncores}.}
+
+\item{verbose}{Logical. If \code{TRUE}, fitting output is printed.}
 
 \item{...}{Additional arguments passed to the model fitting engine.}
 }

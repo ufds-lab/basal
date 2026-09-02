@@ -214,9 +214,11 @@ prepare_area_level_data <- function(spec,
       response = response,
       population_size = population_size,
       domain_name = spec$domain_name
-    )
+    )$aggregate_obs
     response <- "DIR_MEAN_ESTIMATOR"
+    agg_domain <- spec$domain_name
   } else {
+    agg_domain <- NULL
     obs_var <- spec$obs_variability
     if (is.numeric(obs_var)) {
       if (length(obs_var) != 1 && length(obs_var) != nrow(data)) {
@@ -259,7 +261,8 @@ prepare_area_level_data <- function(spec,
   return(
     list(
       data = data,
-      response = response
+      response = response,
+      agg_domain = agg_domain
     )
   )
 }

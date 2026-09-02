@@ -108,6 +108,10 @@ all_model_vars.brms_spec <- function (spec, ss = FALSE, ...) {
     )
   }
   
+  if (!is.null(spec$obs_variability)) {
+    model_variables <- union(model_variables, spec$obs_variability)
+  }
+
   model_variables <- unique(model_variables)
   
   return (model_variables)

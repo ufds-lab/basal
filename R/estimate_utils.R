@@ -103,6 +103,26 @@ prepare_estimate_data <- function (
 ) {
   
   if (!is.null(newdata)) {
+    if (fit$spec$level == "area") {
+      obs_se <- ifelse(
+        is.null(fit$spec$obs_variability) || is.numeric(fit$spec$obs_variability), 
+        "DIR_MEAN_SE", fit$spec$obs_variability
+      )
+      
+      if (!is.null(fit$agg_domain)) {
+        domain_name = fit$agg_domain
+        vec <- fit$data[[obs_se]]
+        names(vec) <- as.character(fit$data[[fit$agg_domain]])
+        
+        newdata[[obs_se]] <- vec[as.character(newdata[[fit$agg_domain]])]
+      } else if (!(obs_se %in% colnames(newdata))) {
+        stop(
+          "observed variability must be included in population data for area ",
+          "level models. We recommend aggregating data with aggregate_data() ",
+          "which will provide a copy of population data with observed variability."
+        )
+      }
+    }
     return (newdata)
   }
   
@@ -139,7 +159,7 @@ prepare_estimate_domain <- function (
 
   missing_domains <- setdiff(domain, colnames(newdata))
   if (length(missing_domains) > 0) {
-    stop("Provided domain", 
+    stop("Provided domain",
          if (length(missing_domains) > 1) "s are" else " is",
          " not present in newdata: ", paste0("`", missing_domains, "`", collapse = ", "),
          ". If you want estimates over the whole region, set `domain = NULL`."
@@ -256,17 +276,27 @@ prepare_area_prediction_data <- function (
   }
   # the first stage has strictly fewer domains than the second stage, so
   # using the domains in fit$data below is sufficient
-  missing_training_domains <- setdiff(unique(newdata[[domain]]), unique(fit$data[[domain]]))
+  estimate_domain = infer_estimate_domain(fit)
+  missing_training_domains <- setdiff(
+    unique(newdata[[estimate_domain]]), unique(fit$data[[estimate_domain]])
+  )
   if (length(missing_training_domains) != 0) {
     warning(
-      "Domains not present in training data detected. ",
-      "These cannot be reliably estimated and will be excluded."
+      "There are more values for specified domains in the population data than ",
+      "in the observed data. These cannot be reliably estimated on and will be removed. ",
+      "Missing domains: ", missing_training_domains
     )
-    newdata <- newdata[!(newdata[[domain]] %in% missing_training_domains), ,drop = FALSE]
+    newdata <- newdata[!(newdata[[estimate_domain]] %in% missing_training_domains), ,drop = FALSE]
   }
-  training_se <- fit$data$BASAL_HT_SE
-  names(training_se) <- fit$data[[domain]]
-  newdata$BASAL_HT_SE <- training_se[newdata[[domain]]]
+  obs_se <- ifelse(
+    is.null(fit$spec$obs_variability) || is.numeric(fit$spec$obs_variability), 
+    "DIR_MEAN_SE", fit$spec$obs_variability
+  )
+  if (!(obs_se %in% colnames(newdata))) {
+    training_se <- fit$data[[obs_se]]
+    names(training_se) <- fit$data[[estimate_domain]]
+    newdata$BASAL_HT_SE <- training_se[newdata[[estimate_domain]]]
+  }
   
   return (newdata)
 }
