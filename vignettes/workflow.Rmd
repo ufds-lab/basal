@@ -177,6 +177,7 @@ estimate(
   BHF_fit_trans,
   oregon_population,
   domain = NULL,
+  ndraws = 100,
   stat = c(mean = mean, se = sd, 
            lower_CI = function(x, ...) {quantile(x, 0.1, ...)},
            upper_CI = function(x, ...) {quantile(x, 0.9, ...)})

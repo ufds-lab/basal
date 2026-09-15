@@ -49,6 +49,29 @@
 #' giving a specification for the second stage of a ZI model. The second stage is 
 #' the GLM predicting the probability of zero-valued plots.
 #' 
+#' @param ... Optional further arguments. See details.
+#' 
+#' @details
+#' The \code{...} argument allows for the use of various other
+#' options. These include
+#' 
+#' \itemize {
+#'  \item \code{obs_variability}: Used to fix variance of observations across a 
+#'  domain. Often used when direct estimators may be pre-computed in an 
+#'  area-level model. Either a string denoting the name of a column with 
+#'  estimated variance values of a direct estimator or a numeric vector with 
+#'  such estimated variance values. NOT FIXED.
+#'  \item \code{lasso}: A logical indicating whether a prior should be put on
+#'  regression coefficients to mimic the frequentist LASSO via a laplace prior on
+#'  fixed-effect coefficients. Priors may not be specified in this case, and 
+#'  this option may not be supported by all engines. NOT DONE.
+#'  \item \code{DRV}: A logical indicating whether a model should be specified
+#'  with domain-specific residual variances. May not be supported by all engines.
+#'  NOT DONE.
+#'  \item \code{Process}: 
+#'  \item \code{etc}: to be added
+#' }
+#' 
 #' @return Object of type `basal_spec`.
 #'
 #' @examples
@@ -121,7 +144,7 @@
 specify <- function(formula = NULL,
                     level = NULL,
                     model = "custom",
-                    obs_variability = NULL,
+                    ...,
                     domain_name = NULL,
                     response_name = NULL,
                     auxiliary_variables = NULL,
@@ -158,7 +181,8 @@ specify <- function(formula = NULL,
     default_model_data = default_model_data,
     variable_transform = variable_transform,
     model_stage = model_stage,
-    second_stage_spec = second_stage_spec
+    second_stage_spec = second_stage_spec,
+    opt_args = opt_args
   )
 
   if (specifying_second_stage_model) {

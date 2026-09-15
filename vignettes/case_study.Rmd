@@ -1,0 +1,66 @@
+---
+title: "case_study"
+output: html_document
+---
+
+We wish to estimate biomass using BHF, FH, and Zero-Inflated BHF. First we will specify the three models
+
+```{r}
+library(basal)
+oregon_population$elev = oregon_population$elev/sd(oregon_sample$elev)
+oregon_population$ppt = oregon_population$ppt/sd(oregon_sample$ppt)
+
+oregon_sample$elev = oregon_sample$elev/sd(oregon_sample$elev)
+oregon_sample$ppt = oregon_sample$ppt/sd(oregon_sample$ppt)
+```
+
+
+```{r}
+model_formula = biomass ~ evc + elev + ppt
+trans <- make_variable_transform(function (y) {y^(1/4)}, function (y) {y^4})
+BHF_spec <- specify(model_formula, domain_name = "evt", 
+                    model = "BHF", variable_transform = trans)
+FH_spec <- specify(model_formula, domain_name = "evt", model = "FH")
+ZI_spec <- specify(model_formula, domain_name = "evt", model = "BHF",
+                   variable_transform = trans,model_stage = "zi")
+```
+
+```{r}
+BHF_fit = fit(BHF_spec, oregon_sample %>% filter(biomass > 0), engine = engine_rstanarm())
+FH_fit = fit(FH_spec, oregon_sample, population_size = nrow(oregon_population))
+ZI_fit = fit(ZI_spec, oregon_sample, engine = engine_rstanarm())
+```
+
+```{r}
+check(BHF_fit)
+check(FH_fit)
+check(ZI_fit)
+```
+
+```{r}
+stats = c(mean = mean, se = sd, lower_95_ci = lower_ci_quantile, upper_95_ci = upper_ci_quantile)
+BHF_preds = estimate(BHF_fit, newdata = oregon_population, domain = "county", ndraws = 500, stat = stats)
+FH_preds = estimate(FH_fit, newdata = oregon_population, domain = "county", ndraws = 500, stat = stats)
+ZI_preds = estimate(ZI_fit, newdata = oregon_population, domain = "county", ndraws = 500, stat = stats)
+
+
+comparisons <- left_join(
+  FH_preds$preds, ZI_preds$preds, suffix = c("_FH_", "_ZI"),
+  by = "county"
+)
+
+comparisons = comparisons[,c(1,2,3,6,7)]
+colnames(comparisons) <- c("county", "FH_mean", "FH_var", "ZI_mean", "ZI_var")
+comparisons %>%
+  ggplot(aes(FH_mean, ZI_mean)) +
+  geom_point() +
+  geom_abline(color = "red", alpha = 0.5) +
+  xlim(0,125) +
+  ylim(0,125) +
+  theme_minimal() +
+  labs(x = "FH prediction", y = "ZI prediction")
+```
+
+
+
+
