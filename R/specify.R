@@ -148,6 +148,7 @@ specify <- function(formula = NULL,
                     domain_name = NULL,
                     response_name = NULL,
                     auxiliary_variables = NULL,
+                    obs_variability = NULL,
                     variable_transform = NULL,
                     family = stats::gaussian(),
                     model_stage = "single",
@@ -163,11 +164,23 @@ specify <- function(formula = NULL,
 
   {
     func_call <- match.call()
-
-    match.arg(level, c(NULL, "area", "unit")) # not the best practice with NULL here but works nicely
-    match.arg(model, c("custom", "FH", "BHF")); stopifnot(!is.null(model))
-    match.arg(model_stage, c("single", "zi")); stopifnot(!is.null(model_stage))
+    
+    if (!is.null(level)) {level <- match.arg(level, c("area", "unit"))} # not the best practice with NULL here but works nicely
+    model <- match.arg(model, c("custom", "FH", "BHF"))
+    model_stage <- match.arg(model_stage, c("single", "zi"))
+    opt_args <- list(...)
+    
+    validate_specify_inputs(
+      formula = formula,
+      domain_name = domain_name,
+      response_name = response_name,
+      auxiliary_variables = auxiliary_variables,
+      obs_variability = obs_variability,
+      specifying_second_stage_model = specifying_second_stage_model,
+      second_stage_spec = second_stage_spec
+    )
     default_model_data <- NULL
+    
   } # housekeeping provided parameters
   
   spec <- list(
@@ -235,4 +248,3 @@ specify <- function(formula = NULL,
     structure(spec, class = "basal_spec")
   )
 }
-

@@ -19,18 +19,13 @@ validate_fit_inputs <- function(spec,
                                 ncores,
                                 nthreads) {
   
-  parallel = do_parallel_settings(chains, ncores, nthreads)
-  ncores = parallel$ncores
-  nthreads = parallel$nthreads
-  if ((ncores %% 1) != 0) {
-    stop(
-      "`ncores` must be an integer, but instead ", ncores, " was given."
-    )
+  if (!is.numeric(ncores) || length(ncores) != 1 || !is.finite(ncores) || ncores <= 0 || ncores != floor(ncores)) {
+    stop("`ncores` must be a single positive integer.")
   }
-  if (nthreads != "default" && ((nthreads %% 1) != 0)) {
-    stop(
-      "`nthreads` must be either \"default\" or an integer. Not ", nthreads, "."
-    )
+  
+  if (!(identical(nthreads, "default") || (is.numeric(nthreads) && length(nthreads) == 1 && 
+                                           is.finite(nthreads) && nthreads > 0 && nthreads == floor(nthreads)))) {
+    stop("`nthreads` must be a single positive integer or \"default\".")
   }
 
   check_inherits("basal_spec", spec)
@@ -102,8 +97,10 @@ all_model_vars <- function (spec, ...) {
 validate_model_variables <- function(variables, data) {
   variables = unlist(variables)
   missing <- setdiff(variables, colnames(data))
-  if (length(missing) == 1) {
-    stop("Variable ", missing," missing from your data.")
+  if (length(missing) > 0) {
+    stop("Variable", if (length(missing) > 1) "s " else " ", 
+         paste0(missing, collapse = ", "), " missing from your data."
+    )
   }
   
   return (data[, variables])
