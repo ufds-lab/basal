@@ -12,6 +12,9 @@ validate_single_stage_spec <- function(spec, auxiliary_variables, response_name)
     if (spec$model_type == "FH") spec$level <- "area"
     
     if (!is.null(spec$formula)) {
+      if (is.null(spec$domain_name)) {
+        stop("`domain_name` must be specified when giving a formula with a preset model.")
+      }
       spec$model_type <- "custom"
       if (!inherits(spec$formula, "formula")) {
         stop("Must use base-R formula when specifying a formula for a BHF or FH.")
@@ -272,3 +275,43 @@ validate_transformation <- function(transformation,
   }
 }
 
+#' Validate the inputs format
+#' @noRd
+validate_specify_inputs <- function(
+    formula,
+    domain_name,
+    response_name,
+    auxiliary_variables,
+    obs_variability,
+    specifying_second_stage_model,
+    second_stage_spec
+) {
+  
+  if (!is.logical(specifying_second_stage_model) || length(specifying_second_stage_model) != 1 || is.na(specifying_second_stage_model)) {
+    stop("`specifying_second_stage_model` must be TRUE or FALSE.")
+  }
+  if (!is.null(second_stage_spec) && !inherits(second_stage_spec, "basal_spec")) {
+    stop("`second_stage_spec` must be a `basal_spec` object or NULL.")
+  }
+  if (!is.null(domain_name) && (!is.character(domain_name) || 
+      length(domain_name) != 1 || is.na(domain_name) || domain_name == "")) {
+    stop("`domain_name` must be a single non-empty character string or NULL.")
+  }
+  if (!is.null(response_name) && (!is.character(response_name) || 
+      length(response_name) != 1 || is.na(response_name) || response_name == "")) {
+    stop("`response_name` must be a single non-empty character string or NULL.")
+  }
+  if (!is.null(auxiliary_variables) && (!is.character(auxiliary_variables) || any(auxiliary_variables == ""))) {
+    stop("`auxiliary_variables` must be a character vector of ", "non-empty variable names or NULL.")
+  }
+  if(!is.null(obs_variability) &&
+     !is.numeric(obs_variability) &&
+     !(is.character(obs_variability) &&
+       length(obs_variability) == 1 &&
+       !is.na(obs_variability) &&
+       obs_variability != ""
+       )
+  ){
+    stop("`obs_variability` must be numeric, a single non-empty character string or NULL.")
+  }
+}
