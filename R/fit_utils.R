@@ -3,6 +3,7 @@
 #' Prior specification is done on an engine-specific basis.
 #' For information on setting priors for a particular engine,
 #' the help pages for prior specification for those engines will be sufficient.
+#' @export
 specify_priors <- function (...) {
   return (list(...))
 }
