@@ -2,10 +2,20 @@
 % Please edit documentation in R/utils.R
 \name{upper_ci_quantile}
 \alias{upper_ci_quantile}
-\title{lower quantile for 95\% CI}
+\title{upper quantile for q\% CI}
 \usage{
-upper_ci_quantile(x, ...)
+upper_ci_quantile(x, q = 0.05, ...)
+}
+\arguments{
+\item{x}{Vector of values}
+
+\item{q}{quantile}
+
+\item{...}{further arguments}
+}
+\value{
+the upper (\code{q}/2)-th quantile of \code{x}
 }
 \description{
-lower quantile for 95\% CI
+upper quantile for q\% CI
 }

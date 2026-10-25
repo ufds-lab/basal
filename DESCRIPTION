@@ -8,7 +8,6 @@ Description: Simplified pipeline for creating Bayesian models and estimatingpost
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 8.0.0
 Imports: 
     brms,
     dplyr,
@@ -30,4 +29,6 @@ VignetteBuilder: knitr
 Depends: 
     R (>= 3.5)
 LazyData: true
+LazyDataCompression: xz
 Config/testthat/edition: 3
+Config/roxygen2/version: 8.1.1

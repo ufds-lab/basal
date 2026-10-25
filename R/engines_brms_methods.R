@@ -26,109 +26,22 @@ engine_brms <- function() {
   return (engine)
 }
 
-#' Get the response formula from a formula
-#' @exportS3Method basal::get_response_formula
+#' Build a formula for a Battese-Harter-Fuller model
+#' a copy of bhf for now, but may change as we add more
+#' @exportS3Method basal::build_bhf_formula
 #' @noRd
-get_response_formula.brmsformula <- function (formula) {
-  return (formula$formula)
-}
-
-#' Set the response value of a specification
-#' @noRd
-#' @exportS3Method basal::set_spec_response
-set_spec_response.brms_spec <- function (spec, response) {
-  if (spec$model_type == "custom") {
-    tmp_formula <- formula(paste0(response, " ~ 1"))
-    # the formula `formula(~x1 + x2)`, for example, is valid, and in this case
-    # the second entry of the formula are the covariates rather than the response
-    # so we move them to the standard place in a formula with a response and covariates
-    if (inherits(spec$formula, "brmsformula")) {
-      if (length(spec$formula$formula) == 2) {
-        spec$formula$formula[[3]] <- spec$formula$formula[[2]] 
-      }
-      spec$formula$formula[[2]] <- tmp_formula[[2]]
-    } else {
-      if (length(spec$formula) == 2) {
-        spec$formula[[3]] <- spec$formula[[2]] 
-      }
-      spec$formula[[2]] <- tmp_formula[[2]]
-    }
-  } else {
-    spec$default_model_data$response_name <- response
-  }
-  return (spec)
-}
-
-#' Extract the response variables
-#' @exportS3Method basal::get_fit_response
-#' @noRd
-get_fit_response.brms_spec <- function(spec, response = NULL, ...) {
-  if (is.null(response)) {
-    if (inherits(spec$formula, "brmsformula")) {
-      response <- all.vars(spec$formula$formula[[2]])[1]
-    } 
-  }
-
-  return (
-    NextMethod("get_fit_response")
-  )
-}
-
-#' Extract all variables from a model
-#' @exportS3Method basal::all_model_vars
-#' @noRd
-all_model_vars.brms_spec <- function (spec, ss = FALSE, ...) {
-  if (spec$model_type == "custom") {
-    if (inherits(spec$formula, "brmsformula")) {
-      model_variables <- list(all.vars(spec$formula$formula))
-      if (length(spec$formula$formula == 2)) {
-        # then the response is NULL
-        model_variables <- union(model_variables, list(NULL))
-      }
-      
-      # now recurse through sub-equations, if there are any
-      if (!is.null(spec$formula$pforms)) {
-        for (sub_form in formula$pforms) {
-          sub_vars <- all.vars(sub_form)
-          sub_vars <- sub_vars[sub_vars != sub_form[[2]]]
-          model_variables <- union(model_variables, sub_vars)
-        }
-      }
-    } else {
-      return (NextMethod("all_model_vars"))
-    }
-  } else {
-    return (NextMethod("all_model_vars"))
-  }
-  
-  if (!is.null(spec$second_stage_spec)) {
-    model_variables <- union(
-      model_variables,
-      all_model_vars(spec$second_stage_spec)
-    )
-  }
-  
-  if (!is.null(spec$obs_variability)) {
-    model_variables <- union(model_variables, spec$obs_variability)
-  }
-
-  model_variables <- unique(model_variables)
-  
-  return (model_variables)
-}
-
+build_bhf_formula.brms_spec <- build_bhf_formula.default
 
 #' Build a formula for a Fay-Herriot model
 #' @exportS3Method basal::build_fh_formula
 #' @noRd
 build_fh_formula.brms_spec <- function (spec, response, ...) {
-  if (spec$family$family == "gaussian") {
-    formula <- stats::formula(
-      paste0(response, " | se(DIR_MEAN_SE) ~ ", paste0(spec$default_model_data$auxiliary_variables, collapse = " + "),
-             " + ", "(1 | ", spec$default_model_data$domain_name, ")"
-    ))
-  }
-
+  formula <- build_bhf_formula(spec, response, ...)
+  formula <- stats::update(
+    formula,
+    stats::reformulate(".", ". | se(DIR_MEAN_SE)")
+  )
+  
   return (brms::brmsformula(formula))
 }
 
@@ -137,45 +50,17 @@ build_fh_formula.brms_spec <- function (spec, response, ...) {
 #' @noRd
 build_custom_formula.brms_spec <- function(spec, response, ...) {
   formula <- spec$formula
-  if (inherits(formula, "brmsformula")) {
-    if (spec$level == "area") {
-      stop(
-        "Custom area-level models supplied as `brmsformula` objects are not currently supported."
-      )
-    }
-    return (formula)
-  }
   
   if (spec$level == "unit") {
     return (brms::brmsformula(formula))
-  }
-  
-  if (spec$level == "area") {
-    if (spec$family$family == "gaussian") {
-      tmp_formula <- stats::as.formula(paste0(response, " | se(DIR_MEAN_SE) ~ 1"))
-
-      if (length(all.vars(formula[[2]])) > 1) {
-        stop(
-	  "Cannot fit area-levels with pre-specified brms addition terms.",
-	  " If you want addition terms, you should pre-aggregate data and fit ",
-	  "a unit-level model with the addition terms."
-        )
-      }
-    } else {
-      tmp_formula <- stats::as.formula(paste0(response, " ~ 1"))
-      warning(
-	"Fitting (non-gaussian) area-level GLM. There is no variance parameter in this GLM ",
-	"and so the known variance from the direct estimator cannot be used. If there is a ",
-	"variance parameter, or the variance can be derived from a second parameter, ",
-	"set an informative prior on that parameter."
-      )
-    }
+  } else if (spec$level == "area") {
+    formula <- stats::update(
+      spec$formula,
+      stats::reformulate(".", ". | se(DIR_MEAN_SE)")
+    ) 
     
-    # Inject the synthesized measurement error LHS into the user-supplied custom formula.
-    formula[[2]] <- tmp_formula[[2]]
     return (brms::brmsformula(formula))
   }
-  stop("`spec$level` must be either \"unit\" or \"area\".")
 }
 
 #' Fit a BASAL model Using brms

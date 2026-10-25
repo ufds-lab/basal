@@ -8,10 +8,11 @@ specify(
   formula = NULL,
   level = NULL,
   model = "custom",
-  obs_variability = NULL,
+  ...,
   domain_name = NULL,
   response_name = NULL,
   auxiliary_variables = NULL,
+  obs_variability = NULL,
   variable_transform = NULL,
   family = stats::gaussian(),
   model_stage = "single",
@@ -36,10 +37,7 @@ and \code{"BHF"} (Battese-Harter-Fuller).  Defaults to \code{"custom"}. If \code
 \code{"BHF"} are selected, \code{domain_name}, \code{response_name}, and \code{auxiliary_variable}
 must be provided for the respective parts of the model.}
 
-\item{obs_variability}{The name of a column containing the variance estimates
-of direct estimates. If left \code{NULL}, then the the direct estimator of the response
-variable in \code{response_name} will be estimated across the domain in \code{domain_name}
-and the model will estimate these estimates.}
+\item{...}{Optional further arguments. See details.}
 
 \item{domain_name}{Character string for stratification, representing
 the areas corresponding to random effects (e.g., \code{"county"}).}
@@ -49,6 +47,11 @@ response. Only required for preset framework.}
 
 \item{auxiliary_variables}{Character vector containing names of covariates for
 the response. Defaults to using all other variables if unspecified in preset models.}
+
+\item{obs_variability}{The name of a column containing the variance estimates
+of direct estimates. If left \code{NULL}, then the the direct estimator of the response
+variable in \code{response_name} will be estimated across the domain in \code{domain_name}
+and the model will estimate these estimates.}
 
 \item{variable_transform}{Either an object of class \code{BASAL_transformation} from
 \code{make_variable_transform()} or a list specifying a variable transformation
@@ -72,6 +75,27 @@ Object of type \code{basal_spec}.
 }
 \description{
 Specify a Small Area Estimation Model
+}
+\details{
+The \code{...} argument allows for the use of various other
+options. These include
+
+\itemize{
+\item \code{obs_variability}: Used to fix variance of observations across a
+domain. Often used when direct estimators may be pre-computed in an
+area-level model. Either a string denoting the name of a column with
+estimated variance values of a direct estimator or a numeric vector with
+such estimated variance values. NOT FIXED.
+\item \code{lasso}: A logical indicating whether a prior should be put on
+regression coefficients to mimic the frequentist LASSO via a laplace prior.
+Priors may not be specified in this case, and
+this option may not be supported by all engines. NOT DONE.
+\item \code{DRV}: A logical indicating whether a model should be specified
+with domain-specific residual variances. May not be supported by all engines.
+NOT DONE.
+\item \code{Process}:
+\item \code{etc}: to be added
+}
 }
 \examples{
 plot_spec_bhf <- specify(
@@ -104,33 +128,28 @@ plot_spec_bhf <- specify(
 )
 
 # we can specify area level models with `model = "FH"`, or `level = "area"`
-FH_spec <- specify(
-  model = "FH",
-  domain_name = "county",
-  response_name = "obs_biomass",
-  auxiliary_variables = c("evc", "evt")
- )
- 
- # and we can create an equivalent model manually:
- FH_spec_manual <- specify(
-   obs_biomass ~  evc + evt + (1 | county),
-   level = "area",
-   domain = "county"
+ FH_spec <- specify(
+   obs_biomass ~ evc + evt,
+   model = "FH",
+ # level = "area", # can replace `model = "FH"` above
+   domain_name = "county",
+   obs_variability = "DIR_MEAN_SE" 
+   # name of estimated variance of direct estimates.
+   # this follows the convention of aggregate_data()
  )
  
  # We allow zero-inflated models as well
  # This will inherit the remainder of the arguments from the response model
  GLM_spec <- specify(
+   ~ evc + evt, # don't necessarily need to specify a response
    model = "BHF",
-   auxiliary_variables = c("evc", "evt"),
-   specifying_second_stage = TRUE
+   specifying_second_stage_model = TRUE
  )
  
 response_model <- specify(
+  obs_biomass ~ tcc,
   model = "BHF",
-  response = "obs_biomass",
-  auxiliary_variables = "tcc",
-  domain = "county",
+  domain_name = "county",
   model_stage = "zi",
   second_stage_spec = GLM_spec,
   variable_transform = list(

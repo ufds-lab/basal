@@ -1,11 +1,11 @@
 #' @title The `stLMM` engine
 #' @description
-#' The `brms` model allows for fitting standard models. This includes unit- 
+#' The `stLMM` library allows for fitting standard models. This includes unit- 
 #' and area-level models, with most standard families in GLMs. It also permits
 #' Domain-residual-variances, and spatio-temporal process terms.
 #' 
 #' @return Object of class `basal_engine`
-#' @export
+#' @noRd
 engine_stLMM <- function() {
   stop("Unable to use stLMM as an engine yet.")
   engine <- list()
@@ -66,29 +66,30 @@ build_bhf_formula.stLMM <- build_fh_formula.stLMM
 build_custom_formula.stLMM <- function(spec, response, ...) {
   # we have to replace standard mixed effects specification with the custom stLMM
   # specification (i.e., (1 | id) -> iid(id) or (x | id) -> x:iid(id))
-  breaks <- reformulas::findbars_x(spec$formula)
-  base_formula_str <- deparse(splitForm(spec$formula)$fixedFormula)
-  extra_terms <- list()
-  for (term in breaks) {
-    term <- paste(term)[2]
-    split_term <- unlist(strsplit(term, " "))
-    if (length(split_term) != 3) {
-      stop("non-standard term: ", paste(term))
-    }
-    if (split_term[1] == "1") {
-      first_term <- ""
-    } else {
-      first_term <- paste0(split_term[1], ":")
-    }
-    new_term <- paste0(first_term, "iid(", split_term[3], ")")
-    extra_terms <- union(extra_terms,
-                         list(new_term))
-  }
-  
-  new_formula <- paste0(
-    base_formula_str, " + ", paste0(unlist(extra_terms), collapse = " + ")
-  )
-  return (stats::formula(new_formula))
+  stop("not implemented")
+#  breaks <- reformulas::findbars_x(spec$formula)
+#  base_formula_str <- deparse(splitForm(spec$formula)$fixedFormula)
+#  extra_terms <- list()
+#  for (term in breaks) {
+#    term <- paste(term)[2]
+#    split_term <- unlist(strsplit(term, " "))
+#    if (length(split_term) != 3) {
+#      stop("non-standard term: ", paste(term))
+#    }
+#    if (split_term[1] == "1") {
+#      first_term <- ""
+#    } else {
+#      first_term <- paste0(split_term[1], ":")
+#    }
+#    new_term <- paste0(first_term, "iid(", split_term[3], ")")
+#    extra_terms <- union(extra_terms,
+#                         list(new_term))
+#  }
+#  
+#  new_formula <- paste0(
+#    base_formula_str, " + ", paste0(unlist(extra_terms), collapse = " + ")
+#  )
+#  return (stats::formula(new_formula))
 }
 
 #' Default method for fitting a model; errors as a default, should not be called
@@ -118,18 +119,18 @@ fit_basal_model.stLMM <- function (
   stop("Add default prior for random effects")
   stop("Thinning is currently not supported")
   
-  model_fit <- stLMM::stLMM(
-    formula,
-    data = data,
-    family = family,
-    chains = chains,
-    n_samples  = iters,
-    n_report = ceiling(iters/5),
-    priors = priors,
-    n_omp_threads = ncores,
-    chain_control = list(seed = seed),
-    ...
-  )
+#  model_fit <- stLMM::stLMM(
+#    formula,
+#    data = data,
+#    family = family,
+#    chains = chains,
+#    n_samples  = iters,
+#    n_report = ceiling(iters/5),
+#    priors = priors,
+#    n_omp_threads = ncores,
+#    chain_control = list(seed = seed),
+#    ...
+#  )
 }
 
 #' Call `pp_check()` 
@@ -189,7 +190,7 @@ get_available_draws.stLMM <- function(
     fit,
     ...
 ) {
-  nrow(as_mcmc(fit$model))
+  stop("not implemented")
 }
 
 #' Get grouping variables
@@ -199,6 +200,7 @@ get_grouping_variables.stLMM <- function(
     fit,
     ...
 ) {
-  return (names(stats::coef(zi_fit$model)))
+  stop("not implemented")
+#  return (names(stats::coef(zi_fit$model)))
 }
 

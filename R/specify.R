@@ -55,15 +55,15 @@
 #' The \code{...} argument allows for the use of various other
 #' options. These include
 #' 
-#' \itemize {
+#' \itemize{
 #'  \item \code{obs_variability}: Used to fix variance of observations across a 
 #'  domain. Often used when direct estimators may be pre-computed in an 
 #'  area-level model. Either a string denoting the name of a column with 
 #'  estimated variance values of a direct estimator or a numeric vector with 
 #'  such estimated variance values. NOT FIXED.
 #'  \item \code{lasso}: A logical indicating whether a prior should be put on
-#'  regression coefficients to mimic the frequentist LASSO via a laplace prior on
-#'  fixed-effect coefficients. Priors may not be specified in this case, and 
+#'  regression coefficients to mimic the frequentist LASSO via a laplace prior. 
+#'  Priors may not be specified in this case, and 
 #'  this option may not be supported by all engines. NOT DONE.
 #'  \item \code{DRV}: A logical indicating whether a model should be specified
 #'  with domain-specific residual variances. May not be supported by all engines.
@@ -73,7 +73,7 @@
 #' }
 #' 
 #' @return Object of type `basal_spec`.
-#'
+#' 
 #' @examples
 #' plot_spec_bhf <- specify(
 #'   obs_biomass ~ evc + evt + (1 | county),
@@ -105,33 +105,28 @@
 #' )
 #' 
 #' # we can specify area level models with `model = "FH"`, or `level = "area"`
-#' FH_spec <- specify(
-#'   model = "FH",
-#'   domain_name = "county",
-#'   response_name = "obs_biomass",
-#'   auxiliary_variables = c("evc", "evt")
-#'  )
-#'  
-#'  # and we can create an equivalent model manually:
-#'  FH_spec_manual <- specify(
-#'    obs_biomass ~  evc + evt + (1 | county),
-#'    level = "area",
-#'    domain = "county"
+#'  FH_spec <- specify(
+#'    obs_biomass ~ evc + evt,
+#'    model = "FH",
+#'  # level = "area", # can replace `model = "FH"` above
+#'    domain_name = "county",
+#'    obs_variability = "DIR_MEAN_SE" 
+#'    # name of estimated variance of direct estimates.
+#'    # this follows the convention of aggregate_data()
 #'  )
 #'  
 #'  # We allow zero-inflated models as well
 #'  # This will inherit the remainder of the arguments from the response model
 #'  GLM_spec <- specify(
+#'    ~ evc + evt, # don't necessarily need to specify a response
 #'    model = "BHF",
-#'    auxiliary_variables = c("evc", "evt"),
-#'    specifying_second_stage = TRUE
+#'    specifying_second_stage_model = TRUE
 #'  )
 #'  
 #' response_model <- specify(
+#'   obs_biomass ~ tcc,
 #'   model = "BHF",
-#'   response = "obs_biomass",
-#'   auxiliary_variables = "tcc",
-#'   domain = "county",
+#'   domain_name = "county",
 #'   model_stage = "zi",
 #'   second_stage_spec = GLM_spec,
 #'   variable_transform = list(
@@ -141,19 +136,20 @@
 #' )
 #' 
 #' @export
-specify <- function(formula = NULL,
-                    level = NULL,
-                    model = "custom",
-                    ...,
-                    domain_name = NULL,
-                    response_name = NULL,
-                    auxiliary_variables = NULL,
-                    obs_variability = NULL,
-                    variable_transform = NULL,
-                    family = stats::gaussian(),
-                    model_stage = "single",
-                    specifying_second_stage_model = FALSE, # should change this variable name
-                    second_stage_spec = NULL
+specify <- function(
+    formula = NULL,
+    level = NULL,
+    model = "custom",
+    ...,
+    domain_name = NULL,
+    response_name = NULL,
+    auxiliary_variables = NULL,
+    obs_variability = NULL,
+    variable_transform = NULL,
+    family = stats::gaussian(),
+    model_stage = "single",
+    specifying_second_stage_model = FALSE, # should change this variable name
+    second_stage_spec = NULL
 ) {
 
   # If we have a custom model, the user must provide a formula and a level
@@ -168,6 +164,9 @@ specify <- function(formula = NULL,
     if (!is.null(level)) {level <- match.arg(level, c("area", "unit"))} # not the best practice with NULL here but works nicely
     model <- match.arg(model, c("custom", "FH", "BHF"))
     model_stage <- match.arg(model_stage, c("single", "zi"))
+    if (!is.null(formula) && !inherits(formula, "formula")) {
+      stop("Formulae must be provided as base-R formulae.")
+    }
     opt_args <- list(...)
     
     validate_specify_inputs(
@@ -195,7 +194,8 @@ specify <- function(formula = NULL,
     variable_transform = variable_transform,
     model_stage = model_stage,
     second_stage_spec = second_stage_spec,
-    opt_args = opt_args
+    opt_args = opt_args,
+    valid_spec = FALSE
   )
 
   if (specifying_second_stage_model) {
@@ -208,10 +208,22 @@ specify <- function(formula = NULL,
     spec <- validate_single_stage_spec(spec = spec, 
                                        auxiliary_variables = auxiliary_variables,
                                        response_name = response_name)
-  } else if (model == "aux_spec") {
+  } else { #if (model == "aux_spec") {
     spec <- validate_GLM_two_stage_spec(spec = spec, 
                                         auxiliary_variables = auxiliary_variables,
                                         response_name = response_name)
+    t = try(
+      validate_single_stage_spec(
+        spec = spec,
+        auxiliary_variables = auxiliary_variables,
+        response_name = response_nmae
+      ),
+      silent = T
+    )
+    
+    if (inherits(t, class(spec))) {
+      spec <- t
+    }
   }
 
   # correct/set variables depending on their level
@@ -221,13 +233,10 @@ specify <- function(formula = NULL,
     spec$obs_variability <- NULL
   }
   if (spec$level == "area" &&
-      is.null(spec$domain_name) &&
+#      is.null(spec$domain_name) &&
       is.null(spec$obs_variability) &&
       !specifying_second_stage_model) {
-    stop(paste0(
-      "Must have either a domain name (for auto aggregation) or observed ",
-      "variability with area level models"
-    ))
+    stop("Must have observed variability with area level models")
   }
 
   # validate the variable transformation --- make sure we have a left-inverse
@@ -238,12 +247,13 @@ specify <- function(formula = NULL,
   }
   
   if (spec$model_stage == "zi" && !specifying_second_stage_model) {
-    spec <- validate_second_stage(spec, auxiliary_variables)
+      spec <- validate_second_stage(spec, auxiliary_variables)
   }
 
   if (spec$level == "area" && !is.null(spec$variable_transform)) {
     stop("Can't specify variable transforms with area-level models")
   }
+  
   return(
     structure(spec, class = "basal_spec")
   )

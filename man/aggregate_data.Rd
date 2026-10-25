@@ -22,6 +22,11 @@ aggregate_data(
 
 \item{population_size}{population size
 (i.e., the number of (possibly unsampled)) plots/units/individuals}
+
+\item{population_data}{a dataframe of the population data, used for computing
+aggregates of auxiliary variables}
+
+\item{...}{to allow extra parameters in the future}
 }
 \value{
 A dataframe with values for auxiliary variables, as well as new values

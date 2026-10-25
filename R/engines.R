@@ -47,95 +47,22 @@ validate_engine <- function(engine, spec) {
   return (spec)
 }
 
-#' Get the response formula from a formula
-#' @exportS3Method basal::get_response_formula
-#' @noRd
-get_response_formula.default <- function (formula) {
-  return (formula)
-}
-
-#' Set the response value of a specification
-#' @noRd
-#' @exportS3Method basal::set_spec_response
-set_spec_response.default <- function (spec, response) {
-  if (spec$model_type == "custom") {
-    tmp_formula <- formula(paste0(response, " ~ 1"))
-    # the formula `formula(~x1 + x2)`, for example, is valid, and in this case
-    # the second entry of the formula are the covariates rather than the response
-    # so we move them to the standard place in a formula with a response and covariates
-    if (length(spec$formula) == 2) {
-      spec$formula[[3]] <- spec$formula[[2]] 
-    }
-    spec$formula[[2]] <- tmp_formula[[2]]
-  } else {
-    spec$default_model_data$response_name <- response
-  }
-  return (spec)
-}
-
-#' Default method for computing model response
-#' @exportS3Method basal::get_fit_response
-#' @noRd
-get_fit_response.default <- function(spec, response = NULL, ...) {
-  if (is.null(response)) {
-    if (is.null(spec$formula)) {
-      response <- spec$default_model_data$response_name
-    } else {
-      response <- all.vars(spec$formula[[2]])[1]
-    }
-  }
-  if (is.null(response) || length(response) != 1 || is.na(response) || response == "") {
-    stop("Unable to determine the response variable from `spec`.")
-  }
-  
-  return (response)
-}
-
-#' Default method for computing model variables
-#' @exportS3Method basaal::all_model_vars
-#' @noRd
-all_model_vars.default <- function (spec, ss = FALSE, ...) {
-  if (spec$model_type == "custom") {
-    model_variables <- list(all.vars(spec$formula))
-    if (length(spec$formula == 2)) {
-      # if there is no response listed, we say it's NULL
-      model_variables <- union(model_variables, list(NULL))
-    }
-    # it's unnecessary to include res in the above, but I'm doing it
-    # just in case. We will call unique() anyway
-  } else {
-    model_variables <- list(
-      spec$default_model_data$response_name,
-      spec$default_model_data$domain_name,
-      spec$default_model_data$auxiliary_variables
-    )
-  }
-  
-  if (!is.null(spec$second_stage_spec)) {
-    model_variables <- c(
-      model_variables,
-      all_model_vars(spec$second_stage_spec)
-    )
-  }
-  if (!is.null(spec$obs_variability)) {
-    model_variables <- union(model_variables, spec$obs_variability)
-  }
-
-  model_variables <- unique(model_variables)
-  
-  return (model_variables)
-}
-
-
 #' Build a formula for a Fay-Herriot model
 #' @exportS3Method basal::build_fh_formula
 #' @noRd
 build_fh_formula.default <- function(spec, response, ...) {
-  formula <- stats::formula(paste0(
-    response, " ~ ", 
-    paste0(spec$default_model_data$auxiliary_variables, collapse = " + "), " + ",
-    "(1 | ",  spec$default_model_data$domain_name, ")"
-  ))
+  if (!is.null(spec$formula)) {
+    formula <- stats::update(
+      spec$formula,
+      stats::reformulate(paste0(". + (1 | ", spec$default_model_data$domain_name, ")"), ".")
+    )
+  } else {
+    formula <- stats::formula(paste0(
+      response, " ~ ", 
+      paste0(spec$default_model_data$auxiliary_variables, collapse = " + "), " + ",
+      "(1 | ",  spec$default_model_data$domain_name, ")"
+    ))
+  }
   
   return (formula)
 }
@@ -143,15 +70,7 @@ build_fh_formula.default <- function(spec, response, ...) {
 #' Build a Formula for a BHF Model
 #' @exportS3Method basal::build_bhf_formula
 #' @noRd
-build_bhf_formula.default <- function (spec, ...) {
-  formula <- stats::formula(paste0(
-    spec$default_model_data$response_name, " ~ ",
-    paste0(spec$default_model_data$auxiliary_variables, collapse = " + "), " + ",
-    "(1 | ",  spec$default_model_data$domain_name, ")"
-  ))
-  
-  return (formula)
-}
+build_bhf_formula.default <- build_fh_formula.default
 
 #' Build a formula for a custom model
 #' @exportS3Method basal::build_custom_formula

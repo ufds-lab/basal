@@ -21,14 +21,14 @@ check_inherits <- function(what, ...) {
 #' is supported
 #' 
 #' @param data Data to compute the direct estimators on
-#' 
 #' @param response Variable to estimate
-#' 
 #' @param population_size population size 
 #' (i.e., the number of (possibly unsampled)) plots/units/individuals
-#' 
 #' @param domain_name The name of the domain to compute direct estimators across
-#' 
+#' @param population_data a dataframe of the population data, used for computing 
+#' aggregates of auxiliary variables
+#' @param ... to allow extra parameters in the future
+#'
 #' @returns A dataframe with values for auxiliary variables, as well as new values
 #' \itemize{
 #'  \item \code{DIR_MEAN_ESTIMATOR}: The direct estimate for the average of the response
@@ -114,9 +114,12 @@ aggregate_data <- function(
   
   population_data = population_data[!is.na(population_data$DIR_MEAN_SE),]
   
-  return(list(
-    aggregate_obs = agg_data,
-    aggregate_pop = population_data
+  return(structure(
+    list(
+      aggregate_obs = agg_data,
+      aggregate_pop = population_data
+    ),
+    class = "basal_data_aggregate"
   ))
 }
 
@@ -256,12 +259,22 @@ entropy = function (x, success = 1) {
   return (H)
 }
 
-#' upper quantile for 95% CI
-lower_ci_quantile = function(x, ...) {
-  stats::quantile(x, 0.025, ...)
+#' lower quantile for q% CI
+#' @param x Vector of values
+#' @param q quantile
+#' @param ... further arguments
+#' @returns the lower (\code{q}/2)-th quantile of \code{x}
+#' @export
+lower_ci_quantile = function(x, q = 0.05, ...) {
+  stats::quantile(x, q/2, ...)
 }
 
-#' lower quantile for 95% CI
-upper_ci_quantile = function(x, ...) {
-  stats::quantile(x, 0.975, ...)
+#' upper quantile for q% CI
+#' @param x Vector of values
+#' @param q quantile
+#' @param ... further arguments
+#' @returns the upper (\code{q}/2)-th quantile of \code{x}
+#' @export
+upper_ci_quantile = function(x, q = 0.05, ...) {
+  stats::quantile(x, 1-q/2, ...)
 }

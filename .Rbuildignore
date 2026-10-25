@@ -3,3 +3,4 @@
 ^sandbox$
 ^LICENSE\.md$
 ^data-raw$
+^R/engines_stLMM.R$

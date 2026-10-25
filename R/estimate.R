@@ -37,6 +37,14 @@ estimate <- function(
     seed = NULL
 ) {
   
+  if (!is.null(fit$pop_data)) {
+    if (!is.null(newdata)) {
+      warning("Ignoring aggregated population data and using `newdata` instead.")
+    } else {
+      newdata = fit$pop_data
+    }
+  }
+  
   validate_estimate_inputs(
     fit = fit,
     newdata = newdata,

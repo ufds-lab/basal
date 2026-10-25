@@ -26,3 +26,16 @@ Object of type \code{BASAL_transformation}
 \description{
 Make Variable Transformation
 }
+\details{
+Variable transformations can be a good way to improve a model, by transforming the response.
+Common transformations include log and root-type transformations.
+
+Before model fitting, the data will be transformed via \code{transform}. Then,
+after posterior estimation but before aggregation of computing summaries,
+predictions will be back-transformed via \code{inv_transform}.
+
+By default, \code{make_variable_transform} will ensure that \code{inv_transform}
+is a (one-sided) inverse of \code{transform} by ensuring that
+\code{inv_transform(transform(eval_grid))} is the same as \code{eval_grid},
+however this behavior can be circumvented with the \code{override} flag.
+}

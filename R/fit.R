@@ -9,7 +9,7 @@
 #'
 #' @param priors Optional prior specification. If `NULL`, default priors are supplied.
 #' 
-#' @param second_stage_priors Optional prior specification for the Bernoulli
+#' @param second_stage_priors Optional prior specification for the logistic
 #' second-stage model in a two-stage zero-inflated specification. If `NULL`, 
 #' default priors are supplied.
 #'
@@ -38,21 +38,23 @@
 #' @exportS3Method generics::fit
 #' @aliases fit
 #'
-fit.basal_spec <- function(spec,
-                           data,
-                           population_size = NULL,
-                           priors = specify_priors(),
-                           second_stage_priors = NULL,
-                           chains = 3,
-                           iter = 5000,
-                           burn_in = 1000,
-                           seed = NULL,
-                           thin = 2,
-                           engine = engine_brms(),
-                           ncores = default_ncores(),
-                           nthreads = "default",
-                           verbose = TRUE,
-                           ...) {
+fit.basal_spec <- function (
+    spec,
+    data,
+    population_size = NULL,
+    priors = specify_priors(),
+    second_stage_priors = NULL,
+    chains = 3,
+    iter = 5000,
+    burn_in = 1000,
+    seed = NULL,
+    thin = 2,
+    engine = engine_brms(),
+    ncores = default_ncores(),
+    nthreads = "default",
+    verbose = TRUE,
+    ...
+) {
   
   func_call <- match.call()
   
@@ -77,12 +79,19 @@ fit.basal_spec <- function(spec,
   vars <- all_model_vars(spec)
   res <- get_fit_response(spec)
   
+  if (inherits(data, "basal_data_aggregate")) {
+    pop_data = data$aggregate_pop
+    data = data$aggregate_obs
+  } else {
+    pop_data = NULL
+  }
+  
   data <- validate_model_variables(vars, data)
   
   second_stage_fit <- NULL
   unfiltered_data <- NULL
   
-  if (!is.null(spec$second_stage_spec)) {
+  if (!is.null(spec$second_stage_spec) && spec$model_stage == "zi") {
     message(
       "Estimating two models for two-stage model. ",
       "This may take a while..."
@@ -116,6 +125,10 @@ fit.basal_spec <- function(spec,
     
     unfiltered_data <- two_stage_data$unfiltered_data
     data <- two_stage_data$nonzero_data
+#  } else if (spec$model_stage == "zi") {
+#    stop("Cannot pass the second-stage specification of a ZI model to `fit()`.")
+  } else if (!is.null(spec$second_stage_spec)) {
+    stop("Malformed specification: observed second-stage specification but no ZI model.")
   }
   
   if (spec$level == "area" && !is.null(spec$variable_transform)) {
@@ -179,6 +192,7 @@ fit.basal_spec <- function(spec,
     spec = spec,
     formula = formula,
     data = data,
+    pop_data = pop_data,
     model = raw_model,
     params = list(
       response = res,

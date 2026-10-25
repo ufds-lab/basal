@@ -10,35 +10,46 @@ specify_priors <- function (...) {
 
 #' Accept inputs for fitting a model
 #' @noRd
-validate_fit_inputs <- function(spec,
-                                data,
-                                chains,
-                                iter,
-                                burn_in,
-                                thin,
-                                engine,
-                                ncores,
-                                nthreads) {
+validate_fit_inputs <- function (
+    spec,
+    data,
+    chains,
+    iter,
+    burn_in,
+    thin,
+    engine,
+    ncores,
+    nthreads
+) {
   
-  if (!is.numeric(ncores) || length(ncores) != 1 || !is.finite(ncores) || ncores <= 0 || ncores != floor(ncores)) {
-    stop("`ncores` must be a single positive integer.")
+  if (!spec$valid_spec) {
+    stop("Invalid specification; likely caused by passing the second-stage of a logit-ZI model to fit().")
+  }
+  if (!is.numeric(ncores) || length(ncores) != 1 || 
+      !is.finite(ncores) || ncores <= 0 || ncores != floor(ncores)) {
+    stop("`ncores` must be a single positive integer, not ", ncores, ".")
   }
   
   if (!(identical(nthreads, "default") || (is.numeric(nthreads) && length(nthreads) == 1 && 
                                            is.finite(nthreads) && nthreads > 0 && nthreads == floor(nthreads)))) {
-    stop("`nthreads` must be a single positive integer or \"default\".")
+    stop(
+      "`nthreads` must be a single positive integer or \"default\", not ", nthreads, "."
+    )
   }
 
+  class_diff = setdiff(c("data.frame", "basal_data_aggregate"), class(data))
+  if (length(class_diff) == 2) {
+    stop("data must be of class data.frame or basal_data_aggregate. Not ", class(data)[1])
+  }
   check_inherits("basal_spec", spec)
-  check_inherits("data.frame", data)
   check_inherits("numeric", chains, iter, burn_in, thin)
   
   mcmc_args <- list(chains = chains, iter = iter, burn_in = burn_in, thin = thin)
   bad_length <- names(mcmc_args)[lengths(mcmc_args) != 1]
   if (length(bad_length) > 0) {
     stop(
-      "The following argument", if (length(bad_length) > 1) "s must" else "must",
-      " have length one: ", paste0("`", bad_length, "`", collapse = ", "),"."
+      "The following argument", if (length(bad_length) > 1) "s" else "",
+      " must have length one: ", paste0("`", bad_length, "`", collapse = ", "),"."
     )
   }
   mcmc_args <- unlist(mcmc_args)
@@ -52,16 +63,16 @@ validate_fit_inputs <- function(spec,
   non_integer <- names(mcmc_args)[mcmc_args != floor(mcmc_args)]
   if (length(non_integer) > 0) {
     stop(
-      "The following argument", if (length(non_integer) > 1) "s must" else " must",
-      " be integer-valued: ", paste0("`", non_integer, "`", collapse = ", "), "."
+      "The following argument", if (length(non_integer) > 1) "s" else "",
+      " must be integer-valued: ", paste0("`", non_integer, "`", collapse = ", "), "."
     )
   }
   positive_args <- mcmc_args[c("chains", "iter", "thin")]
   non_positive <- names(positive_args)[positive_args <= 0]
   if (length(non_positive) > 0) {
     stop(
-      "The following argument", if (length(non_positive) > 1) "s must" else " must",
-      " be positive: ", paste0("`", non_positive, "`", collapse = ", "), "."
+      "The following argument", if (length(non_positive) > 1) "s" else "",
+      " must be positive: ", paste0("`", non_positive, "`", collapse = ", "), "."
     )
   }
   if (burn_in < 0) {
@@ -75,27 +86,97 @@ validate_fit_inputs <- function(spec,
 #' Add the (possibly) engine-specific family to the second stage logit model
 #' @noRd
 add_engine_logit_family <- function (spec, engine) {
+  
   if (!is.null(engine$logistic_family)) {
-    spec$second_stage_spec$family <- engine$logistic_family
+    expected_family = engine$logistic_family
+  } else {
+    stats::binomial()$family
+  }
+  if (spec$second_stage_spec$family$family != expected_family$family) {
+    if (spec$second_stage_spec$family$family != "gaussian") {
+      warning("Family for logistic model ignored.")
+    }
+  }
+  spec$second_stage_spec$family <- expected_family
+  return (spec)
+}
+
+#' computing model response
+#' @noRd
+get_fit_response <- function(spec, response = NULL) {
+  if (is.null(response)) {
+    if (is.null(spec$formula)) {
+      response <- spec$default_model_data$response_name
+    } else {
+      if (!is.null(spec$second_stage_spec$formula) && 
+          attr(stats::terms(spec$second_stage_spec$formula), which = "response") == 0) {
+        stop("Found formula with no resposne")
+      }
+      response <- all.vars(spec$formula[[2]])[1]
+    }
+  }
+  if (is.null(response) || length(response) != 1 || is.na(response) || response == "") {
+    stop("Unable to determine the response variable from `spec`.")
+  }
+  
+  return (response)
+}
+
+#' Set the response value of a specification
+#' @noRd
+set_spec_response <- function (spec, response) {
+  if (!is.null(spec$formula)) {
+    spec$formula <- stats::update(
+      spec$formula,
+      stats::reformulate(".", response)
+    )
+    spec$default_model_data$response_name <- NULL
+  } else {
+    spec$default_model_data$response_name <- response
   }
   return (spec)
 }
 
-#' Generic; get response from a model specification
+#' computing model variables
 #' @noRd
-get_fit_response <- function (spec, ...) {
-  UseMethod("get_fit_response")
-}
+all_model_vars <- function (spec) {
+  if (!is.null(spec$formula)) {
+    model_variables <- list(all.vars(spec$formula))
+    if (attr(stats::terms(spec$formula), which = "response") == 0) {
+      # if there is no response listed, we say it's NULL
+      model_variables <- union(model_variables, list(NULL))
+    } else if (!is.null(spec$default_model_data$response_name)) {
+      stop("Malformed specification: observed response as a formula and as `response_name`.")
+    }
+    if (!is.null(spec$default_model_data$domain_name)) {
+      model_variables = union(model_variables, list(spec$default_model_data$domain_name))
+    }
+  } else {
+    model_variables <- list(
+      spec$default_model_data$response_name,
+      spec$default_model_data$domain_name,
+      spec$default_model_data$auxiliary_variables
+    )
+  }
+  
+  if (!is.null(spec$second_stage_spec)) {
+    model_variables <- union(
+      model_variables,
+      all_model_vars(spec$second_stage_spec)
+    )
+  }
+  if (!is.null(spec$obs_variability)) {
+    model_variables <- union(model_variables, spec$obs_variability)
+  }
 
-#' Generic; get all variables from a model specification
-#' @noRd
-all_model_vars <- function (spec, ...) {
-  UseMethod("all_model_vars")
+  model_variables <- unique(model_variables)
+  
+  return (model_variables)
 }
 
 #' Ensure all variables are present in the data
 #' @noRd
-validate_model_variables <- function(variables, data) {
+validate_model_variables <- function (variables, data) {
   variables = unlist(variables)
   missing <- setdiff(variables, colnames(data))
   if (length(missing) > 0) {
@@ -109,7 +190,7 @@ validate_model_variables <- function(variables, data) {
 
 #' Parallel settings for model fitting
 #' @noRd
-do_parallel_settings <- function(chains, ncores, nthreads) {
+do_parallel_settings <- function (chains, ncores, nthreads) {
   
   # A thread here is used to speed up within-chain computations.
   # A core is used to run another chain in parallel
@@ -159,7 +240,7 @@ build_basal_formula <- function(spec, response) {
   }
   if (spec$model_type == "BHF") {
     return(
-      build_bhf_formula(spec = spec)
+      build_bhf_formula(spec = spec, response = response)
     )
   }
   if (spec$model_type == "FH") {
@@ -201,47 +282,32 @@ prepare_area_level_data <- function(spec,
   # compute HT estimators and replace the original response with the direct
   # estimator. This applies to both preset FH models and custom area-level models.
   if (is.null(spec$obs_variability)) {
-    if (is.null(population_size)) {
-      stop(
-        "Population size is required for auto-aggregation (computation of ",
-        "direct estimator) in area-level models."
-      )
-    }
-    data <- aggregate_data(
-      data = data,
-      response = response,
-      population_size = population_size,
-      domain_name = spec$domain_name
-    )$aggregate_obs
-    response <- "DIR_MEAN_ESTIMATOR"
-    agg_domain <- spec$domain_name
+    stop("Auto-aggregation not supported currently.")
+    # the below can be buggy, we should ensure it works well if we want it at all
+    
+#    if (is.null(population_size)) {
+#      stop(
+#        "Population size is required for auto-aggregation (computation of ",
+#        "direct estimator) in area-level models."
+#      )
+#    }
+#    data <- aggregate_data(
+#      data = data,
+#      response = response,
+#      population_size = population_size,
+#      domain_name = spec$domain_name
+#    )$aggregate_obs
+#    response <- "DIR_MEAN_ESTIMATOR"
+#    agg_domain <- spec$domain_name
   } else {
     agg_domain <- NULL
     obs_var <- spec$obs_variability
-    if (is.numeric(obs_var)) {
-      if (length(obs_var) != 1 && length(obs_var) != nrow(data)) {
-        stop(
-          "`obs_variability` must have length one or the same number of rows as data."
-        )
-      }
-      data$DIR_MEAN_SE <- obs_var
-    } else if (is.character(obs_var)) {
-      if (length(obs_var) != 1) {
-        stop(
-          "`obs_variability` must be a numeric vector or a single column name."
-        )
-      }
-      if (!(obs_var %in% colnames(data))) {
-        stop(
-          "`obs_variability` must be a vector of standard errors or a column in the data."
-        )
-      }
-      data$DIR_MEAN_SE <- data[[obs_var]]
-    } else {
+    if (!(obs_var %in% colnames(data))) {
       stop(
-        "`obs_variability` must be a numeric vector or the name of a column in data."
+        "`obs_variability` must be a vector of standard errors or a column in the data."
       )
     }
+    data$DIR_MEAN_SE <- data[[obs_var]]
   }
   if (!("DIR_MEAN_SE" %in% colnames(data))) {
     stop("Unable to construct the estimated variance of the direct estimator, ",
@@ -267,10 +333,17 @@ prepare_area_level_data <- function(spec,
 
 #' Prepare data for a two-stage model
 #' @noRd
-prepare_two_stage_data <- function(data, response, spec) {
+prepare_two_stage_data <- function (data, response, spec) {
+  
   ss_res = try(get_fit_response(spec$second_stage_spec), silent = TRUE)
   if (inherits(ss_res, "try-error")) {
-    ss_res = response
+    ss_res <- response
+  } else if (!(ss_res %in% colnames(data))) {
+    warning(
+      "Logit response ", ss_res, " not found in data. Defaulting to ",
+      "the base-level response ", response, "."
+    )
+    ss_res <- response
   }
   data$BASAL_NONZERO_INDICATOR <- as.numeric(data[[ss_res]] != 0)
   indicator_values <- unique(stats::na.omit(data$BASAL_NONZERO_INDICATOR))
@@ -280,6 +353,7 @@ prepare_two_stage_data <- function(data, response, spec) {
   unfiltered_data <- data
   nonzero_data <- data[!is.na(data[[response]]) & data[[response]] != 0,]
   if (nrow(nonzero_data) == 0) {
+    # should be redudant considering the above error check
     stop("No nonzero observations were found for response variable ", response, ".")
   }
   return(
@@ -288,12 +362,6 @@ prepare_two_stage_data <- function(data, response, spec) {
       nonzero_data = nonzero_data
     )
   )
-}
-
-#' Set the response value of a specification
-#' @noRd
-set_spec_response <- function (spec, response) {
-  UseMethod("set_spec_response")
 }
 
 #' Fit the second stage of a two-stage model

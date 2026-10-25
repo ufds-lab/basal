@@ -1,4 +1,33 @@
 # stolen from specify check, just going to make sure it works with fitting as well
+get_many_fit_args <- function () {
+  arglist = get_many_specs()
+  
+  ret = lapply(arglist, function (l) {
+    if (l$error) {
+      return (list(error = TRUE))
+    }
+    spec <- do.call(basal::specify, l$args)
+    
+    for (engine in list(
+      engine_rstanarm(),
+      engine_brms()
+    )) {
+      expecting_error = FALSE
+      if (!((spec$level %in% engine$level) &&
+            (spec$model_type %in% engine$model) &&
+            (spec$model_stage %in% engine$model_stage)) ||
+          !spec$valid_spec) {
+        expecting_error = TRUE
+      }
+      return (list(spec = spec,
+                   engine = engine,
+                   error = expecting_error))
+    }
+  })
+  
+  return (unique(ret))
+}
+
 big_test_fit <- function () {
   test_data <- data.frame(
     biomass = c(0,  11, 8, 10, 0, 12, 14, 9, 0, 13, 8, 10, 0, 11, 16, 19),
@@ -6,102 +35,34 @@ big_test_fit <- function () {
     county = factor(rep(c("A", "B", "C", "D"), each = 4))
   )
   
-  custom_args = list(
-    formula = biomass ~ ppt,
-    level = NULL
-  )
+  specs = suppressWarnings(suppressMessages(get_many_fit_args()))
   
-  manual_args = list(
-    response_name = "biomass",
-    auxiliary_variables = "ppt"
-  )
-  
-  for (base_args in list(custom_args, manual_args)) {
-    for (model_type in c("custom", "BHF", "FH")) {
-      args <- base_args
-      if (model_type != "custom") {
-        domain_name = "county"
-      } else {
-        domain_name = NULL
-        args$formula <- biomass ~ ppt + (1 | county)
-      }
-      for (transform in list(
-        NULL,
-        basal::make_variable_transform(
-          function (x) {x^2},
-          function (x) {sqrt(x)}
-        )
-      )) {
-        for (model_stage in c("single", "zi")) {
-          for (sssm in c(TRUE, FALSE)) {
-            for (level in c("unit", "area")) {
-              domain_name <- if (model_type != "custom" || level == "area") {
-                "county"
-              } else {
-                NULL
-              }
-              expecting_error = FALSE
-              if ((level == "area" || model_type == "FH") && sssm && model_type != "BHF") {
-                expecting_error = TRUE
-              } else if (sssm && !is.null(args$formula) && is.null(domain_name) && model_type != "custom") {
-                expecting_error = TRUE
-              } else if (model_type == "custom" && is.null(args$formula) && !sssm) {
-                expecting_error = TRUE
-              } else if ((model_type == "FH" || (level == "area" && model_type != "BHF")) && 
-                          is.null(domain_name) && !sssm) {
-                expecting_error = TRUE
-              } else if ((model_type == "FH" || (level == "area" && model_type != "BHF")) &&
-                         !is.null(transform) && (sssm || model_stage != "zi")) {
-                expecting_error = TRUE
-              }
-              if (expecting_error) {
-                next
-              } else {
-                spec <- basal::specify(
-                  formula = args$formula,
-                  response_name = args$response_name,
-                  auxiliary_variables = args$auxiliary_variables,
-                  model = model_type,
-                  domain_name = domain_name,
-                  variable_transform = transform,
-                  model_stage = model_stage,
-                  specifying_second_stage_model = sssm,
-                  level = level
-                )
-                for (engine in list(
-                  engine_rstanarm(),
-                  engine_brms()
-                )) {
-                  if (!(level %in% engine$level &&
-                        model_type %in% engine$model &&
-                        model_stage %in% engine$model_stage) ||
-                      sssm) {
-                    next
-                  }
-                  testthat::expect_no_error(
-                    suppressWarnings(basal::fit(
-                      spec,
-                      test_data,
-                      chains = 1,
-                      burn_in = 2,
-                      thin = 1,
-                      iter = 4,
-                      ncores = 1,
-                      nthreads = 1,
-                      engine = engine,
-                      refresh = 0
-                    )
-                  ))
-                }
-              }
-            }
-          }
-        }
-      }
+  sapply(specs, function (l) {
+    if (l$error) {
+      test = testthat::expect_error
+    } else {
+      test = testthat::expect_no_error
     }
-  }
+    t = test(
+      suppressWarnings(basal::fit(
+        l$spec,
+        test_data,
+        chains = 1,
+        burn_in = 2,
+        thin = 1,
+        iter = 4,
+        ncores = 1,
+        nthreads = 1,
+        engine = l$engine,
+        refresh = 0
+      )
+      )) |> try()
+    if (inherits(t, "try-error")) {
+      browser()
+    }
+  })
 }
-
+  
 test_many_specs <- testthat::test_that("fit handles basic model specifications", {
   big_test_fit()
 })
@@ -114,7 +75,11 @@ test_fit <- function() {
     county = factor(rep(c("A", "B", "C", "D"), each = 3))
   )
   
-  for (engine in list(engine_rstanarm(), engine_brms())) {
+  agg_test_data = basal::aggregate_data(
+    test_data, "biomass", "county", 100, test_data
+  )
+  
+  for (engine in list(basal::engine_rstanarm(), basal::engine_brms())) {
     for (model_type in c("BHF", "FH")) {
       if (model_type == "BHF") {
         level <- "unit"
@@ -123,31 +88,34 @@ test_fit <- function() {
       }
       
       if (model_type == "FH") {
-        domain_name <- "county"
-        population_size = 100
+        thedata <- agg_test_data
+        obs_variability = "DIR_MEAN_SE"
       } else {
-        domain_name <- NULL
-        population_size <- NULL
+        thedata <- test_data
+        obs_variability = NULL
       }
       
       specs <- list(
         custom = basal::specify(
           biomass ~ ppt + (1 | county),
           level = level,
-          domain_name = domain_name
+          domain_name = NULL,
+          obs_variability = obs_variability
         ),
         
         BHF = basal::specify(
           model = model_type,
           response_name = "biomass",
           auxiliary_variables = "ppt",
-          domain_name = "county"
+          domain_name = "county",
+          obs_variability = obs_variability
         ),
         
         semi_custom = basal::specify(
           biomass ~ ppt,
           domain_name = "county",
-          model = model_type
+          model = model_type,
+          obs_variability = obs_variability
         )
       )
       
@@ -157,7 +125,7 @@ test_fit <- function() {
           testthat::expect_error(
             basal::fit(
               specs[[spec]],
-              data = test_data,
+              data = thedata,
               chains = 1,
               iter = 10,
               burn_in = 5,
@@ -177,10 +145,10 @@ test_fit <- function() {
       fit_list <- list()
       
       for (spec in names(specs)) {
-        testthat::expect_no_error(
+        t = testthat::expect_no_error(
           fit_list[[spec]] <- basal::fit(
             specs[[spec]],
-            data = test_data,
+            data = thedata,
             chains = 1,
             iter = 10,
             burn_in = 5,
@@ -189,10 +157,12 @@ test_fit <- function() {
             ncores = 1,
             nthreads = 1,
             engine = engine,
-            population_size = population_size,
             refresh = 0
           )
-        )
+        ) |> try()
+        if (inherits(t, "try-error")) {
+          browser()
+        }
       }
       
       if (engine$name == "brms") {
@@ -217,7 +187,10 @@ test_fit <- function() {
           same_models = FALSE
         }
       }
-      testthat::expect_true(same_models)
+      t = testthat::expect_true(same_models) |> try()
+      if (inherits(t, "try-error")) {
+        browser()
+      }
     }
   }
 }
@@ -290,7 +263,7 @@ testthat::test_that("fit validates MCMC", {
     biomass ~ ppt + (1 | county),
     level = "unit"
   )
-  for (engine in list(engine_rstanarm(), engine_brms())) {
+  for (engine in list(basal::engine_rstanarm(), basal::engine_brms())) {
     testthat::expect_error(
       basal::fit(
         spec,

@@ -2,10 +2,20 @@
 % Please edit documentation in R/utils.R
 \name{lower_ci_quantile}
 \alias{lower_ci_quantile}
-\title{upper quantile for 95\% CI}
+\title{lower quantile for q\% CI}
 \usage{
-lower_ci_quantile(x, ...)
+lower_ci_quantile(x, q = 0.05, ...)
+}
+\arguments{
+\item{x}{Vector of values}
+
+\item{q}{quantile}
+
+\item{...}{further arguments}
+}
+\value{
+the lower (\code{q}/2)-th quantile of \code{x}
 }
 \description{
-upper quantile for 95\% CI
+lower quantile for q\% CI
 }
