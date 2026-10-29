@@ -151,6 +151,9 @@ all_model_vars <- function (spec) {
     if (!is.null(spec$default_model_data$domain_name)) {
       model_variables = union(model_variables, list(spec$default_model_data$domain_name))
     }
+    if (!is.null(spec$default_model_data$auxiliary_variables)) {
+      model_variables = union(model_variables, spec$default_model_data$auxiliary_variables)
+    }
   } else {
     model_variables <- list(
       spec$default_model_data$response_name,
@@ -264,10 +267,11 @@ get_scale <- function (data, variable) {
 
 #' Prepare data for an area-Level model
 #' @noRd
-prepare_area_level_data <- function(spec,
-                                    data,
-                                    response,
-                                    population_size = NULL) {
+prepare_area_level_data <- function (
+    spec,
+    data,
+    response
+) {
   
   if (spec$level != "area") {
     return(
@@ -386,7 +390,6 @@ fit_second_stage <- function(spec,
   second_stage_fit <- fit.basal_spec(
     spec = spec,
     data = data,
-    population_size = NULL,
     priors = priors,
     second_stage_priors = NULL,
     chains = chains,

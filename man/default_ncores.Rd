@@ -16,7 +16,7 @@ copied (with slight modifications) from \{eulerr\}, https://github.com/jolars/eu
 Collects the core-count limits we trust and returns the smallest, never less
 than one. This mirrors the (much more elaborate) min-of-signals design of
 \code{parallelly::availableCores()}, but only the durable, non-platform-specific
-signals: the detected core count, \verb{R CMD check}'s \verb{_R_CHECK_LIMIT_CORES_}
+signals: the detected core count, \code{R CMD check}'s \code{_R_CHECK_LIMIT_CORES_}
 (capped at two), and \code{OMP_THREAD_LIMIT}. We deliberately do not parse cgroup
 quotas or HPC scheduler variables.
 }

@@ -18,10 +18,17 @@ get_many_fit_args <- function () {
             (spec$model_stage %in% engine$model_stage)) ||
           !spec$valid_spec) {
         expecting_error = TRUE
+      } else if (!is.null(spec$obs_variability) && 
+                 spec$level == "area" && 
+                 spec$obs_variability != "biomass_se") {
+        expecting_error = TRUE
+      } else if (!is.null(spec$DRV) && engine$name != "brms") {
+        expecting_error = TRUE 
       }
       return (list(spec = spec,
                    engine = engine,
                    error = expecting_error))
+        
     }
   })
   
@@ -35,6 +42,10 @@ big_test_fit <- function () {
     county = factor(rep(c("A", "B", "C", "D"), each = 4))
   )
   
+  test_agg_data = aggregate_data(
+    test_data, "biomass", "county", test_data, population_size = 1e3
+  )
+  
   specs = suppressWarnings(suppressMessages(get_many_fit_args()))
   
   sapply(specs, function (l) {
@@ -43,10 +54,17 @@ big_test_fit <- function () {
     } else {
       test = testthat::expect_no_error
     }
+    if (is.null(l$spec) || 
+        l$spec$level == "area") {
+      thedata = test_agg_data
+    } else {
+      thedata = test_data
+    }
+    
     t = test(
       suppressWarnings(basal::fit(
         l$spec,
-        test_data,
+        thedata,
         chains = 1,
         burn_in = 2,
         thin = 1,
@@ -56,10 +74,7 @@ big_test_fit <- function () {
         engine = l$engine,
         refresh = 0
       )
-      )) |> try()
-    if (inherits(t, "try-error")) {
-      browser()
-    }
+      ))
   })
 }
   
@@ -76,7 +91,7 @@ test_fit <- function() {
   )
   
   agg_test_data = basal::aggregate_data(
-    test_data, "biomass", "county", 100, test_data
+    test_data, "biomass", "county", test_data, population_size = 1e3
   )
   
   for (engine in list(basal::engine_rstanarm(), basal::engine_brms())) {
@@ -89,11 +104,10 @@ test_fit <- function() {
       
       if (model_type == "FH") {
         thedata <- agg_test_data
-        obs_variability = "DIR_MEAN_SE"
       } else {
         thedata <- test_data
-        obs_variability = NULL
       }
+      obs_variability = NULL
       
       specs <- list(
         custom = basal::specify(
@@ -159,10 +173,11 @@ test_fit <- function() {
             engine = engine,
             refresh = 0
           )
-        ) |> try()
-        if (inherits(t, "try-error")) {
-          browser()
-        }
+        ) |> try(
+          if (inherits(t, "try-error")) {
+            browser()
+          }
+        )
       }
       
       if (engine$name == "brms") {

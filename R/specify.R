@@ -2,29 +2,22 @@
 #'
 #' @description Specify a Small Area Estimation Model
 #'
-#' @param formula Formula for a model of type `model = "custom"`. This should be
-#' the standard form of R mixed effect models. e.g., `y ~ x1 + (1 | id) + (x2 | county)`.
-#' Or if you intend to use `brms` as an engine, a formula of type `brmsformula`.
-#' Defaults to `NULL`.
+#' @param formula Formula for a model of type \code{model = "custom"}. This should be
+#' the standard form of R mixed effect models. e.g., \code{y ~ x1 + (1 | id) + (x2 | county)}.
 #'
-#' @param level Character string of value `"unit"` or `"area"` denoting type of
-#' model fit. Value `"unit"` denotes unit-level (e.g., predictions on the scale
-#' of observations in auxiliary data). Value `"area`" denotes aggregate data
+#' @param level Character string of value \code{"unit"} or \code{"area"} denoting type of
+#' model to fit. Value \code{"unit"} denotes unit-level (e.g., predictions on the scale
+#' of observations in auxiliary data). Value \code{"area"} denotes aggregate data
 #' (e.g., predicting values of direct estimators).
 #'
 #' @param model Character string targeting either user-defined structures or
-#' preset SAE models. Available choices include `"custom"`, `"FH"` (Fay-Herriot),
-#' and `"BHF"` (Battese-Harter-Fuller).  Defaults to `"custom"`. If `"FH"` or
-#' `"BHF"` are selected, `domain_name`, `response_name`, and `auxiliary_variable`
-#' must be provided for the respective parts of the model.
-#'
-#' @param obs_variability The name of a column containing the variance estimates
-#' of direct estimates. If left `NULL`, then the the direct estimator of the response
-#' variable in `response_name` will be estimated across the domain in `domain_name`
-#' and the model will estimate these estimates.
+#' preset SAE models. Available choices include \code{"custom"}, \code{"FH"} (Fay-Herriot),
+#' and \code{"BHF"} (Battese-Harter-Fuller).  Defaults to \code{"custom"}. If \code{"FH"} or
+#' \code{"BHF"} are selected, \code{domain_name}, \code{response_name}, and \code{auxiliary_variable}
+#' may be provided for the respective parts of the model.
 #'
 #' @param domain_name Character string for stratification, representing
-#' the areas corresponding to random effects (e.g., `"county"`).
+#' the areas corresponding to random effects (e.g., \code{"county"}).
 #'
 #' @param response_name Character string specifying the column name of the target
 #' response. Only required for preset framework.
@@ -32,11 +25,12 @@
 #' @param auxiliary_variables Character vector containing names of covariates for
 #' the response. Defaults to using all other variables if unspecified in preset models.
 #'
-#' @param variable_transform Either an object of class `BASAL_transformation` from
-#' `make_variable_transform()` or a list specifying a variable transformation
-#' `transform` and inverse variable transformation `inv_transform`. 
+#' @param variable_transform Either an object of class \code{BASAL_transformation} from
+#' [make_variable_transform()] or a list specifying a variable transformation
+#' \code{transform} and inverse variable transformation \code{inv_transform}.
 #'
-#' @param family GLM family type, specifying error distributions and links. See `help(stats::glm)`
+#' @param family GLM family type, specifying error distributions and links.
+#' See [stats::glm] or [brms::brmsfamily]
 #' 
 #' @param model_stage What stage of model to fit. Currently supported for only
 #' "single" and "zi" stage models
@@ -45,7 +39,7 @@
 #' will be used for the second stage of a ZI model. Not necessary but allows partial
 #' specifications which will be filled in by the larger specification.
 #' 
-#' @param second_stage_spec Either `NULL` or an object of type `basal_spec`, 
+#' @param second_stage_spec Either \code{NULL} or an object of type \code{basal_spec}, 
 #' giving a specification for the second stage of a ZI model. The second stage is 
 #' the GLM predicting the probability of zero-valued plots.
 #' 
@@ -57,22 +51,20 @@
 #' 
 #' \itemize{
 #'  \item \code{obs_variability}: Used to fix variance of observations across a 
-#'  domain. Often used when direct estimators may be pre-computed in an 
-#'  area-level model. Either a string denoting the name of a column with 
-#'  estimated variance values of a direct estimator or a numeric vector with 
-#'  such estimated variance values. NOT FIXED.
+#'  domain for area-level models. Often used when direct estimators may be pre-computed in an 
+#'  area-level model. This must be a name representing a column in the data. If
+#'  specifying an area-level model and this is not set, then this is set to
+#'  \code{response_se} where \code{response} is the response of the model. This
+#'  agrees with the output of [aggregate_data()].
+#'  \item \code{DRV}: A logical indicating whether a model should be specified
+#'  with domain-specific residual variances. May not be supported by all engines.
 #'  \item \code{lasso}: A logical indicating whether a prior should be put on
 #'  regression coefficients to mimic the frequentist LASSO via a laplace prior. 
 #'  Priors may not be specified in this case, and 
 #'  this option may not be supported by all engines. NOT DONE.
-#'  \item \code{DRV}: A logical indicating whether a model should be specified
-#'  with domain-specific residual variances. May not be supported by all engines.
-#'  NOT DONE.
-#'  \item \code{Process}: 
-#'  \item \code{etc}: to be added
 #' }
 #' 
-#' @return Object of type `basal_spec`.
+#' @return Object of type \code{basal_spec}.
 #' 
 #' @examples
 #' plot_spec_bhf <- specify(
@@ -158,29 +150,35 @@ specify <- function(
   # for BHF, this is it
   # for FH, we can have obs_variability
 
-  {
-    func_call <- match.call()
-    
-    if (!is.null(level)) {level <- match.arg(level, c("area", "unit"))} # not the best practice with NULL here but works nicely
-    model <- match.arg(model, c("custom", "FH", "BHF"))
-    model_stage <- match.arg(model_stage, c("single", "zi"))
-    if (!is.null(formula) && !inherits(formula, "formula")) {
-      stop("Formulae must be provided as base-R formulae.")
-    }
-    opt_args <- list(...)
-    
-    validate_specify_inputs(
-      formula = formula,
-      domain_name = domain_name,
-      response_name = response_name,
-      auxiliary_variables = auxiliary_variables,
-      obs_variability = obs_variability,
-      specifying_second_stage_model = specifying_second_stage_model,
-      second_stage_spec = second_stage_spec
-    )
-    default_model_data <- NULL
-    
-  } # housekeeping provided parameters
+  func_call <- match.call()
+  
+  dotlist = list(...)
+  if (!("obs_variability" %in% ...names())) {
+    dotlist$obs_variability = NULL
+  }
+  if (!("DRV" %in% ...names()) || is.null(dotlist$DRV)) {
+    DRV = NULL
+  } else {
+    DRV = TRUE
+  }
+  if (!is.null(level)) {level <- match.arg(level, c("area", "unit"))} # not the best practice with NULL here but works nicely
+  model <- match.arg(model, c("custom", "FH", "BHF"))
+  model_stage <- match.arg(model_stage, c("single", "zi"))
+  if (!is.null(formula) && !inherits(formula, "formula")) {
+    stop("Formulae must be provided as base-R formulae.")
+  }
+  opt_args <- list(...)
+  
+  validate_specify_inputs(
+    formula = formula,
+    domain_name = domain_name,
+    response_name = response_name,
+    auxiliary_variables = auxiliary_variables,
+    obs_variability = obs_variability,
+    specifying_second_stage_model = specifying_second_stage_model,
+    second_stage_spec = second_stage_spec
+  )
+  default_model_data <- NULL
   
   spec <- list(
     call = func_call,
@@ -195,6 +193,7 @@ specify <- function(
     model_stage = model_stage,
     second_stage_spec = second_stage_spec,
     opt_args = opt_args,
+    DRV = DRV,
     valid_spec = FALSE
   )
 
@@ -231,12 +230,6 @@ specify <- function(
   if (!is.null(spec$level) && spec$level == "unit" && !is.null(spec$obs_variability)) {
     message("Supplied variability of the observations. This isn't supported for unit-level models")
     spec$obs_variability <- NULL
-  }
-  if (spec$level == "area" &&
-#      is.null(spec$domain_name) &&
-      is.null(spec$obs_variability) &&
-      !specifying_second_stage_model) {
-    stop("Must have observed variability with area level models")
   }
 
   # validate the variable transformation --- make sure we have a left-inverse

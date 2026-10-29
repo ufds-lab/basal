@@ -6,6 +6,9 @@
 \usage{
 engine_rstanarm()
 }
+\value{
+Object of class \code{basal_engine}.
+}
 \description{
 The \code{rstanarm} engine allows for fitting standard unit-level models. It allows
 both custom and BHF models.

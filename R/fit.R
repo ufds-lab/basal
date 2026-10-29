@@ -1,29 +1,26 @@
 #' Fit a Specified Small Area Estimation Model Object
 #'
-#' @param spec An object of class `basal_spec` containing initialized metadata states.
+#' @param spec An object of class \code{basal_spec} containing initialized metadata states.
 #'
 #' @param data A data.frame containing the response variable and all predictor covariates.
 #'
-#' @param population_size Number of plots like those sampled in data. Necessary
-#' for auto-aggregation in area-level models.
-#'
-#' @param priors Optional prior specification. If `NULL`, default priors are supplied.
+#' @param priors Optional prior specification. If \code{NULL}, default priors are supplied.
 #' 
 #' @param second_stage_priors Optional prior specification for the logistic
-#' second-stage model in a two-stage zero-inflated specification. If `NULL`, 
+#' second-stage model in a two-stage zero-inflated specification. If \code{NULL}, 
 #' default priors are supplied.
 #'
-#' @param chains Numeric integer. Number of MCMC chains. Defaults to `3`.
+#' @param chains Numeric integer. Number of MCMC chains.
 #'
-#' @param iter Numeric integer. Total number of iterations per chain. Defaults to `6000`.
+#' @param iter Numeric integer. Total number of iterations per chain.
 #'
-#' @param burn_in Numeric integer. Number of burn-in/warmup iterations per chain. Defaults to `2000`.
+#' @param burn_in Numeric integer. Number of burn-in/warmup iterations per chain.
 #'
-#' @param seed Numeric integer. Seed for random number generation. Defaults to `1`.
+#' @param seed Numeric integer. Seed for random number generation.
 #' 
-#' @param thin Thinning for the MCMC. The model keeps every one in every `thin` observations
+#' @param thin Thinning for the MCMC. The model keeps every one in every \code{thin} observations
 #' 
-#' @param engine Engine used for fitting model. Can only use `engine = "brms"` right now
+#' @param engine Engine used for fitting model. Can only use \code{engine = "brms"} right now
 #' 
 #' @param ncores number of cores to use to computed MCMC chains in parallel
 #' 
@@ -33,7 +30,7 @@
 #'
 #' @param ... Additional arguments passed to the model fitting engine.
 #'
-#' @return An object of class basal_fit containing the results.
+#' @return An object of class \code{basal_fit} containing the results.
 #'
 #' @exportS3Method generics::fit
 #' @aliases fit
@@ -41,7 +38,6 @@
 fit.basal_spec <- function (
     spec,
     data,
-    population_size = NULL,
     priors = specify_priors(),
     second_stage_priors = NULL,
     chains = 3,
@@ -150,8 +146,7 @@ fit.basal_spec <- function (
   area_data <- prepare_area_level_data(
     spec = spec,
     data = data,
-    response = res,
-    population_size = population_size
+    response = res
   )
   
   data <- area_data$data

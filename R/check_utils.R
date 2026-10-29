@@ -31,10 +31,6 @@ prepare_check_stats <- function(stat, argument) {
     stat <- as.list(stat)
   }
   
-  valid_functions <- vapply(stat, is.function, logical(1))
-  if (!all(valid_functions)) {
-    stop("Every element of `", argument, "` must be a function.")
-  }
   if (is.null(names(stat)) || any(is.na(names(stat))) || any(names(stat) == "")) {
     warning("`", argument, "` should contain named functions. ", 
             "Unnamed functions will be assigned numeric names."
@@ -47,6 +43,15 @@ prepare_check_stats <- function(stat, argument) {
     } else {
       names(stat)[missing_names] <- as.character(which(missing_names))
     }
+  }
+  
+  
+  valid_functions <- vapply(stat, is.function, TRUE)
+  if (!all(valid_functions)) {
+    stop(
+      "Every element of `", argument, "` must be a function. Items ",
+      paste0(names(stat)[!valid_functions], collapse = ", "), " are not functions."
+    )
   }
   
   return(stat)
@@ -83,18 +88,13 @@ build_pp_checks <- function(
 
 #' build posterior predictive checks
 #' @noRd
-get_model_pp_check <- function (
-    fit, ...
-) {
+get_model_pp_check <- function (fit, ...) {
   UseMethod("get_model_pp_check")
 }
 
 #' Construct Convergence Diagnostics
 #' @noRd
-build_convergence_checks <- function(
-    fit,
-    trace_plots = FALSE
-) {
+build_convergence_checks <- function (fit, trace_plots = FALSE) {
   
   convergence <- list()
   convergence$rhat <- get_model_rhat(fit)
@@ -140,7 +140,7 @@ get_model_neff_ratio <- function (
 #' @noRd
 build_trace_plots <- function(fit) {
   
-  parameter_names <- get_all_variable_names(fit)
+  parameter_names <- get_all_parameter_names(fit)
   trace <- vector(mode = "list", length = length(parameter_names))
   names(trace) <- parameter_names
   
@@ -151,10 +151,10 @@ build_trace_plots <- function(fit) {
   return(trace)
 }
 
-#' Construct trace plots
+#' We need all the parameter names in a fit sometimes
 #' @noRd
-get_all_variable_names <- function (fit, ...) {
-  UseMethod("get_all_variable_names")
+get_all_parameter_names <- function (fit, ...) {
+  UseMethod("get_all_parameter_names")
 }
 
 #' @title Custom posterior predictions
@@ -212,7 +212,8 @@ get_pp_check_data <- function(
       fit,
       fit$model,
       draws = draws,
-      newdata = fit$data
+      newdata = fit$data,
+      allow_new_levels = TRUE
     )
     
   } else {
@@ -264,8 +265,8 @@ build_custom_pp_plot <- function(
         ggplot2::geom_density(ggplot2::aes(x = post_data, color = "y_rep"), linewidth = 0.5) +
         ggplot2::geom_vline(ggplot2::aes(color = "y", xintercept = y_stat)) +
         ggplot2::xlim(
-          min(stats::quantile(post_data, 0.01, na.rm = T), y_stat, na.rm = T),
-          max(stats::quantile(post_data, 0.99, na.rm = T), y_stat, na.rm = T)
+          min(stats::quantile(post_data, 0.01, na.rm = T), y_stat - 0.05 * abs(y_stat), na.rm = T),
+          max(stats::quantile(post_data, 0.99, na.rm = T), y_stat + 0.05 * abs(y_stat), na.rm = T)
         )
     )
     

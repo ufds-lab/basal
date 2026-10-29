@@ -31,5 +31,8 @@ oregon_sample = oregon_sample |>
                 evc = lfevc)
 oregon_sample$county = county_imputation_function(oregon_sample$county)
 
+oregon_sample = oregon_sample |>
+  dplyr::mutate(county = as.factor(county),
+                evt = as.factor(evt))
 
 usethis::use_data(oregon_sample, overwrite = TRUE)

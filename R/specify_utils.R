@@ -14,13 +14,23 @@ validate_single_stage_spec <- function(spec, auxiliary_variables, response_name)
       }
     }
   }
+  
+  if (!is.null(spec$DRV)) {
+    if (!is.null(spec$domain_name)) {
+      spec$DRV = spec$domain_name
+    } else {
+      stop("Specified `DRV` but there provided no `domain_name`. Please provide `domain_name`.")
+    }
+  }
   if (spec$model_type == "custom") {
     if (is.null(spec$formula) || is.null(spec$level)) {
       stop("Must provide a formula and level for custom models.")
     }
     if (!is.null(spec$domain_name)) {
-      stop("Unexpected arg: `domain_name`. If a BHF or FH model is desired, use ",
-           "`model = \"BHF\"` or `model = \"FH\"`.")
+      if (is.null(spec$DRV)) {
+        stop("Unexpected arg: `domain_name`. If a BHF or FH model is desired, use ",
+             "`model = \"BHF\"` or `model = \"FH\"`.")
+      }
     }
   } else {
     if (spec$model_type == "BHF") spec$level <- "unit"
@@ -44,6 +54,15 @@ validate_single_stage_spec <- function(spec, auxiliary_variables, response_name)
       auxiliary_variables = auxiliary_variables
     )
   }
+  
+  if (spec$level == "area" && is.null(spec$obs_variability)) {
+    if (!is.null(response_name)) {
+      spec$obs_variability = paste0(response_name, "_se")
+    } else { # else the response is in the formula
+      spec$obs_variability = paste0(all.vars(spec$formula)[1], "_se")
+    }
+  }
+  
   spec$valid_spec <- TRUE
   return (spec)
 }
@@ -110,7 +129,8 @@ validate_second_stage <- function (spec, auxiliary_variables) {
       variable_transform = NULL,
       model_stage = spec$model_stage,
       specifying_second_stage_model = TRUE,
-      second_stage_spec = NULL
+      second_stage_spec = NULL,
+      DRV = spec$DRV
     )
   } else {
     if (spec$second_stage_spec$level == "area") {
@@ -175,25 +195,30 @@ validate_second_stage <- function (spec, auxiliary_variables) {
     }
   }
   
+  
+  if (!is.null(spec$formula)) {
+    newresponse <- all.vars(spec$formula)[1]
+  } else if (!is.null(spec$default_model_data$response_name)) {
+    newresponse <- spec$default_model_data$response_name
+  } else {
+    stop("Internal error: couldn't find response in base-level specification.")
+  }
+  
   if (!is.null(spec$second_stage_spec$formula) && 
       (attr(stats::terms(spec$second_stage_spec$formula), which = "response") == 0)) {
     # ^ if there's a formula with no response
-    if (!is.null(spec$formula)) {
-      newresponse <- all.vars(spec$formula)[1]
-    } else if (!is.null(spec$default_model_data$response_name)) {
-      newresponse <- spec$default_model_data$response_name
-    } else {
-      stop("Internal error: couldn't find response in base-level specification.")
-    }
     spec$second_stage_spec$formula <- stats::update(
       spec$second_stage_spec$formula,
       stats::reformulate(".", newresponse)
     )
+  } else if (is.null(spec$second_stage_spec$formula) &&
+             is.null(spec$second_stage_spec$default_model_data$response_name)) {
+    spec$second_stage_spec$default_model_data$response_name <- newresponse
   }
   
   if (!is.null(spec$second_stage_spec$default_model_data$response_name) &&
       !is.null(spec$second_stage_spec$formula) && 
-               attr(stats::terms(spec$second_stage_spec$formula), which = "response")) {
+      attr(stats::terms(spec$second_stage_spec$formula), which = "response")) {
     stop("Over-specified logistic model; observed two responses.")
   } else if (is.null(spec$second_stage_spec$default_model_data$response_name) &&
              !is.null(spec$second_stage_spec$formula) &&
@@ -214,69 +239,6 @@ validate_second_stage <- function (spec, auxiliary_variables) {
   )
   
   return (spec)
-}
-
-#' @title Make Variable Transformation
-#' @param transform Function to transform the response
-#' @param inv_transform Right inverse of `transform` i.e., `inv_transform(transform(x)) == x`
-#' @param eval_grid Grid of values to ensure that the `transform` and `inv_transform` are consistent with each other
-#' @param override logical flag to indicate that the check on `eval_grid` should be ignored.
-#' 
-#' @details
-#' Variable transformations can be a good way to improve a model, by transforming the response.
-#' Common transformations include log and root-type transformations. 
-#' 
-#' Before model fitting, the data will be transformed via \code{transform}. Then,
-#' after posterior estimation but before aggregation of computing summaries, 
-#' predictions will be back-transformed via \code{inv_transform}. 
-#' 
-#' By default, \code{make_variable_transform} will ensure that \code{inv_transform}
-#' is a (one-sided) inverse of \code{transform} by ensuring that 
-#' \code{inv_transform(transform(eval_grid))} is the same as \code{eval_grid},
-#' however this behavior can be circumvented with the \code{override} flag.
-#' 
-#' @return Object of type `BASAL_transformation`
-#' @export
-make_variable_transform <- function(transform,
-                                    inv_transform,
-                                    eval_grid = 0:512,
-                                    override = FALSE) {
-  transformation = list(
-    transform = transform,
-    inv_transform = inv_transform
-  )
-  validate_transformation(transformation, eval_grid, override)
-  
-  class(transformation) <- "BASAL_transformation"
-  return (transformation)
-}
-
-#' @noRd
-validate_transformation <- function(transformation,
-                                    eval_grid, override) {
-  if (!is.null(transformation)) {
-    check_inherits("list", transformation)
-    check_inherits("function",
-                   transformation$transform, transformation$inv_transform)
-
-    if (!override) {
-      identity = TRUE
-      for (i in eval_grid) { # somewhat arbitrary points, we want zero to be included though
-        # we only check that inv_transform is a left inverse of transform, because 
-        # we never go the other way
-        identity = identity &&
-          round(transformation$inv_transform(transformation$transform(i)),10) == i
-      }
-      if (!identity) {
-        stop(paste0(
-          "variable_transform$inv_transform isn't an inverse of ",
-          "variable_transform$transform on `eval_grid`. To bypass the check ",
-          "create your variable transformation with:\n",
-          "`create_variable_transformation(transform, inv_transform, override = TRUE)`."
-        ))
-      }
-    }
-  }
 }
 
 #' Validate the inputs format

@@ -8,37 +8,108 @@ aggregate_data(
   data,
   response,
   domain_name,
+  population_data,
   population_size = NULL,
-  population_data = NULL,
+  sample_weights = NULL,
+  estimate = "mean",
+  method = "HT",
+  PS_strata = NULL,
+  mase_messages = F,
   ...
 )
 }
 \arguments{
-\item{data}{Data to compute the direct estimators on}
+\item{data}{Data to compute the direct estimators on.}
 
-\item{response}{Variable to estimate}
+\item{response}{Variable to estimate.}
 
-\item{domain_name}{The name of the domain to compute direct estimators across}
-
-\item{population_size}{population size
-(i.e., the number of (possibly unsampled)) plots/units/individuals}
+\item{domain_name}{The name of the domain to compute direct estimators across.}
 
 \item{population_data}{a dataframe of the population data, used for computing
-aggregates of auxiliary variables}
+aggregates of auxiliary variables.}
 
-\item{...}{to allow extra parameters in the future}
+\item{population_size}{"A numeric value of the population size. If \code{NULL}, it
+is estimated with the sum of the inverse of the [\code{sample_weights}]"
+(\code{\link[mase:horvitzThompson]{mase::horvitzThompson()}}).
+If both \code{population_size} and \code{sample_weights} are \code{NULL},
+\code{population_size} is taken to be the number of rows in \code{population_data}.}
+
+\item{sample_weights}{"A numeric vector of inclusion probabilities for each sampled
+unit in \code{data}." (\code{\link[mase:horvitzThompson]{mase::horvitzThompson()}}).}
+
+\item{estimate}{Type of estimate; supported for values "mean" and "sum".}
+
+\item{method}{Type of direct estimate; supported for values "HT", for
+Horvitz-Thompson and "PS" for Poast-Stratified.}
+
+\item{PS_strata}{name of strata used for post-stratification; ignored if
+method isn't "PS".}
+
+\item{mase_messages}{logical. If true, prints all messages from \code{mase}. Disabled
+by default to avoid repeated messages from repeated calls to \code{mase} functions.}
+
+\item{...}{to pass extra parameters to \code{mase::horvitzThompson} or
+\code{mase::postStrat}. See Details.}
 }
 \value{
-A dataframe with values for auxiliary variables, as well as new values
-\itemize{
-\item \code{DIR_MEAN_ESTIMATOR}: The direct estimate for the average of the response
-\item \code{DIR_MEAN_SE}: The estimated variance of the above estimate
-\item \code{DIR_SUM_ESTIMATOR}: The direct estimate for the sum of the response
-\item \code{DIR_SUM_SE}: The estimated variance of the above estimate
-\item \code{DIR_N}: The number of observations of the response
-}
+Two data frames \code{aggregate_obs} and \code{aggregate_pop}.
+They each have an additional column response_se, where response is replaced
+with the value for \code{response}.
+
+In addition, in \code{aggregate_obs}, the column for \code{response}
+is replaced with the direct estimate of the response (but using the same name).
+Furthermore, all the other columns are replaced with averages (accross \code{domain_name})
+of the columns in the population data when they are numeric or a modal
+response when they are categorical.
 }
 \description{
-Apply direct estimators to different domains. Currently only the Horvitz-Thompson
-is supported
+Apply direct estimators to different domains using \code{mase} as a backend.
+}
+\details{
+The \code{...} parameter can be used to pass additional arguments to the backend
+used to compute the direct estimates. The arguments being used are, for
+\code{mase::horvitzThompson}:
+\itemize{
+\item \code{y},
+\item \code{pi},
+\item \code{N},
+\item \code{var_est},
+\item \code{messages}
+}
+and for for \code{mase::postStratified}:
+\itemize{
+\item \code{y},
+\item \code{xsample},
+\item \code{xpop},
+\item \code{pi},
+\item \code{N},
+\item \code{var_est},
+\item \code{messages}
+}
+any other arguments to the direct estimator functions in \code{mase} may be
+passed to \code{...}.
+}
+\examples{
+
+# HT estimator
+aggregate_data(oregon_sample, "biomass",
+               "county", oregon_population)
+
+# PS estimator 
+aggregate_data(oregon_sample, "biomass", 
+               "county", oregon_population, 
+               PS_strata = "evt", method = "PS")
+     
+# use population size
+aggregate_data(oregon_sample, "biomass", "county", 
+               population_size = 1e4, oregon_population)
+               
+# use sampling weights
+aggregate_data(oregon_sample, "biomass", "county", 
+               sample_weights = rbeta(nrow(oregon_sample),1,1), 
+               oregon_population)
+
+}
+\seealso{
+\code{\link[mase:horvitzThompson]{mase::horvitzThompson()}}, \code{\link[mase:postStrat]{mase::postStrat()}}
 }

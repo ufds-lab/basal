@@ -1,5 +1,7 @@
 load("data-raw/oregon_population.rda")
 
+set.seed(0)
+
 unique_counties = unique(oregon_population$countyfips)
 
 county_lookup = lapply(unique_counties, function (code) {
@@ -29,7 +31,12 @@ oregon_population = oregon_population |>
                 evt = evt_class_cd,
                 evc = lfevc)
 
+oregon_population = oregon_population |> dplyr::slice_sample(n = 200000)
+
 oregon_population$county = county_imputation_function(oregon_population$county)
 
+oregon_population = oregon_population |>
+  dplyr::mutate(county = as.factor(county),
+                evt = as.factor(evt))
 
 usethis::use_data(oregon_population, overwrite = TRUE)

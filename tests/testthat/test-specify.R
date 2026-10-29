@@ -35,47 +35,51 @@ get_many_specs <- function () {
                   NULL
                 }
                 for (obs_variability in list(NULL,"asdf")) {
-                  
-                  expecting_error = FALSE
-                  if (!sssm && !is.null(args$formula) &&
-                      (attr(stats::terms(args$formula), which = "response") == 0)) {
-                    expecting_error = TRUE
+                  for (DRV in list(TRUE, NULL)) {
+                    
+                    expecting_error = FALSE
+                    if (!sssm && !is.null(args$formula) &&
+                        (attr(stats::terms(args$formula), which = "response") == 0)) {
+                      expecting_error = TRUE
+                    }
+                    if (((level == "area" && model_type != "BHF") || model_type == "FH")) {
+                      if (sssm) {
+                        expecting_error = TRUE
+                      } else if (!is.null(transform)) {
+                        expecting_error = TRUE
+                      }
+                    } 
+                    if (model_type == "custom") {
+                      if (is.null(args$formula) && !sssm) {
+                        expecting_error = TRUE
+                      } else if (!is.null(domain_name) && is.null(DRV)) {
+                        expecting_error = TRUE
+                      }
+                    } else {
+                      if (is.null(domain_name) && !sssm) {
+                        expecting_error = TRUE
+                      }
+                    }
+                    if (!is.null(DRV) && is.null(domain_name) && !sssm) {
+                      expecting_error = T
+                    }
+                    arglist <- union(arglist, list(list(
+                      args = list(
+                        formula = args$formula,
+                        response_name = args$response_name,
+                        auxiliary_variables = args$auxiliary_variables,
+                        model = model_type,
+                        domain_name = domain_name,
+                        variable_transform = transform,
+                        model_stage = model_stage,
+                        specifying_second_stage_model = sssm,
+                        obs_variability = obs_variability,
+                        level = level,
+                        DRV = DRV
+                      ),
+                      error = expecting_error
+                    )))
                   }
-                  if (((level == "area" && model_type != "BHF") || model_type == "FH")) {
-                    if (sssm) {
-                      expecting_error = TRUE
-                    } else if (is.null(obs_variability)) {
-                      expecting_error = TRUE
-                    } else if (!is.null(transform)) {
-                      expecting_error = TRUE
-                    }
-                  } 
-                  if (model_type == "custom") {
-                    if (is.null(args$formula) && !sssm) {
-                      expecting_error = TRUE
-                    } else if (!is.null(domain_name)) {
-                      expecting_error = TRUE
-                    }
-                  } else {
-                    if (is.null(domain_name) && !sssm) {
-                      expecting_error = TRUE
-                    }
-                  }
-                  arglist <- union(arglist, list(list(
-                    args = list(
-                      formula = args$formula,
-                      response_name = args$response_name,
-                      auxiliary_variables = args$auxiliary_variables,
-                      model = model_type,
-                      domain_name = domain_name,
-                      variable_transform = transform,
-                      model_stage = model_stage,
-                      specifying_second_stage_model = sssm,
-                      obs_variability = obs_variability,
-                      level = level
-                    ),
-                    error = expecting_error
-                  )))
                 }
               }
             }

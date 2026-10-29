@@ -292,3 +292,23 @@ testthat::test_that("estimate returns expected domain information", {
   testthat::expect_equal(result$params$max_preds, 10)
   testthat::expect_true("county" %in% names(result$preds))
 })
+
+testthat::test_that("Estimate plays well with area-levcel models", {
+  test_data = data.frame(
+    biomass = c(10, 12, 15, 9, 18, 21, 13, 17, 20, 11, 16, 19),
+    ppt = c(1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3),
+    county = factor(rep(c("A", "B", "C", "D"), each = 3))
+  )
+  
+  test_data = aggregate_data(test_data, "biomass", "county", test_data, 1e4)
+  
+  fit = fit(
+    specify(biomass ~ ppt + (1 | county), level = "area"),
+    test_data,
+    iter = 10,
+    burn_in = 5,
+    chains = 1
+  )
+  
+  testthat::expect_no_error(estimate(fit, ndraws = 2))
+})

@@ -22,20 +22,18 @@ specify(
 }
 \arguments{
 \item{formula}{Formula for a model of type \code{model = "custom"}. This should be
-the standard form of R mixed effect models. e.g., \code{y ~ x1 + (1 | id) + (x2 | county)}.
-Or if you intend to use \code{brms} as an engine, a formula of type \code{brmsformula}.
-Defaults to \code{NULL}.}
+the standard form of R mixed effect models. e.g., \code{y ~ x1 + (1 | id) + (x2 | county)}.}
 
 \item{level}{Character string of value \code{"unit"} or \code{"area"} denoting type of
-model fit. Value \code{"unit"} denotes unit-level (e.g., predictions on the scale
-of observations in auxiliary data). Value \verb{"area}" denotes aggregate data
+model to fit. Value \code{"unit"} denotes unit-level (e.g., predictions on the scale
+of observations in auxiliary data). Value \code{"area"} denotes aggregate data
 (e.g., predicting values of direct estimators).}
 
 \item{model}{Character string targeting either user-defined structures or
 preset SAE models. Available choices include \code{"custom"}, \code{"FH"} (Fay-Herriot),
 and \code{"BHF"} (Battese-Harter-Fuller).  Defaults to \code{"custom"}. If \code{"FH"} or
 \code{"BHF"} are selected, \code{domain_name}, \code{response_name}, and \code{auxiliary_variable}
-must be provided for the respective parts of the model.}
+may be provided for the respective parts of the model.}
 
 \item{...}{Optional further arguments. See details.}
 
@@ -48,16 +46,12 @@ response. Only required for preset framework.}
 \item{auxiliary_variables}{Character vector containing names of covariates for
 the response. Defaults to using all other variables if unspecified in preset models.}
 
-\item{obs_variability}{The name of a column containing the variance estimates
-of direct estimates. If left \code{NULL}, then the the direct estimator of the response
-variable in \code{response_name} will be estimated across the domain in \code{domain_name}
-and the model will estimate these estimates.}
-
 \item{variable_transform}{Either an object of class \code{BASAL_transformation} from
-\code{make_variable_transform()} or a list specifying a variable transformation
+\code{\link[=make_variable_transform]{make_variable_transform()}} or a list specifying a variable transformation
 \code{transform} and inverse variable transformation \code{inv_transform}.}
 
-\item{family}{GLM family type, specifying error distributions and links. See \code{help(stats::glm)}}
+\item{family}{GLM family type, specifying error distributions and links.
+See \link[stats:glm]{stats::glm} or \link[brms:brmsfamily]{brms::brmsfamily}}
 
 \item{model_stage}{What stage of model to fit. Currently supported for only
 "single" and "zi" stage models}
@@ -82,10 +76,11 @@ options. These include
 
 \itemize{
 \item \code{obs_variability}: Used to fix variance of observations across a
-domain. Often used when direct estimators may be pre-computed in an
-area-level model. Either a string denoting the name of a column with
-estimated variance values of a direct estimator or a numeric vector with
-such estimated variance values. NOT FIXED.
+domain for area-level models. Often used when direct estimators may be pre-computed in an
+area-level model. This must be a name representing a column in the data. If
+specifying an area-level model and this is not set, then this is set to
+\code{response_se} where \code{response} is the response of the model. This
+agrees with the output of \code{\link[=aggregate_data]{aggregate_data()}}.
 \item \code{lasso}: A logical indicating whether a prior should be put on
 regression coefficients to mimic the frequentist LASSO via a laplace prior.
 Priors may not be specified in this case, and
@@ -93,8 +88,6 @@ this option may not be supported by all engines. NOT DONE.
 \item \code{DRV}: A logical indicating whether a model should be specified
 with domain-specific residual variances. May not be supported by all engines.
 NOT DONE.
-\item \code{Process}:
-\item \code{etc}: to be added
 }
 }
 \examples{

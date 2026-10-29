@@ -1,7 +1,9 @@
-#' @title The `rstanarm` engine
+#' @title The \code{rstanarm} engine
 #' @description
-#' The `rstanarm` engine allows for fitting standard unit-level models. It allows
+#' The \code{rstanarm} engine allows for fitting standard unit-level models. It allows
 #' both custom and BHF models.
+#' 
+#' @return Object of class \code{basal_engine}.
 #' @export
 engine_rstanarm <- function() {
   engine <- list()

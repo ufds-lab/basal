@@ -40,10 +40,17 @@ validate_engine <- function(engine, spec) {
          paste(engine$glm_families, collapse = ","), ".")
   }
   
+  if (!is.null(spec$DRV)) {
+    if (is.null(engine$DRV)) {
+      stop("DRVs not supported for engine ", engine$name)
+    }
+  }
+  
   class(spec) <- c(paste0(name, "_spec"), class(spec))
   if (!is.null(spec$second_stage_spec)) {
     spec$second_stage_spec <- validate_engine(engine, spec$second_stage_spec)
   }
+  
   return (spec)
 }
 
@@ -113,8 +120,8 @@ get_model_neff_ratio.default <- function (fit, ...) {
 
 #' Get all model variable names
 #' @noRd
-#' @exportS3Method basal::get_all_variable_names
-get_all_variable_names.default <- function (fit, ...) {
+#' @exportS3Method basal::get_all_parameter_names
+get_all_parameter_names.default <- function (fit, ...) {
   return (names(fit$model$coefficients))
 }
 

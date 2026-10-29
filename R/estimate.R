@@ -28,8 +28,8 @@ estimate <- function(
     stat = c(
       mean = mean,
       var = var,
-      lower_95_ci = lower_ci_quantile,
-      upper_95_ci = upper_ci_quantile
+      lower_95_ci = lower_ci_quantile(),
+      upper_95_ci = upper_ci_quantile()
     ),
     aggregation_statistic = c(mean = mean),
     ndraws = 1000,
@@ -39,7 +39,9 @@ estimate <- function(
   
   if (!is.null(fit$pop_data)) {
     if (!is.null(newdata)) {
-      warning("Ignoring aggregated population data and using `newdata` instead.")
+      message(
+        "Observed aggregated population data provided in fit(). Is `newdata` the same? (using `newdata`)"
+      )
     } else {
       newdata = fit$pop_data
     }

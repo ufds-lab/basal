@@ -1,26 +1,26 @@
-#' Posterior Predictive and Regression checks from fit `basal` model.
+#' Posterior Predictive and Regression checks from fit \code{basal} model.
 #'
-#' @param fit object of class `fit` from `fit()`.
+#' @param fit object of class \code{fit} from \code{fit()}.
 #'
 #' @param stat extra functions to plot for posterior checks. Multiple can be
-#' specified if included in a list (i.e., `stat = c(mean = mean, ecdf = ecdf)`)
+#' specified if included in a list (i.e., \code{stat = c(mean = mean, ecdf = ecdf)})
 #' functions should be named.
 #'
 #' @param include_base_pp_check Logical determining whether or not to include the
-#' empirial density funciton as a posterior predictive check. Defaults to `TRUE`
+#' empirial density funciton as a posterior predictive check. Defaults to \code{TRUE}
 #'
 #' @param draws number of draws for posterior prediction
 #'
 #' @param trace_plots Logical flag to include trace plots of parameter estimates.
-#' Defaults to `FALSE` so that large number of plots (if including many random effects)
+#' Defaults to \code{FALSE} so that large number of plots (if including many random effects)
 #' are not included in the object.
 #' 
-#' @param two_stage_stat Like `stat`, but used for the second stage of a second-stage model
+#' @param two_stage_stat Like \code{stat}, but used for the second stage of a second-stage model
 #' 
-#' @param join_two_stage_stat Like `stat` but used for the response aggregated
+#' @param join_two_stage_stat Like \code{stat} but used for the response aggregated
 #' from the multi-stage model.
 #'
-#' @return An object of class `basal_check`.
+#' @return An object of class \code{basal_check}.
 #'
 #' @export
 check <- function(
@@ -52,7 +52,7 @@ check <- function(
   
   ret <- list(
     call = match.call(),
-    pp_checks = list(response = list(), second_stage = list(), joined = list()),
+    pp_checks = list(response = list(), second_stage = NULL, joined = NULL),
     convergence = list(response = list(), second_stage = NULL),
     params = list(
       draws = draws,

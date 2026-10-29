@@ -14,13 +14,15 @@ validate_estimate_inputs <- function (
   
   check_inherits("basal_fit", fit)
   
-  if (!is.null(newdata) && !inherits(newdata, "data.frame") && inherits(try(as.data.frame(newdata)), "try-error")) {
+  if (!is.null(newdata) && !inherits(newdata, "data.frame") &&
+      inherits(try(as.data.frame(newdata)), "try-error")) {
     stop("`newdata` must be a data frame or `NULL`.")
   }
   if (!is.null(domain) && !is.character(domain)) {
-    stop("`domain` must be a character vector or `NULL`.")
+    stop("`domain` must be a character string or `NULL`.")
   }
-  if (!is.numeric(ndraws) || length(ndraws) != 1 || !is.finite(ndraws) || ndraws <= 0 || ndraws != floor(ndraws)) {
+  if (!is.numeric(ndraws) || length(ndraws) != 1 || !is.finite(ndraws)
+      || ndraws <= 0 || ndraws != floor(ndraws)) {
     stop("`ndraws` must be a single positive integer.")
   }
   if (!is.null(seed) && (!is.numeric(seed) || length(seed) != 1 || !is.finite(seed))) {
@@ -35,7 +37,7 @@ validate_estimate_inputs <- function (
   if (is.numeric(max_preds) && length(max_preds) != 1) {
     stop("`max_preds` must have length one.")
   }
-  if (is.numeric(max_preds) && !is.infinite(max_preds) && (!is.finite(max_preds) || 
+  if (is.numeric(max_preds) && !is.infinite(max_preds) && (!is.finite(max_preds) ||
       max_preds <= 0 || max_preds != floor(max_preds))) {
     stop("`max_preds` must be a positive integer, `Inf`, `NULL`, or \"default\".")
   }
@@ -64,13 +66,17 @@ validate_estimate_functions <- function (
     functions <- as.list(functions)
   }
   
-  valid_functions <- vapply(functions, is.function, logical(1))
+  valid_functions <- vapply(functions, is.function, TRUE)
   
-  if (!all(valid_functions)) {
-    stop("Every element of `", argument, "` must be a function.")
-  }
   if (is.null(names(functions)) || any(is.na(names(functions))) || any(names(functions) == "")) {
     stop("`", argument, "` must contain named functions.")
+  }
+  
+  if (!all(valid_functions)) {
+    stop(
+      "Every element of `", argument, "` must be a function. Item(s) ",
+      paste0(names(stat)[!valid_functions], collapse = ", "), " are not functions."
+    )
   }
 }
 
@@ -81,7 +87,8 @@ prepare_max_preds <- function (max_preds) {
   
   if (max_preds == "default") {
     warning(
-      "For ease of computation, argument `max_preds` is set to `1e5`. This sub-samples `newdata`. ",
+      "For ease of computation, argument `max_preds` is set to `1e5`. This ",
+      "randomly samples `newdata` 1e5 rows of newdata to use for prediction. ",
       "To disable or change this, use `max_preds = NULL` or another value."
     )
     return(1e5)
@@ -104,24 +111,8 @@ prepare_estimate_data <- function (
   
   if (!is.null(newdata)) {
     if (fit$spec$level == "area") {
-      obs_se <- ifelse(
-        is.null(fit$spec$obs_variability) || is.numeric(fit$spec$obs_variability), 
-        "DIR_MEAN_SE", fit$spec$obs_variability
-      )
-      
-      if (!is.null(fit$agg_domain)) {
-        domain_name = fit$agg_domain
-        vec <- fit$data[[obs_se]]
-        names(vec) <- as.character(fit$data[[fit$agg_domain]])
-        
-        newdata[[obs_se]] <- vec[as.character(newdata[[fit$agg_domain]])]
-      } else if (!(obs_se %in% colnames(newdata))) {
-        stop(
-          "observed variability must be included in population data for area ",
-          "level models. We recommend aggregating data with aggregate_data() ",
-          "which will provide a copy of population data with observed variability."
-        )
-      }
+      obs_se = fit$spec$obs_variability
+      newdata$DIR_MEAN_SE <- newdata[[obs_se]]
     }
     return (newdata)
   }
@@ -433,7 +424,8 @@ summarize_estimate_predictions <- function (
     
   } else {
     ret_preds <- sapply(stat, function(statistic) {statistic(preds$predicted_stat)})
-    base::names(ret_preds) <- paste0("predicted_stat_",base::names(ret_preds))
+    names(ret_preds) <- names(stat)
+    base::names(ret_preds) <- paste0("predicted_stat_", names(ret_preds))
     base::names(ret_preds) <- sapply(
       base::names(ret_preds),
       function(name) {

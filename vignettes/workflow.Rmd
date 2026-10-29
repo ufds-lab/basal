@@ -47,10 +47,9 @@ When modeling in `basal`, every model starts with a specification which will det
 
 ```{r}
 BHF_spec <- specify(
+  biomass ~ ppt + evc,
   model = "BHF",
-  domain_name = "evt",
-  response_name = "biomass",
-  auxiliary_variables = c("ppt", "evc")
+  domain_name = "evt"
 )
 ```
 
@@ -63,49 +62,58 @@ BHF_spec_manual <- specify(
 )
 ```
 
-or, a hybrid case between the two of these:
-
-```{r}
-BHF_spec_mixed <- specify(
-  biomass ~ evc + ppt,
-  domain_name = "evt",
-  model = "BHF"
-)
-```
-
-
-The second specification is both simpler and more complex. It requires less input from the user provided they know how to express their modelling assumptions in a form like that of `\{lme4\}`. Simultaneously, though, it may be more ambiguous to express a model by a formula. Either way, these two models will impose the same modeling assumptions and will ultimately be indistinguishable.
+The second specification is both simpler and more complex. It requires less input from the user provided they know how to express their modelling assumptions in a form like that of `\{lme4\}`. Simultaneously, the user has to understand the syntax of `\{lme4\}`. Either way, these two models will impose the same modeling assumptions and will ultimately be indistinguishable.
 
 In the transition to the area-level model, while modeling assumptions may become more stringent, the burden on the user changes only marginally. When estimating a FH model, for example, one may use almost identical code as the BHF model, substituting only `model = "BHF"` for `model = "FH"`.
 
 ```{r}
 FH_spec <- specify(
   biomass ~ evc + ppt,
-  model = "FH", # only line that changes
+  model = "FH", # the only line that changes
   domain_name = "evt"
 )
 ```
 
-From this, the engine will understand that, as the FH is an area-level model, it is estimating the direct estimators, and the variance of these estimators should be known from the estimation procedure. It will compute the direct estimators for the given response, and impose the restriction that the variance of these estimators is known. Accordingly though, it must know what domain to aggregate over.
+The astute reader will note that an area-level model must use *direct estimates* of the response, but we have specified this as though it uses the same data. This is not so, and area-level models are accompanied by the `aggregate_data` function, which computes the direct estimators on the observed data, adds the estimated variability to the population data. To do this, we use
+
+```{r}
+agg_data = aggregate_data(
+  data = oregon_sample, 
+  response = "biomass", 
+  domain_name = "evt", 
+  population_data = oregon_population
+)
+```
+
+`aggregate_data` returns two dataframes corresponding to the observed data and the population data. Let's look at the the dataframe corresponding to the observed data:
+
+```{r}
+agg_data$aggregate_obs
+```
+
+There is one row per value of `evt`. Furthermore, the values `evc`, `elev`, `ppt`, and `county` are all averages (for the first three) or the most common value (for county). The averages were done using the population-level data. Finally, the last two columns, `biomass` and `biomass_se` are the direct estimate and  variance estimate respectively. These are so-named so that the user does not have to change the body of a specification. Furthermore, though the user can specify which columns gives the estimated variance, by default an area-level model assumes that the variance is in a column named `[response]_se` where `[response]` is the response variable.
+
+
 
 Once a model has been specified, its parameters can be estimated through the `fit()` function. While there are many options for `fit()`, the only necessary ones are a previously specified model, and a dataset. The columns in the dataset must correspond to the variables in the formula or various variable names listed in `specify()`, although aside from area-level models, not much is needed.
 
 ```{r, cache = TRUE, results = "hide"}
 BHF_fit <- fit(
-  BHF_spec_mixed,
+  BHF_spec,
   oregon_sample,
-  engine = engine_rstanarm()
+  engine = engine_rstanarm(),
+  refresh = 0 # silences the output
 )
 ```
 
-For area level models, in order to compute direct estimates, the size of the population must be given.
+For area level models, if the `aggregate_data()` function is used, then the user need not specify any more information, and can just use that object. The engine will understand where the observed data is and use it:
 
 ```{r, cache = TRUE, results = "hide"}
-# FH_fit <- fit(
-#   FH_spec,
-#   oregon_sample,
-#   population_size = nrow(oregon_population)
-# )
+FH_fit <- fit(
+  FH_spec,
+  agg_data,
+  refresh = 0 # silence the output
+)
 ```
 
 With these models in hand, it is best practices to ensure the model specification and subsequent MCMC posterior approximation is accurate, which we do with the `check()` function.
@@ -116,9 +124,11 @@ check(BHF_fit)
 
 The output from these functions shows statistics computed from the original population (black) as well as statistics computed from posterior predictive populations (blue). The first plot shows the empirical density of both the provided data and predicted data from the posterior predictive distribution. The second shows the empirical cdf. These are both related and show the same information in different ways. In both, we see a significant deviation of our posterior predictive samples from the observed sample indicating that our model does not explain the data very well. These may be less familiar than things like histograms, but often provide easier methods to compare different distributions, namely allowing plots showing multiple distributions at once. We are looking for these plots to line up well.
 
-Looking at the empirical density (in the first plot), we see first a point-mass at zero in the density, reflecting the zero-inflated nature of the data, as well as a strong right skew. The former may be removed by filtering out the zero-valued observations (and this will be formalized in a later model), and the latter may be corrected by applying a variable transform for which we must re-define our model by adding a `variable_transform`. To supply an inverse transform, we must provide a list with a `transform` object and `inv_transform` object---functions which are their own inverses. The model will be estimated on the transformed data, and then be back-transformed using the inverse transformation.
+Looking at the empirical density (in the first plot), we see first a point-mass at zero in the density, reflecting the zero-inflated nature of the data, as well as a strong right skew. The former may be removed by filtering out the zero-valued observations (and this will be formalized in a later model), and the latter may be corrected by applying a variable transform for which we must re-define our model by adding a `variable_transform`. To supply an inverse transform, we must provide a list with a `transform` object and `inv_transform` object. These are functions which are their own inverses. The model will be estimated on the transformed data, and then be back-transformed using the inverse transformation.
 
 In general, it is easier to see if posterior predictives agree with data using the ecdf, but easier to diagnose issues (i.e., seeing if variable transformations may be necessary) using the epdf.
+
+Now we will try using (1) a variable transform, and (2) estimate on forested (nonzero) plots. The former is a change to the specification, while the can be acheived by changing the data we fit the model with. We will talk about another specification for estimating on zero-inflated data shortly.
 
 ```{r}
 BHF_spec_trans <- specify(
@@ -142,12 +152,22 @@ BHF_fit_trans = fit(
 )
 ```
 
+Now we should check our model
+
 ```{r}
 check(BHF_fit_trans)
 ```
 
 
 All of these plots are much more reassuring. The empirical pdf and cdf both closely match the data with only slight deviations.
+
+To see another check which indicates good model fitness, we look at the checks for the Fay-Herriot model we fit earlier:
+
+```{r}
+check(FH_fit)
+```
+
+We see much different plots here, but in both there is high agreement between the observed statistics (black line) and posterior predictive statistics (blue lines).
 
 The final step is to compute estimates, for which we need some new data. 
 We could provide the initial data, but here we provide population data. Without specifying domains, the code will use the domains in the model specification:
@@ -159,7 +179,7 @@ estimate(
 )
 ```
 
-This gives the summary statistics about the predicted average value, the `predicted_mean`. By default, it has a point estimate and variance for the `predicted_mean`, as well as quantiles for a 95% credible interval. The interpretation of a credible interval is like a confidence interval, except we can work with probabilities. So an interpretation could be that ``The probability that the mean biomass is within the interval above for any of the counties is 95%''. There will be another interpretation with more explicit values shortly. We don't need to be restricted to the domain (if any) we used in specifying our model. For example, though we used county as the domain when specifying the model, we could estimate on the level of `countyfips`, the different counties, this is possibly more desirable for estimates.
+This gives the summary statistics about the predicted average value, the `predicted_mean`. By default, it has a point estimate and variance for the `predicted_mean`, as well as quantiles for a 95% credible interval. The interpretation of a credible interval is like a confidence interval, except we can work with probabilities. So an interpretation could be that ``The probability that the mean biomass is within the interval above for any of the counties is 95%''. There will be another interpretation with more explicit values shortly. We don't need to be restricted to the domain (if any) we used in specifying our model. For example, though we used county as the domain when specifying the model, we could estimate on the level of `county`, the different counties, this is possibly more desirable for estimates.
 
 ```{r}
 estimate(
@@ -177,16 +197,16 @@ estimate(
   BHF_fit_trans,
   oregon_population,
   domain = NULL,
-  ndraws = 100,
   stat = c(mean = mean, se = sd, 
-           lower_CI = function(x, ...) {quantile(x, 0.1, ...)},
-           upper_CI = function(x, ...) {quantile(x, 0.9, ...)})
+           lower_80_ci = lower_ci_quantile(0.8),
+           upper_80_ci = upper_ci_quantile(0.8))
 )
 ```
 
 This allows us to make inferences like ``This model assigns 80% posterior probability to the event where the mean biomass in Oregon is within the interval above''. Although, it's important to remember that this model is on modified data, where we excluded zeroes.
 
-One other thing we can do is use other aggregation statistics. Generally, it is the mean we wish to do inference on---that is, draw inference on the value of the mean or our understanding thereof. However, we can do inference on other statistics. For example, we could do inference on the variance or standard error of biomass values, rather than means of biomass values. Unlike the values for `stat` though, you can only use one aggregation statistic at a time.
+<!--
+One other thing we can do is use other aggregation statistics. Generally, it is the mean we wish to do inference on. That is, draw inference on the value of the mean or our understanding thereof. However, we can do inference on other statistics. For example, we could do inference on the variance or standard error of biomass values, rather than means of biomass values. Unlike the values for `stat` though, you can only use one aggregation statistic at a time.
 
 ```{r}
 estimate(
@@ -197,19 +217,27 @@ estimate(
   aggregation_statistic = c(se = sd)
 )
 ```
+-->
+
+Finally, we note that when estimating with area-level models, if the user provided an object from `aggregate_data()`, then the engine does not need population-level data. Indeed, estimation with the Fay-Herriot model from earlier can be done with
+
+```{r}
+estimate(FH_fit)
+```
+
 
 \section{Zero Inflated Estimators/Two-Stage Models}
 
-A popular choice in recent years for dealing with zero inflation has been the development of a two-stage zero-inflated estimator. This consists of two models. There is a response model, like the ones fitted above, fitted on nonzero observations, and there is a GLM, estimating the probability of a plot having a nonzero value. To compute estimates, then, the response model at a plot is weighted by the probability that this plot has a nonzero value.
+A popular choice recently for dealing with zero inflation has been the development of a two-stage "zero-inflated estimator". This consists of two models. There is a response model, like the ones fitted above, fitted on nonzero observations, and there is a GLM, estimating the probability of a plot having a nonzero value. To compute estimates, then, the response model at a plot is weighted by the probability that this plot has a nonzero value. Generally the response model will be called the "first stage" and the GLM may be called 
+the "second stage" or "logiistc model"
 
 In order to fit this in `basal`, we use two model specifications and fit each one individually, and pool them for posterior predictive checks and estimation. The work specifying for the GLM can be much easier than a normal specification as many of the parameters can be safely inherited from the response model. For example, we could do this with the above model like so:
 
 ```{r}
 zi_BHF <- specify(
+  biomass ~ evc + ppt,
   model = "BHF",
   domain_name = "evt",
-  response_name = "biomass",
-  auxiliary_variables = c("evc", "ppt"),
   variable_transform = list(
     transform = function (y) {y^(1/4)},
     inv_transform = function (y) {y^4}
@@ -218,21 +246,19 @@ zi_BHF <- specify(
 )
 ```
 
-This will fit a logistic model of the form of a BHF with similar variables (specifically, `nonzero ~ lfevc + elev + ( 1 | evt_class_cd)`). Where `nonzero` = $I(\texttt{biomass} \neq 0)$. The specification for this model is below:
+This will fit a logistic model of the form of a BHF with similar variables (specifically, `nonzero ~ lfevc + elev + ( 1 | evt_class_cd)`). Where `nonzero` = $I(\texttt{biomass} \neq 0)$. If a different model is desired, then one can specify the logistic model separately. These models do not need to be fully specified, and can inherit attributes from the response model. However, when specifying them, the argument `specifying_second_stage_model` should be set to `TRUE`. For example
 
 ```{r}
 second_stage <- specify(
-  model = "BHF",
-  domain_name = "evt",
-  auxiliary_variables = c("evc", "ppt"),
-  specifying_second_stage_model = TRUE
+  biomass ~ evc,
+  model = "BHF", # note the lack of a domain specified here
+  specifying_second_stage_model = TRUE # indicates a logistic model
 )
 
 zi_BHF <- specify(
+  biomass ~ evc + ppt,
   model = "BHF",
-  domain_name = "evt",
-  response_name = "biomass",
-  auxiliary_variables = c("evc", "ppt"),
+  domain_name = "evt", # the GLM inherits this domain
   variable_transform = list(
     transform = function (y) {y^(1/4)},
     inv_transform = function (y) {y^4}
@@ -246,26 +272,9 @@ While most of these choices will not affect the models past parametric form or c
 
 ```{r}
 zi_BHF <- specify(
+  biomass ~ evc + ppt,
   model = "BHF",
   domain_name = "evt",
-  response_name = "biomass",
-  auxiliary_variables = c("evc", "ppt"),
-  variable_transform = list(
-    transform = function (y) {y^(1/4)},
-    inv_transform = function (y) {y^4}
-  ),
-  model_stage = "zi"
-)
-```
-
-While most of these choices will not affect the models past parametric form or covariates used in the GLM, the response name is uniquely important because it is used to filter the data. For example, if `response_name = "ppt"`, then there would be a GLM fit to predicting whether or not `ppt` is nonzero. More significantly, though, is that the response model would be fit using data where `ppt` is nonzero. Generally it is not advised to provide full specifications for the GLM, and instead allow it to inherit as many parameters from the response model. This makes it easier to change models and reduces the chance of accidental mis-specification. Here we will use the same parametric form for the GLM.
-
-```{r}
-zi_BHF <- specify(
-  model = "BHF",
-  domain_name = "evt",
-  response_name = "biomass",
-  auxiliary_variables = c("evc", "ppt"),
   variable_transform = list(
     transform = function (y) {y^(1/4)},
     inv_transform = function (y) {y^4}
@@ -301,11 +310,3 @@ estimate(
   max_preds = 1e4
 )
 ```
-
-\section{Notes}
-
-\subsection{Auto-Aggregation}
-
-\subsection{Notes on `check()`}
-
-\subsection{Notes on posterior prediction}

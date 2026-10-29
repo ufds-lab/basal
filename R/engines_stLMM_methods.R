@@ -1,10 +1,10 @@
-#' @title The `stLMM` engine
+#' @title The \code{stLMM} engine
 #' @description
-#' The `stLMM` library allows for fitting standard models. This includes unit- 
+#' The \code{stLMM} library allows for fitting standard models. This includes unit- 
 #' and area-level models, with most standard families in GLMs. It also permits
 #' Domain-residual-variances, and spatio-temporal process terms.
 #' 
-#' @return Object of class `basal_engine`
+#' @return Object of class \code{basal_engine}.
 #' @noRd
 engine_stLMM <- function() {
   stop("Unable to use stLMM as an engine yet.")
@@ -156,8 +156,8 @@ get_model_neff_ratio.stLMM <- function (fit, ...) {
 
 #' Get all model variable names
 #' @noRd
-#' @exportS3Method basal::get_all_variable_names
-get_all_variable_names.stLMM <- function (fit, ...) {
+#' @exportS3Method basal::get_all_parameter_names
+get_all_parameter_names.stLMM <- function (fit, ...) {
   stop("do this")
 }
 

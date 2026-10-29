@@ -8,7 +8,6 @@
 \method{fit}{basal_spec}(
   spec,
   data,
-  population_size = NULL,
   priors = specify_priors(),
   second_stage_priors = NULL,
   chains = 3,
@@ -28,22 +27,19 @@
 
 \item{data}{A data.frame containing the response variable and all predictor covariates.}
 
-\item{population_size}{Number of plots like those sampled in data. Necessary
-for auto-aggregation in area-level models.}
-
 \item{priors}{Optional prior specification. If \code{NULL}, default priors are supplied.}
 
-\item{second_stage_priors}{Optional prior specification for the Bernoulli
+\item{second_stage_priors}{Optional prior specification for the logistic
 second-stage model in a two-stage zero-inflated specification. If \code{NULL},
 default priors are supplied.}
 
-\item{chains}{Numeric integer. Number of MCMC chains. Defaults to \code{3}.}
+\item{chains}{Numeric integer. Number of MCMC chains.}
 
-\item{iter}{Numeric integer. Total number of iterations per chain. Defaults to \code{6000}.}
+\item{iter}{Numeric integer. Total number of iterations per chain.}
 
-\item{burn_in}{Numeric integer. Number of burn-in/warmup iterations per chain. Defaults to \code{2000}.}
+\item{burn_in}{Numeric integer. Number of burn-in/warmup iterations per chain.}
 
-\item{seed}{Numeric integer. Seed for random number generation. Defaults to \code{1}.}
+\item{seed}{Numeric integer. Seed for random number generation.}
 
 \item{thin}{Thinning for the MCMC. The model keeps every one in every \code{thin} observations}
 
@@ -58,7 +54,7 @@ default priors are supplied.}
 \item{...}{Additional arguments passed to the model fitting engine.}
 }
 \value{
-An object of class basal_fit containing the results.
+An object of class \code{basal_fit} containing the results.
 }
 \description{
 Fit a Specified Small Area Estimation Model Object

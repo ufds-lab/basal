@@ -1,10 +1,10 @@
-#' @title The `brms` engine
+#' @title The \code{brms} engine
 #' @description
-#' The `brms` model allows for fitting most standard models. This includes unit- 
+#' The \code{brms} model allows for fitting most standard models. This includes unit- 
 #' and area-level models, with most standard families in GLMs. It also permits
 #' Domain-residual-variances.
 #' 
-#' @return Object of class `basal_engine`
+#' @return Object of class \code{basal_engine}
 #' @export
 engine_brms <- function() {
   engine <- list()
@@ -20,29 +20,51 @@ engine_brms <- function() {
     "gaussian", "bernoulli", "exponential"
   )
   
+  engine$DRV <- TRUE
+  
   engine$logistic_family <- brms::bernoulli()
   
   class(engine) <- "basal_engine"
   return (engine)
 }
 
+#' Produce a second formula to model DRVs for brms
+#' @noRd
+make_brms_DRV_addition <- function (spec, response) {
+  if (!is.null(spec$DRV)) {
+    return (formula(paste0("sigma ~ (1 | ", spec$domain_name, ")")))
+  } else {
+    return (NULL)
+  }
+}
+
 #' Build a formula for a Battese-Harter-Fuller model
 #' a copy of bhf for now, but may change as we add more
 #' @exportS3Method basal::build_bhf_formula
 #' @noRd
-build_bhf_formula.brms_spec <- build_bhf_formula.default
+build_bhf_formula.brms_spec <- function (spec, response, ...) {
+  formula = build_bhf_formula.default(spec, response, ...)
+  
+  DRV_addition = make_brms_DRV_addition(spec, response)
+  
+  if (!is.null(DRV_addition)) {
+    return (brms::brmsformula(formula, DRV_addition))
+  } else {
+    return (brms::brmsformula(formula))
+  }
+}
 
 #' Build a formula for a Fay-Herriot model
 #' @exportS3Method basal::build_fh_formula
 #' @noRd
 build_fh_formula.brms_spec <- function (spec, response, ...) {
   formula <- build_bhf_formula(spec, response, ...)
-  formula <- stats::update(
-    formula,
+  formula$formula <- stats::update(
+    formula$formula,
     stats::reformulate(".", ". | se(DIR_MEAN_SE)")
   )
   
-  return (brms::brmsformula(formula))
+  return (formula)
 }
 
 #' Build a formula for a custom model
@@ -50,16 +72,24 @@ build_fh_formula.brms_spec <- function (spec, response, ...) {
 #' @noRd
 build_custom_formula.brms_spec <- function(spec, response, ...) {
   formula <- spec$formula
+  if (!is.null(spec$DRV)) {
+    formula <- brms::brmsformula(
+      formula,
+      make_brms_DRV_addition(spec, response)
+    )
+  } else {
+    formula <- brms::brmsformula(formula)
+  }
   
   if (spec$level == "unit") {
-    return (brms::brmsformula(formula))
+    return (formula)
   } else if (spec$level == "area") {
-    formula <- stats::update(
-      spec$formula,
+    formula$formula <- stats::update(
+      formula$formula,
       stats::reformulate(".", ". | se(DIR_MEAN_SE)")
     ) 
     
-    return (brms::brmsformula(formula))
+    return (formula)
   }
 }
 
@@ -160,7 +190,6 @@ get_posterior_epred.brms_fit <- function(
     )
   )
 }
-
 
 #' Call `pp_check()` 
 #' @exportS3Method basal::get_model_pp_check
