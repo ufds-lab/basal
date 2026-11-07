@@ -1,5 +1,6 @@
 #' @exportS3Method base::print
-print.basal_spec <- function(spec, suppress_header = F, ...) {
+print.basal_spec <- function(x, suppress_header = F, ...) {
+  spec = x
   p = function(...) {writeLines(noquote(paste0(...)))}
   if (!suppress_header) {
     p("**BASAL model specification:**")
@@ -25,27 +26,29 @@ print.basal_spec <- function(spec, suppress_header = F, ...) {
   }
   
   if (!is.null(spec$formula)) {
-    print(spec$formula)
+    print(f)
     if (more_args) {
-      p("**with additional arguments:**")
+      p("with additional arguments:")
     }
   }
   if (!is.null(spec$domain_name)) {
     p("Domain: ", spec$domain_name)
   }
   if (!is.null(spec$default_model_data$response_name)) {
-    p("Resposne: ", spec$default_model_data$response_name)
-  } else {
-    p("Response: ", all.vars(spec$formula)[1])
+    p("Response: ", spec$default_model_data$response_name)
   }
   if (!is.null(spec$default_model_data$auxiliary_variables)) {
-    p("Auxiliary variables: ", paste0(spec$default_model_data$auxiliary_variables, collapse = ","))
+    p("Auxiliary variables: ", paste0(spec$default_model_data$auxiliary_variables, collapse = ", "))
+  }
+  
+  if (!is.null(spec$DRV)) {
+    p("and residual variance estimation")
   }
   
   if (spec$model_stage == "zi" && !is.null(spec$second_stage_spec)) {
     p("")
-    p("**and second-stage logistic specification**")
-    print(spec$second_stage_spec, suppress_header = T)
+    p("**and second-stage logistic specification:**")
+    print.basal_spec(spec$second_stage_spec, suppress_header = T)
   }
 }
 

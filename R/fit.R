@@ -1,6 +1,6 @@
 #' Fit a Specified Small Area Estimation Model Object
 #'
-#' @param spec An object of class \code{basal_spec} containing initialized metadata states.
+#' @param object An object of class \code{basal_spec} containing initialized metadata states.
 #'
 #' @param data A data.frame containing the response variable and all predictor covariates.
 #'
@@ -36,7 +36,7 @@
 #' @aliases fit
 #'
 fit.basal_spec <- function (
-    spec,
+    object,
     data,
     priors = specify_priors(),
     second_stage_priors = NULL,
@@ -51,6 +51,7 @@ fit.basal_spec <- function (
     verbose = TRUE,
     ...
 ) {
+  spec = object
   
   func_call <- match.call()
   

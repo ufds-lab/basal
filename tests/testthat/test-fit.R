@@ -42,7 +42,7 @@ big_test_fit <- function () {
     county = factor(rep(c("A", "B", "C", "D"), each = 4))
   )
   
-  test_agg_data = aggregate_data(
+  test_agg_data = aggregate(
     test_data, "biomass", "county", test_data, population_size = 1e3
   )
   
@@ -74,11 +74,16 @@ big_test_fit <- function () {
         engine = l$engine,
         refresh = 0
       )
-      ))
+      )) |> try()
+    if (inherits(t, "try-error")) {
+      browser()
+    }
   })
 }
   
 test_many_specs <- testthat::test_that("fit handles basic model specifications", {
+  testthat::skip_on_cran()
+  
   big_test_fit()
 })
 
@@ -90,7 +95,7 @@ test_fit <- function() {
     county = factor(rep(c("A", "B", "C", "D"), each = 3))
   )
   
-  agg_test_data = basal::aggregate_data(
+  agg_test_data = basal::aggregate(
     test_data, "biomass", "county", test_data, population_size = 1e3
   )
   
@@ -212,10 +217,14 @@ test_fit <- function() {
 
 
 testthat::test_that("fit handles basic model specifications", {
+  testthat::skip_on_cran()
+  
   test_fit()
 })
 
 testthat::test_that("specifications produce correct brms models", {
+  testthat::skip_on_cran()
+  
   test_data <- data.frame(
     biomass = c(10, 12, 14, 9, 11, 13, 8, 10, 20, 11, 16, 19),
     ppt = c(1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3),

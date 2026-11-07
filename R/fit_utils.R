@@ -295,7 +295,7 @@ prepare_area_level_data <- function (
 #        "direct estimator) in area-level models."
 #      )
 #    }
-#    data <- aggregate_data(
+#    data <- aggregate(
 #      data = data,
 #      response = response,
 #      population_size = population_size,
@@ -370,25 +370,27 @@ prepare_two_stage_data <- function (data, response, spec) {
 
 #' Fit the second stage of a two-stage model
 #' @noRd
-fit_second_stage <- function(spec,
-                             data,
-                             priors = NULL,
-                             chains,
-                             iter,
-                             burn_in,
-                             seed,
-                             thin,
-                             engine,
-                             ncores,
-                             nthreads,
-                             ...) {
+fit_second_stage <- function(
+    spec,
+    data,
+    priors,
+    chains,
+    iter,
+    burn_in,
+    seed,
+    thin,
+    engine,
+    ncores,
+    nthreads,
+    ...
+) {
   
   if (is.null(spec)) {
     return(NULL)
   }
   
   second_stage_fit <- fit.basal_spec(
-    spec = spec,
+    object = spec,
     data = data,
     priors = priors,
     second_stage_priors = NULL,

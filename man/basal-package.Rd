@@ -6,10 +6,19 @@
 \alias{basal-package}
 \title{basal: Bayesian Small Area Estimation Library}
 \description{
-Simplified pipeline for creating Bayesian models and estimatingposterior point statistics, with a focus on small area estimation.
+Provides a flexible but simplified pipeline for creating Bayesian models and estimating posterior point statistics with a focus on small area estimation.
 }
 \author{
-\strong{Maintainer}: First Last \email{first.last@example.com}
+\strong{Maintainer}: Leland Russell \email{lrussell6204@gmail.com} (\href{https://orcid.org/0009-0005-6426-6355}{ORCID})
+
+Authors:
+\itemize{
+  \item Leland Russell \email{lrussell6204@gmail.com} (\href{https://orcid.org/0009-0005-6426-6355}{ORCID})
+  \item Wystan Wu
+  \item Grayson W. White
+  \item Kelly S. McConville
+  \item George Gaines
+}
 
 }
 \keyword{internal}

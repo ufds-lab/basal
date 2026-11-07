@@ -1,8 +1,8 @@
+<a><img src='figs/basal.png' align="right" height="280"/></a>
+
 # Development Mode
 
 `basal` is still under development. Please us at your own risk!
-
-<a><img src='figs/basal.png' align="right" height="280"/></a>
 
 # `basal`: `Ba`yesian `S`mall `A`rea Estimation `L`ibrary
 
@@ -16,13 +16,13 @@ models. Every model starts with a call to `specify()`, detailing various
 different parts of a model. For example, with the data provided here,
 
 ``` r
-spec <- specify(biomass ~ ppt, domain = "evt", model = "BHF")
+spec <- specify(biomass ~ ppt, domain_name = "evt", model = "BHF")
 ```
 
 is a valid specification for a Battese-Harter-Fuller model. Likewise,
 
 ``` r
-spec <- specify(biomass ~ ppt, domain = "evt", model = "FH")
+spec <- specify(biomass ~ ppt, domain_name = "evt", model = "FH")
 ```
 
 specifies a Fay-Herriot model.
@@ -37,7 +37,7 @@ basal_fit <- fit(spec, oregon_sample)
 check(basal_fit) 
 # inspect the diagnostic plots for agreement between blue and black lines
 
-estimate(basal_fit, oregon_population, domain = "county")
+estimate(basal_fit, oregon_population, domain_name = "county")
 ```
 
 This constitutes a Bayesian analysis, but the `check()`’s will likely

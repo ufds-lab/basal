@@ -118,6 +118,8 @@ test_estimate <- function() {
 }
 
 testthat::test_that("estimate handles basic arguments and domains", {
+  testthat::skip_on_cran()
+  
   test_estimate()
 })
 
@@ -150,7 +152,7 @@ big_test_estimate <- function () {
       }
       for (transform in list(
         NULL,
-        basal::make_variable_transform(
+        basal::transform(
           function (x) {x^2},
           function (x) {sqrt(x)}
         )
@@ -249,19 +251,21 @@ big_test_estimate <- function () {
 }
 
 testthat::test_that("estimate returns expected domain information", {
+  testthat::skip_on_cran()
+
   test_data <- data.frame(
     biomass = c(10, 12, 15, 9, 18, 21, 13, 17, 20, 11, 16, 19),
     ppt = c(1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3),
     county = factor(rep(c("A", "B", "C", "D"), each = 3))
   )
-  
+
   spec <- basal::specify(
     model = "BHF",
     response_name = "biomass",
     auxiliary_variables = "ppt",
     domain_name = "county"
   )
-  
+
   fit <- basal::fit(
     spec,
     data = test_data,
@@ -275,7 +279,7 @@ testthat::test_that("estimate returns expected domain information", {
     engine = basal::engine_rstanarm(),
     refresh = 0
   )
-  
+
   result <- basal::estimate(
     fit,
     domain = "county",
@@ -285,7 +289,7 @@ testthat::test_that("estimate returns expected domain information", {
     max_preds = 10,
     seed = 1
   )
-  
+
   testthat::expect_s3_class(result, "basal_estimate")
   testthat::expect_equal(result$params$domain, "county")
   testthat::expect_equal(result$params$ndraws, 10)
@@ -293,15 +297,17 @@ testthat::test_that("estimate returns expected domain information", {
   testthat::expect_true("county" %in% names(result$preds))
 })
 
-testthat::test_that("Estimate plays well with area-levcel models", {
+testthat::test_that("Estimate plays well with area-level models", {
+  testthat::skip_on_cran()
+
   test_data = data.frame(
     biomass = c(10, 12, 15, 9, 18, 21, 13, 17, 20, 11, 16, 19),
     ppt = c(1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3),
     county = factor(rep(c("A", "B", "C", "D"), each = 3))
   )
-  
-  test_data = aggregate_data(test_data, "biomass", "county", test_data, 1e4)
-  
+
+  test_data = aggregate(test_data, "biomass", "county", test_data, 1e4)
+
   fit = fit(
     specify(biomass ~ ppt + (1 | county), level = "area"),
     test_data,
@@ -309,6 +315,6 @@ testthat::test_that("Estimate plays well with area-levcel models", {
     burn_in = 5,
     chains = 1
   )
-  
+
   testthat::expect_no_error(estimate(fit, ndraws = 2))
 })

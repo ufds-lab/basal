@@ -5,10 +5,8 @@
 #' @param formula Formula for a model of type \code{model = "custom"}. This should be
 #' the standard form of R mixed effect models. e.g., \code{y ~ x1 + (1 | id) + (x2 | county)}.
 #'
-#' @param level Character string of value \code{"unit"} or \code{"area"} denoting type of
-#' model to fit. Value \code{"unit"} denotes unit-level (e.g., predictions on the scale
-#' of observations in auxiliary data). Value \code{"area"} denotes aggregate data
-#' (e.g., predicting values of direct estimators).
+#' @param level Character string of value \code{"unit"} or \code{"area"}. Value 
+#' \code{"unit"} denotes unit-level. Value \code{"area"} denotes aggregate data.
 #'
 #' @param model Character string targeting either user-defined structures or
 #' preset SAE models. Available choices include \code{"custom"}, \code{"FH"} (Fay-Herriot),
@@ -25,23 +23,15 @@
 #' @param auxiliary_variables Character vector containing names of covariates for
 #' the response. Defaults to using all other variables if unspecified in preset models.
 #'
-#' @param variable_transform Either an object of class \code{BASAL_transformation} from
-#' [make_variable_transform()] or a list specifying a variable transformation
+#' @param transform Either an object of class \code{BASAL_transformation} from
+#' [transform()] or a list specifying a variable transformation
 #' \code{transform} and inverse variable transformation \code{inv_transform}.
 #'
 #' @param family GLM family type, specifying error distributions and links.
 #' See [stats::glm] or [brms::brmsfamily]
 #' 
 #' @param model_stage What stage of model to fit. Currently supported for only
-#' "single" and "zi" stage models
-#' 
-#' @param specifying_second_stage_model Boolean indicating whether or not a specification
-#' will be used for the second stage of a ZI model. Not necessary but allows partial
-#' specifications which will be filled in by the larger specification.
-#' 
-#' @param second_stage_spec Either \code{NULL} or an object of type \code{basal_spec}, 
-#' giving a specification for the second stage of a ZI model. The second stage is 
-#' the GLM predicting the probability of zero-valued plots.
+#' "single" and "zi" stage models.
 #' 
 #' @param ... Optional further arguments. See details.
 #' 
@@ -50,30 +40,28 @@
 #' options. These include
 #' 
 #' \itemize{
-#'  \item \code{obs_variability}: Used to fix variance of observations across a 
+#'  \item \code{obs_var}: Used to fix variance of observations across a 
 #'  domain for area-level models. Often used when direct estimators may be pre-computed in an 
 #'  area-level model. This must be a name representing a column in the data. If
 #'  specifying an area-level model and this is not set, then this is set to
 #'  \code{response_se} where \code{response} is the response of the model. This
-#'  agrees with the output of [aggregate_data()].
+#'  agrees with the output of [aggregate()].
 #'  \item \code{DRV}: A logical indicating whether a model should be specified
 #'  with domain-specific residual variances. May not be supported by all engines.
-#'  \item \code{lasso}: A logical indicating whether a prior should be put on
-#'  regression coefficients to mimic the frequentist LASSO via a laplace prior. 
-#'  Priors may not be specified in this case, and 
-#'  this option may not be supported by all engines. NOT DONE.
 #' }
 #' 
 #' @return Object of type \code{basal_spec}.
 #' 
 #' @examples
+#' transform = transform(
+#'   function (y) {y^(1/3)},
+#'   function (y) {y^3}
+#' )
+#' 
 #' plot_spec_bhf <- specify(
 #'   obs_biomass ~ evc + evt + (1 | county),
 #'   level = "unit",
-#'   variable_transform = list(
-#'     transform = function (y) {y^(1/3)},
-#'     inv_transform = function (y) {y^3}
-#'   )
+#'   transform = transform
 #' )
 #'
 #' # gives equivalent specification to above
@@ -81,7 +69,8 @@
 #' plot_spec_bhf <- specify(
 #'   obs_biomass ~ evc + evt, 
 #'   domain_name = "county",
-#'   model = "BHF"
+#'   model = "BHF",
+#'   transform = transform
 #' )
 #'
 #' # gives equivalent specification to above
@@ -90,83 +79,62 @@
 #'   domain_name = "county",
 #'   response_name = "obs_biomass",
 #'   auxiliary_variables = c("evc", "evt"),
-#'   variable_transform = list(
-#'     transform = function (y) {y^(1/3)},
-#'     inv_transform = function (y) {y^3}
-#'   )
+#'   transform = transform
 #' )
 #' 
 #' # we can specify area level models with `model = "FH"`, or `level = "area"`
 #'  FH_spec <- specify(
 #'    obs_biomass ~ evc + evt,
 #'    model = "FH",
-#'  # level = "area", # can replace `model = "FH"` above
-#'    domain_name = "county",
-#'    obs_variability = "DIR_MEAN_SE" 
-#'    # name of estimated variance of direct estimates.
-#'    # this follows the convention of aggregate_data()
+#' # level = "area", # can replace `model = "FH"` above
+#'    domain_name = "county"
 #'  )
 #'  
-#'  # We allow zero-inflated models as well
-#'  # This will inherit the remainder of the arguments from the response model
-#'  GLM_spec <- specify(
-#'    ~ evc + evt, # don't necessarily need to specify a response
-#'    model = "BHF",
-#'    specifying_second_stage_model = TRUE
-#'  )
-#'  
+#' # We allow zero-inflated models as well
 #' response_model <- specify(
-#'   obs_biomass ~ tcc,
+#'   c(biomass ~ tcc, biomass ~ tcc + ppt),
 #'   model = "BHF",
 #'   domain_name = "county",
 #'   model_stage = "zi",
-#'   second_stage_spec = GLM_spec,
-#'   variable_transform = list(
-#'     transform = function (y) {y^(1/3)},
-#'     inv_transform = function (y) {y^3}
-#'   )
+#'   transform = transform
 #' )
 #' 
 #' @export
 specify <- function(
     formula = NULL,
-    level = NULL,
-    model = "custom",
-    ...,
     domain_name = NULL,
+    model = "custom",
+    level = NULL,
     response_name = NULL,
     auxiliary_variables = NULL,
-    obs_variability = NULL,
-    variable_transform = NULL,
+    transform = NULL,
     family = stats::gaussian(),
     model_stage = "single",
-    specifying_second_stage_model = FALSE, # should change this variable name
-    second_stage_spec = NULL
+    ...
 ) {
 
   # If we have a custom model, the user must provide a formula and a level
   # If we have a non-custom model, the user must specify a model (type)
   # For both, there must be response, auxiliary, and domain
   # for BHF, this is it
-  # for FH, we can have obs_variability
+  # for FH, we can have obs_var
 
   func_call <- match.call()
   
   dotlist = list(...)
-  if (!("obs_variability" %in% ...names())) {
-    dotlist$obs_variability = NULL
+  if (!("obs_var" %in% ...names()) || is.null(dotlist$obs_var)) {
+    obs_var = NULL
+  } else {
+    obs_var = dotlist$obs_var
   }
   if (!("DRV" %in% ...names()) || is.null(dotlist$DRV)) {
     DRV = NULL
   } else {
     DRV = TRUE
   }
-  if (!is.null(level)) {level <- match.arg(level, c("area", "unit"))} # not the best practice with NULL here but works nicely
+  if (!is.null(level)) {level <- match.arg(level, c("area", "unit"))}
   model <- match.arg(model, c("custom", "FH", "BHF"))
   model_stage <- match.arg(model_stage, c("single", "zi"))
-  if (!is.null(formula) && !inherits(formula, "formula")) {
-    stop("Formulae must be provided as base-R formulae.")
-  }
   opt_args <- list(...)
   
   validate_specify_inputs(
@@ -174,9 +142,8 @@ specify <- function(
     domain_name = domain_name,
     response_name = response_name,
     auxiliary_variables = auxiliary_variables,
-    obs_variability = obs_variability,
-    specifying_second_stage_model = specifying_second_stage_model,
-    second_stage_spec = second_stage_spec
+    obs_variability = obs_var,
+    model = model
   )
   default_model_data <- NULL
   
@@ -187,43 +154,51 @@ specify <- function(
     level = level,
     model_type = model,
     domain_name = domain_name,
-    obs_variability = obs_variability,
+    obs_variability = obs_var,
     default_model_data = default_model_data,
-    variable_transform = variable_transform,
+    variable_transform = transform,
     model_stage = model_stage,
-    second_stage_spec = second_stage_spec,
+    second_stage_spec = NULL,
     opt_args = opt_args,
     DRV = DRV,
     valid_spec = FALSE
   )
 
-  if (specifying_second_stage_model) {
-    # re-code model so coming if statement separates it
-    model <- "aux_spec"
-    spec$model_stage <- "zi"
-  }
-
-  if (model != "aux_spec") {
-    spec <- validate_single_stage_spec(spec = spec, 
-                                       auxiliary_variables = auxiliary_variables,
-                                       response_name = response_name)
-  } else { #if (model == "aux_spec") {
-    spec <- validate_GLM_two_stage_spec(spec = spec, 
-                                        auxiliary_variables = auxiliary_variables,
-                                        response_name = response_name)
-    t = try(
-      validate_single_stage_spec(
-        spec = spec,
-        auxiliary_variables = auxiliary_variables,
-        response_name = response_nmae
-      ),
-      silent = T
+  if (spec$model_stage == "zi") {
+    check_zi_spec_integrity(spec)
+    specs = create_zi_specs(spec, auxiliary_variables, response_name)
+    spec <- specs$spec1
+    spec$second_stage_spec <- specs$spec2
+    check_spec_integrity(
+      spec = spec,
+      auxiliary_variables = spec$default_model_data$auxiliary_variables,
+      response_name = spec$default_model_data$response_name
     )
-    
-    if (inherits(t, class(spec))) {
-      spec <- t
+    check_spec_integrity(
+      spec = spec$second_stage_spec,
+      auxiliary_variables = spec$second_stage_spec$default_model_data$auxiliary_variables,
+      response_name = spec$second_stage_spec$default_model_data$response_name
+    )
+    spec <- validate_single_stage_spec(
+      spec = spec,
+      auxiliary_variables = spec$default_model_data$auxiliary_variables,
+      response_name = spec$default_model_data$response_name
+    )
+    if (any(spec$level == "area")) {
+      stop("Cannot fit area-level zero-inflated models currently.")
     }
-  }
+  } else if (model != "aux_spec") {
+    check_spec_integrity(
+      spec = spec, 
+      auxiliary_variables = auxiliary_variables,
+      response_name = response_name
+    )
+    spec <- validate_single_stage_spec(
+      spec = spec, 
+      auxiliary_variables = auxiliary_variables,
+      response_name = response_name
+    )
+  } 
 
   # correct/set variables depending on their level
   # auto-aggregation related checks
@@ -235,14 +210,14 @@ specify <- function(
   # validate the variable transformation --- make sure we have a left-inverse
   if (!is.null(spec$variable_transform) && 
       !inherits(spec$variable_transform, "BASAL_transformation")) {
-    spec$variable_transform <- make_variable_transform(spec$variable_transform$transform,
+    spec$variable_transform <- transform(spec$variable_transform$transform,
                                                        spec$variable_transform$inv_transform)
   }
   
-  if (spec$model_stage == "zi" && !specifying_second_stage_model) {
-      spec <- validate_second_stage(spec, auxiliary_variables)
-  }
-
+#  if (spec$model_stage == "zi" && !specifying_second_stage_model) {
+#      spec <- validate_second_stage(spec, auxiliary_variables)
+#  }
+#
   if (spec$level == "area" && !is.null(spec$variable_transform)) {
     stop("Can't specify variable transforms with area-level models")
   }

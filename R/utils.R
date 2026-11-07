@@ -15,58 +15,92 @@ check_inherits <- function(what, ...) {
 }
 
 #' @title Make Variable Transformation
-#' @param transform Function to transform the response
-#' @param inv_transform Right inverse of \code{transform} i.e., \code{inv_transform(transform(x)) == x}
+#' @description
+#' Specify a variable transformation to map the response values through.
+#' Can help improve model fitness with highly skewed (for example) distributions
+#' of responses. Predictions are transformed back for point statistic estimation.
+#' 
+#' @param variable_transform Function to transform the response
+#' @param inv_transform Left-inverse of \code{variable_transform} i.e., 
+#' \code{inv_transform(transform(x)) == x}
 #' @param eval_grid Grid of values to ensure that the \code{transform} and 
 #' \code{inv_transform} are consistent with each other
 #' @param override logical flag to indicate that the check on \code{eval_grid} should be ignored.
+#' @param tol tolerance for testing equality. If 
+#' \code{abs(variable_transform(inv_transform(eval_grid)) - eval_grid < tol)},
+#' then there will be no error.
 #' 
 #' @details
 #' Variable transformations can be a good way to improve a model, by transforming the response.
 #' Common transformations include log and root-type transformations. 
 #' 
-#' Before model fitting, the data will be transformed via \code{transform}. Then,
-#' after posterior estimation but before aggregation of computing summaries, 
+#' Before model fitting, the data will be transformed via \code{variable_transform}. Then,
+#' after posterior estimation but before aggregation and computing summaries, 
 #' predictions will be back-transformed via \code{inv_transform}. 
 #' 
-#' By default, \code{make_variable_transform} will ensure that \code{inv_transform}
-#' is a (one-sided) inverse of \code{transform} by ensuring that 
-#' \code{inv_transform(transform(eval_grid))} is the same as \code{eval_grid},
+#' By default, \code{transform} will ensure that \code{inv_transform}
+#' is a (one-sided) inverse of \code{variable_transform} by ensuring that 
+#' \code{inv_transform(variable_transform(eval_grid))} is the same as \code{eval_grid},
 #' however this behavior can be circumvented with the \code{override} flag.
 #' 
-#' @return Object of type \code{BASAL_transformation}.
+#' @examples
+#' # here are two common transformations
+#' root_trans = transform(
+#'   sqrt,
+#'   function (y) {y^2}
+#' )
+#' 
+#' log_trans = transform(
+#'   log,
+#'   exp
+#' )
+#' 
+#' # we can also use a different grid
+#' grid_trans = transform(
+#'   sin,
+#'   asin,
+#'   eval_grid = seq(-pi/2, pi/2, 0.1),
+#' )
+#' 
+#' # the eval_grid can be ignored (this is not recommended)
+#' bad_trans = transform(
+#'   function (y) {0},
+#'   function (y) {0},
+#'   override = TRUE
+#' )
+#' 
+#' 
+#' @return Object of type \code{basal_transformation}.
 #' @export
-make_variable_transform <- function(transform,
-                                    inv_transform,
-                                    eval_grid = 0:512,
-                                    override = FALSE) {
+transform <- function (
+    variable_transform,
+    inv_transform,
+    eval_grid = 0:512,
+    override = FALSE,
+    tol = 1e-10
+) {
   transformation = list(
-    transform = transform,
+    transform = variable_transform,
     inv_transform = inv_transform
   )
-  validate_transformation(transformation, eval_grid, override)
+  validate_transformation(transformation, eval_grid, override, tol)
   
-  class(transformation) <- "BASAL_transformation"
+  class(transformation) <- "basal_transformation"
   return (transformation)
 }
 
 #' @noRd
 validate_transformation <- function(transformation,
-                                    eval_grid, override) {
+                                    eval_grid, override, tol) {
   if (!is.null(transformation)) {
     check_inherits("list", transformation)
     check_inherits("function",
                    transformation$transform, transformation$inv_transform)
 
     if (!override) {
-      identity = TRUE
-      for (i in eval_grid) { # somewhat arbitrary points, we want zero to be included though
-        # we only check that inv_transform is a left inverse of transform, because 
-        # we never go the other way
-        identity = identity &&
-          round(transformation$inv_transform(transformation$transform(i)),10) == i
-      }
-      if (!identity) {
+      if (
+        any(abs(transformation$inv_transform(transformation$transform(eval_grid)) - eval_grid) >= tol)
+        ) {
         stop(paste0(
           "variable_transform$inv_transform isn't an inverse of ",
           "variable_transform$transform on `eval_grid`. To bypass the check ",
@@ -138,32 +172,30 @@ validate_transformation <- function(transformation,
 #' 
 #' In addition, in \code{aggregate_obs}, the column for \code{response}
 #' is replaced with the direct estimate of the response (but using the same name).
-#' Furthermore, all the other columns are replaced with averages (accross \code{domain_name}) 
+#' Furthermore, all the other columns are replaced with averages (across \code{domain_name}) 
 #' of the columns in the population data when they are numeric or a modal 
 #' response when they are categorical.
 #' 
 #' @examples
-#' 
 #' # HT estimator
-#' aggregate_data(oregon_sample, "biomass",
-#'                "county", oregon_population)
+#' aggregate(oregon_sample, "biomass",
+#'           "county", oregon_population)
 #' 
 #' # PS estimator 
-#' aggregate_data(oregon_sample, "biomass", 
-#'                "county", oregon_population, 
-#'                PS_strata = "evt", method = "PS")
+#' aggregate(oregon_sample, "biomass", 
+#'           "county", oregon_population, 
+#'           PS_strata = "county", method = "PS")
 #'      
 #' # use population size
-#' aggregate_data(oregon_sample, "biomass", "county", 
-#'                population_size = 1e4, oregon_population)
+#' aggregate(oregon_sample, "biomass", "county", 
+#'           population_size = 1e4, oregon_population)
 #'                
 #' # use sampling weights
-#' aggregate_data(oregon_sample, "biomass", "county", 
-#'                sample_weights = rbeta(nrow(oregon_sample),1,1), 
-#'                oregon_population)
-#' 
+#' aggregate(oregon_sample, "biomass", "county", 
+#'           sample_weights = rbeta(nrow(oregon_sample),1,1), 
+#'           oregon_population)
 #' @export
-aggregate_data <- function(
+aggregate <- function(
     data, response, domain_name, population_data, 
     population_size = NULL, sample_weights = NULL,
     estimate = "mean", method = "HT", PS_strata = NULL, mase_messages = F, ...
@@ -217,13 +249,17 @@ aggregate_data <- function(
     }
     if (estimate == "mean") {
       est_val <- est$pop_mean
-      if (est$pop_mean_var < 0) {
+      if (is.nan(est$pop_mean_var)) {
+        stop("Error: Undefined variance estimate: ", est$pop_mean_var)
+      } else if (est$pop_mean_var < 0) {
         warning("Observed negative estimated variance")
       }
       est_se <- sqrt(est$pop_mean_var)
     } else {
       est_val <- est$pop_total
-      if (est$pop_total_var < 0) {
+      if (is.nan(est$total_var)) {
+        stop("Error: Undefined variance estimate: ", est$pop_total_var)
+      } else if (est$pop_total_var < 0) {
         warning("Observed negative estimated variance")
       }
       est_se <- sqrt(est$pop_total_var)
@@ -260,7 +296,7 @@ aggregate_data <- function(
   ))
 }
 
-#' Verify the arguments for aggregate_data()
+#' Verify the arguments for aggregate()
 #' @noRd
 check_agg_data_args <- function (
   data, response, domain_name, population_data, 
@@ -330,10 +366,11 @@ check_agg_data_args <- function (
     stop("Population size must be a non-negative value.")
   }
   if (!is.null(sample_weights) && 
-      (sample_weights < 0 || sample_weights > 0 || length(sample_weights) != nrow(data))) {
-    if (sample_weights < 0) {
+      (any((sample_weights < 0) | (sample_weights > 1)) || 
+       length(sample_weights) != nrow(data))) {
+    if (any(sample_weights < 0)) {
       stop("sample_weights must be non-negative.")
-    } else if (sample_weights > 1) {
+    } else if (any(sample_weights > 1)) {
       stop("sample_weights must be at most 1.")
     } else {
       stop("there should be one sampling weight per row of data.")
@@ -363,13 +400,13 @@ prepare_agg_data <- function (
             " from the population data. Adding existing observations to the observed data.")
     population_data <- rbind(
       population_data,
-      data[data[[domain]] %in% setdiff(domains_1, domains_2), colnames(population_data)]
+      data[data[[domain_name]] %in% setdiff(domains_1, domains_2), colnames(population_data)]
     )
   }
   if (length(setdiff(domains_2, domains_1)) != 0) {
     warning("Domains present in population data that aren't present in ",
             "observed data. Removing these observations")
-    population_data <- population_data[population_data[[domain]] %in% domains_1,]
+    population_data <- population_data[population_data[[domain_name]] %in% domains_1,]
   }
   if (paste0(response, "_se") %in% colnames(population_data)) {
     warning("Variable `", response, "_se` overwritten as standard error of the direct estimate.")

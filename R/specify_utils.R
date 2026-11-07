@@ -1,3 +1,160 @@
+#' Validate the inputs format
+#' @noRd
+validate_specify_inputs <- function(
+    formula,
+    domain_name,
+    response_name,
+    auxiliary_variables,
+    obs_variability,
+    model
+) {
+  
+  if (!is.null(domain_name) && (!is.character(domain_name) || 
+      any(is.na(domain_name)) || any(domain_name == ""))) {
+    stop("`domain_name` must be a non-empty character string, a list thereof, or NULL.")
+  }
+  if (!is.null(response_name) && (!is.character(response_name) || 
+      any(is.na(response_name)) || any(response_name == ""))) {
+    stop("`response_name` must be a non-empty character string, a list thereof, or NULL.")
+  }
+  if (!is.null(auxiliary_variables) && !inherits(auxiliary_variables, "list") 
+      && (!is.character(auxiliary_variables) || any(auxiliary_variables == ""))) {
+    stop("`auxiliary_variables` must be a list, a character vector of ", 
+         "non-empty variable names or NULL.")
+  }
+  if(!is.null(obs_variability) &&
+     !(is.character(obs_variability) &&
+       length(obs_variability) == 1 &&
+       !is.na(obs_variability) &&
+       obs_variability != ""
+       )
+  ){
+    stop("`obs_variability` must be a single non-empty character string.")
+  }
+  if (!is.null(formula) && !inherits(formula, "formula")) {
+    if (!inherits(formula, "list")) {
+      stop("Formula must be formula or list, not ", class(formula)[1], ".")
+    } else if (!inherits(formula[[1]], "formula")) {
+      stop("Formula must be a formula or a list of formulae. A list cannot have class ", class(formula[[1]])[1], ".")
+    }
+  }
+  
+  if (intersect(unique(model), names(model_level_lookup)) != unique(model)) {
+    stop("model type(s) ", 
+         paste0(intersect(unique(model), names(model_level_lookup)), collapse = ", "),
+         "not accepted as valid model type(s)."
+    )
+  }
+}
+
+#' @noRd
+create_zi_specs <- function (spec, auxiliary_variables, response_name) {
+  spec1 <- spec
+  spec2 <- spec
+  specs <- list(spec1 = spec1, spec2 = spec2)
+  if (!is.null(spec$formula)) {
+    form = T
+    if (inherits(spec$formula, "list")) {
+      specs$spec1$formula <- specs$spec1$formula[[1]]
+      specs$spec2$formula <- specs$spec2$formula[[2]]
+    }
+  } else {
+    form = F
+  }
+  
+  for (i in 1:2) {
+    if (length(response_name) > 1) {
+      specs[[i]]$default_model_data$response_name = response_name[i]
+    } else {
+      specs[[i]]$default_model_data$response_name = response_name
+    }
+    if (length(spec$domain_name) > 1) {
+      specs[[i]]$default_model_data$domain_name = 
+        specs[[i]]$domain_name = 
+        spec$domain_name[i]
+    }
+    if (is.list(auxiliary_variables) && length(auxiliary_variables) > 1) {
+      specs[[i]]$default_model_data$auxiliary_variables = auxiliary_variables[[i]]
+    } else {
+      specs[[i]]$default_model_data$auxiliary_variables = auxiliary_variables
+    }
+  }
+
+  specs$spec2$obs_variability = NULL
+  specs$spec2$variable_transform = NULL
+  specs$spec2$call = NULL
+  specs$spec2 <- structure(specs$spec2, class = "basal_spec")
+  
+  return (specs)
+}
+
+#' @noRd
+check_zi_spec_integrity <- function (spec) {
+  if (!inherits(spec$formula, "formula") && length(spec$formula) > 2) {
+    stop("Lists of formulae must be of length at most 2.")
+  }
+  if (length(spec$response_name) > 2) {
+    stop("Lists of response names must be of length at most 2.")
+  }
+  if (is.list(spec$auxiliary_variables) && length(spec$auxiliary_variables) > 2) {
+    stop("Can only provide at most two lists of auxiliary variables.")
+  }
+}
+
+#' @noRd
+check_spec_integrity <- function (spec, auxiliary_variables, response_name) {
+  
+  if (length(spec$level) > 1) {
+    stop("level must be a single character string... maybe you should ",
+    "set `model_stage = \"zi\"`.")
+  }
+  if (length(spec$model) > 1) {
+    stop("model must be a single character string... maybe you should ",
+    "set `model_stage = \"zi\"`.")
+  }
+  
+  if (!is.null(spec$formula)) {
+    if (!inherits(spec$formula, "formula")) {
+      if (length(spec$formula) != 1) {
+        stop("Expected a single base R formula for this model, but saw a ", 
+             class(spec$formula)[1], " with length ",
+             length(spec$formula), " instead... did you mean to specify a zi model?")
+      }
+      stop("Formulae must be provided as base-R formulae.")
+    }
+    if (!inherits(spec$formula, "formula")) {
+      stop("Formulae must be a formula, not ", spec$formula, ".")
+    }
+    if (attr(stats::terms(spec$formula), which = "response") && !is.null(response_name)) {
+      stop("Overspecified model: Cannot specify a formula with a response, and ",
+           "a response name")
+    }
+  }
+  if (!inherits(spec$family, "family")) {
+    stop("Family must be a family, not ", spec$family, ".")
+  }
+  if (!is.null(spec$level) && !inherits(spec$level, "character")) {
+    stop("level must be a character, not ", spec$level, ".")
+  } else if (!is.null(spec$level) && length(spec$level) > 1) {
+    stop("level must be of length one, not ", spec$level, ".")
+  }
+  if (!inherits(spec$model_type, "character")) {
+    stop("model must be a character, not ", spec$model_type, ".")
+  } else if (length(spec$model_type) > 1) {
+    stop("model must be of length one, not ", spec$model_type, ".")
+  } else if (!is.null(model_level_lookup[[spec$model_type]]) &&
+             !is.null(spec$level) &&
+             model_level_lookup[[spec$model_type]] != spec$level) {
+    stop("level corresponding to specified model type does not match.")
+  }
+  if (!is.null(spec$domain_name) && !inherits(spec$domain_name, "character") && length(spec$domain_name) > 1) {
+    stop("domain name must be NULL or a character of length one, not ", spec$domain_name, ".")
+  }
+  if (!is.null(spec$obs_variability) && !inherits(spec$obs_variability, "character")) {
+    stop("obs_variability must be NULL or a character")
+  }
+}
+
 #' @noRd
 validate_single_stage_spec <- function(spec, auxiliary_variables, response_name) {
   if (!is.null(spec$formula)) {
@@ -64,219 +221,12 @@ validate_single_stage_spec <- function(spec, auxiliary_variables, response_name)
   }
   
   spec$valid_spec <- TRUE
-  return (spec)
-}
-
-#' @noRd
-validate_GLM_two_stage_spec = function(spec, response_name, auxiliary_variables) {
-  if (spec$model_type == "custom") {
-    if (is.null(spec$formula) ||
-        is.null(spec$level)) {
-      message(paste0(
-        "Missing values for formula and/or level will be filled by the first stage"
-      ))
-    }
-  } else {
-    if (spec$model_type == "BHF") spec$level <- "unit"
-    if (spec$model_type == "FH") spec$level <- "area"
-    
-    if (is.null(spec$domain_name) ||
-        (is.null(auxiliary_variables) &&
-         is.null(spec$formula))) {
-      missing = c(is.null(spec$domain_name), is.null(auxiliary_variables))
-      if (all(missing)) {
-        message(
-          "Domain and auxiliary variables are missing. These will be",
-          " inherited from the first stage.")
-      } else if (missing[1]) {
-        message("domain is missing. This will be inherited from the first stage.")
-      } else {
-        message("auxiliary variables are missing. These will be inherited form the first stage.")
-      }
-    }
-    
-    spec$default_model_data <- list(
-      response_name = response_name,
-      domain_name = spec$domain_name,
-      auxiliary_variables = auxiliary_variables
+  if (!is.null(spec$second_stage_spec)) {
+    spec$second_stage_spec <- validate_single_stage_spec(
+      spec$second_stage_spec,
+      spec$second_stage_spec$default_model_data$auxiliary_variables,
+      spec$second_stage_spec$default_model_data$response_name
     )
   }
-  
-  if (spec$level == "area") {
-    stop("Can't specify area-level models for the second stage.")
-  }
-  
   return (spec)
-}
-
-validate_second_stage <- function (spec, auxiliary_variables) {
-  # if there is no specification, then inherit from response model
-  if (is.null(spec$second_stage_spec)) {
-    if (spec$model_type == "FH") {
-      newmodel = "BHF"
-    } else {
-      newmodel = spec$model_type
-    }
-    message("Specification for second stage inherited from this level")
-    spec$second_stage_spec <- specify(
-      formula = spec$formula,
-      level = "unit",
-      model = newmodel,
-      obs_variability = NULL,
-      domain_name = spec$domain_name,
-      response_name = spec$default_model_data$response_name,
-      auxiliary_variables = auxiliary_variables,
-      variable_transform = NULL,
-      model_stage = spec$model_stage,
-      specifying_second_stage_model = TRUE,
-      second_stage_spec = NULL,
-      DRV = spec$DRV
-    )
-  } else {
-    if (spec$second_stage_spec$level == "area") {
-      stop(
-        "Can't fit area-level models to predict probabilities of zero-valued",
-        " observations currently."
-      )
-    }
-    # if there is a specification for the GLM, ensure it has all parts
-    # and fill in what we can from the response model
-    if (spec$second_stage_spec$model_type != spec$model_type) {
-      if (spec$second_stage_spec$model_type != "custom") {
-        if ((is.null(spec$second_stage_spec$default_model_data$domain_name) &&
-             is.null(spec$domain_name)) || # otherwise if domain name is missing, error
-            ((is.null(spec$second_stage_spec$default_model_data$auxiliary_variables) &&
-              is.null(auxiliary_variables)) && # or if auxiliary variables are missing, error
-             is.null(spec$second_stage_spec$formula) &&
-             (is.null(spec$formula) || # unless the base has a formula that can be made acceptable
-              is.null(spec$default_model_data$domain_nmae)))) {
-          stop(
-            "Did not specify domain or auxiliary variables in logistic model ",
-            "and these cannot be inferred from the base model."
-          )
-        } else {
-          if (!is.null(spec$domain_name) && 
-              is.null(spec$second_stage_spec$default_model_data$domain_name)) {
-            spec$second_stage_spec$default_model_data$domain_name <- spec$domain_name
-            spec$second_stage_spec$domain_name <- spec$domain_name
-          }
-          if (!is.null(auxiliary_variables) &&
-              is.null(spec$second_stage_spec$default_model_data$auxiliary_variables)) {
-            spec$second_stage_spec$default_model_data$auxiliary_variables <- auxiliary_variables
-          } else if (!is.null(spec$formula) &&
-                     is.null(spec$second_stage_spec$formula)) {
-            spec$second_stage_spec$formula <- spec$formula
-          }
-        }
-      } else {
-        if (is.null(spec$formula) && is.null(spec$second_stage_spec$formula))
-          warning(
-            "Cannot inherit formula from first stage. Re-specify the second-stage ",
-            "model to type ", spec$model_type, " or provide a formula."
-          )
-        }
-    } else { #if (spec$second_stage_spec$model_type == spec$model_type) {
-      if (is.null(spec$second_stage_spec$formula) &&
-          !is.null(spec$formula)) {
-        spec$second_stage_spec$formula <- spec$formula
-      }
-      if (is.null(spec$second_stage_spec$level)) {
-        spec$second_stage_spec$level <- spec$level
-      }
-      if (is.null(spec$second_stage_spec$default_model_data$auxiliary_variables) &&
-          !is.null(spec$default_model_data$auxiliary_variables)) {
-        spec$second_stage_spec$default_model_data$auxiliary_variables <- auxiliary_variables
-      }
-      if (is.null(spec$second_stage_spec$default_model_data$domain_name) && 
-          !is.null(spec$default_model_data$domain_name)) {
-        spec$second_stage_spec$default_model_data$domain_name <- spec$domain_name
-        spec$second_stage_spec$domain_name <- spec$domain_name
-      }
-    }
-  }
-  
-  
-  if (!is.null(spec$formula)) {
-    newresponse <- all.vars(spec$formula)[1]
-  } else if (!is.null(spec$default_model_data$response_name)) {
-    newresponse <- spec$default_model_data$response_name
-  } else {
-    stop("Internal error: couldn't find response in base-level specification.")
-  }
-  
-  if (!is.null(spec$second_stage_spec$formula) && 
-      (attr(stats::terms(spec$second_stage_spec$formula), which = "response") == 0)) {
-    # ^ if there's a formula with no response
-    spec$second_stage_spec$formula <- stats::update(
-      spec$second_stage_spec$formula,
-      stats::reformulate(".", newresponse)
-    )
-  } else if (is.null(spec$second_stage_spec$formula) &&
-             is.null(spec$second_stage_spec$default_model_data$response_name)) {
-    spec$second_stage_spec$default_model_data$response_name <- newresponse
-  }
-  
-  if (!is.null(spec$second_stage_spec$default_model_data$response_name) &&
-      !is.null(spec$second_stage_spec$formula) && 
-      attr(stats::terms(spec$second_stage_spec$formula), which = "response")) {
-    stop("Over-specified logistic model; observed two responses.")
-  } else if (is.null(spec$second_stage_spec$default_model_data$response_name) &&
-             !is.null(spec$second_stage_spec$formula) &&
-             attr(stats::terms(spec$second_stage_spec$formula), which = "response")) {
-    res = all.vars(spec$second_stage_spec$formula)[1]
-  } else if (!is.null(spec$second_stage_spec$default_model_data$response_name)) {
-    res = spec$second_stage_spec$default_model_data$response_name
-  } else {
-    stop("Cannot infer response for the logistic (second-stage) model.")
-  }
-  
-  # at this point, the logit specification should pass the test forced 
-  # to the single-stage model. 
-  spec$second_stage_spec <- validate_single_stage_spec(
-    spec$second_stage_spec,
-    spec$second_stage_spec$default_model_data$auxiliary_variables, # might be NULL; whatever
-    spec$second_stage_spec$default_model_data$response_name # same as above
-  )
-  
-  return (spec)
-}
-
-#' Validate the inputs format
-#' @noRd
-validate_specify_inputs <- function(
-    formula,
-    domain_name,
-    response_name,
-    auxiliary_variables,
-    obs_variability,
-    specifying_second_stage_model,
-    second_stage_spec
-) {
-  
-  if (!is.logical(specifying_second_stage_model) || length(specifying_second_stage_model) != 1 || is.na(specifying_second_stage_model)) {
-    stop("`specifying_second_stage_model` must be TRUE or FALSE.")
-  }
-  if (!is.null(second_stage_spec) && !inherits(second_stage_spec, "basal_spec")) {
-    stop("`second_stage_spec` must be a `basal_spec` object or NULL.")
-  }
-  if (!is.null(domain_name) && (!is.character(domain_name) || 
-      length(domain_name) != 1 || is.na(domain_name) || domain_name == "")) {
-    stop("`domain_name` must be a single non-empty character string or NULL.")
-  }
-  if (!is.null(response_name) && (!is.character(response_name) || 
-      length(response_name) != 1 || is.na(response_name) || response_name == "")) {
-    stop("`response_name` must be a single non-empty character string or NULL.")
-  }
-  if (!is.null(auxiliary_variables) && (!is.character(auxiliary_variables) || any(auxiliary_variables == ""))) {
-    stop("`auxiliary_variables` must be a character vector of ", "non-empty variable names or NULL.")
-  }
-  if(!is.null(obs_variability) &&
-     !(is.character(obs_variability) &&
-       length(obs_variability) == 1 &&
-       !is.na(obs_variability) &&
-       obs_variability != ""
-       )
-  ){
-    stop("`obs_variability` must be a single non-empty character string.")
-  }
 }

@@ -9,10 +9,10 @@ validate_engine <- function(engine, spec) {
   }
   
   name <- engine$name
-  if (!(name %in% basal_engines)) {
-    stop("Engine ", name, " is not a registered engine with basal. ",
-         "Valid engines for `basal` are: ", paste(basal_engines, collapse = ", "), ".")
-  }
+#  if (!(name %in% basal_engines)) {
+#    stop("Engine ", name, " is not a registered engine with basal. ",
+#         "Valid engines for `basal` are: ", paste(basal_engines, collapse = ", "), ".")
+#  }
 
   if (!(is.null(spec$formula) || class(spec$formula)[1] %in% engine$formula_types)) {
     stop("Cannot fit a custom model using a formula of class ", class(spec$formula)[1],

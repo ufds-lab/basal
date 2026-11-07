@@ -1,10 +1,26 @@
 Package: basal
 Title: Bayesian Small Area Estimation Library
-Version: 0.0.0.9000
-Authors@R: c(
-    person("First", "Last", , "first.last@example.com", role = "cre")
-    )
-Description: Simplified pipeline for creating Bayesian models and estimatingposterior point statistics, with a focus on small area estimation.
+Version: 0.0.1
+Authors@R: 
+    c(
+	person(given = "Leland",
+	    family = "Russell",
+	    role = c("aut", "cre"),
+	    email = "lrussell6204@gmail.com",
+	    comment = c(ORCID = "0009-0005-6426-6355")),
+	person(given = "Wystan",
+	    family = "Wu",
+	    role = "aut"),
+	person(given = "Grayson W.",
+	    family = "White",
+	    role = "aut"),
+	person(given = "Kelly S.",
+	    family = "McConville",
+	    role = "aut"),
+	person(given = "George",
+	    family = "Gaines",
+	    role = "aut"))
+Description: Provides a flexible but simplified pipeline for creating Bayesian models and estimating posterior point statistics with a focus on small area estimation.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
@@ -15,11 +31,11 @@ Imports:
     mase,
     tidyr,
     bayesplot,
-    stats,
     base,
     rstanarm,
     rstantools,
-    generics
+    generics,
+    rlang
 Suggests: 
     knitr,
     rmarkdown,

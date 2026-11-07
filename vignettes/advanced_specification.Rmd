@@ -16,61 +16,29 @@ knitr::opts_chunk$set(
 
 ```{r setup}
 library(basal)
-library(tidyverse)
-
-data("oregon_population", "oregon_sample")
+library(ggplot2)
 ```
 
-
-
-
-
-This vignette is not yet finished. You can read it if you like, though the information may be outdated or not well presented.
-
-
-
-
-
-
-
-\section{Data Description}
-
-Here's some data. There will be a better section here, or no section, depending. Either way, these are FIA data like what we might use, but they are public. We have a number of columns, of which I have selected the interesting ones.
-
-```{r}
-oregon_population = oregon_population |>
-  dplyr::select(c("countyfips", "tnt", "evt_class_cd", "ppt", "elev", "lfevc"))
-oregon_sample = oregon_sample |>
-  dplyr::select(c("biomass", "countyfips", "tnt", "evt_class_cd", "ppt", "elev", "lfevc"))
-```
-
-To assist with stability and reduce variability of priors, we will scale the `elev` variable to have a smaller variance. We will discuss this more in depth in another vignette---`advanced_model_fitting`---but take it for granted here.
-
-```{r}
-# sapply(oregon_sample, sd) # find variables with large variances
-
-oregon_population$elev = oregon_population$elev/sd(oregon_sample$elev)
-oregon_sample$elev = oregon_sample$elev/sd(oregon_sample$elev)
-
-oregon_population$ppt = oregon_population$ppt/sd(oregon_sample$ppt)
-oregon_sample$ppt = oregon_sample$ppt/sd(oregon_sample$ppt)
-```
 
 # Details of `specify()` arguments
 While a model may be specified quite easily, there can be a good amount of nuance in a specification. We will start with a BHF and expand outwards into increasingly complex models. A basic BHF can be specified like below with `model = "BHF"`.
 
 ```{r}
 bhf <- specify(
-  biomass ~ evc + ppt
+  biomass ~ evc + ppt,
   model = "BHF", 
-  domain = "evt", 
+  domain = "evt"
 )
 ```
 
 There are also several other ways to specify such a model. Certainly, this can be specified in a custom way:
 
 ```{r}
-bhf <- specify(biomass ~ evc + ppt + (1 | evt), level = "unit", model = "custom")
+bhf <- specify(
+  biomass ~ evc + ppt + (1 | evt), 
+  level = "unit", 
+  model = "custom"
+)
 ```
 
 It can also be specified by naming the arguments in the BHF:
@@ -87,7 +55,7 @@ bhf <- specify(
 
 
 ## Variable Transformations
-A variable transformation is often useful for acceptable model fitness. This can be specified through supplying a transformation as well as an inverse transformation. The inverse transformation should be a left-inverse of the transformation---that is, `inv_transform(transform(x)) == x`. The response variable for the model is transformed before model fitting in `fit`, and then before returning values in `estimate`. If estimating a two-stage model, then the response values are transformed before weighting pixels by their probability of nonzero values.
+A variable transformation is often useful for acceptable model fitness. This can be specified through supplying a transformation as well as an inverse transformation. The inverse transformation should be a left-inverse of the transformation---that is, `inv_transform(variable_transform(x)) == x`. The response variable for the model is transformed before model fitting in `fit`, and then before returning values in `estimate`. If estimating a two-stage model, then the response values are transformed before weighting pixels by their probability of nonzero values.
 
 ```{r}
 bhf <- specify(
@@ -95,7 +63,7 @@ bhf <- specify(
   auxiliary_variables = c("lfevc", "ppt"),
   domain = "evt_class_cd", 
   response = "biomass",
-  variable_transform = list(
+  transform = list(
     transform = function (y) {y^(1/4)},
     inv_transform = function (y) {y^4}
   )
@@ -107,14 +75,14 @@ Although sometimes some more flexibility may be required for creating variable t
 ```{r}
 # ignore checks entirely
 # NOT RECOMMENDED
-transform = make_variable_transform(
+transform = transform(
   function (y) {y^(1/4)},
   function (y) {y^4},
   override = TRUE
 )
 
 # other ranges
-transform = make_variable_transform(
+transform = transform(
   function (y) {y^(1/4)},
   function (y) {y^4},
   eval_grid = 0:5
@@ -124,7 +92,7 @@ transform = make_variable_transform(
 Ignoring checks is not recommended though as typos could create an invalid transformation. For example, the following variable transformation is not valid, as the transformation is equal to `function (y) {(y^1)/4}`, but this is not caught since `override = TRUE`.
 
 ```{r}
-transform_bad = make_variable_transform(
+transform_bad = transform(
   function (y) {y^1/4},
   function (y) {y^4},
   override = TRUE
@@ -143,7 +111,7 @@ bhf <- specify(
 ```
 
 ## Area level models
-For area level models, the engine assumes data are being aggregated using `aggregate_data()`. This function is highly recommended as it computes the direct estimates on the sample data, adds the averages from the population data, and creates a population data with the estimated variance.
+For area level models, the engine assumes data are being aggregated using `aggregate()`. This function is highly recommended as it computes the direct estimates on the sample data, adds the averages from the population data, and creates a population data with the estimated variance.
 
 It also places the estimated variance in the column `[response]_se` where `[response]` is the `response_name`, and the direct estimates in the `[response]` column. If the `obs_variability` argument is not used in `specify()`, and an area-level model is specified, the engine will assume the estimated standard errors are in this column.
 
@@ -154,7 +122,7 @@ fh  <- specify(
   DIRECT_ESTIMATE ~ evc + ppt,
   model = "FH", 
   domain_name = "evt",
-  obs_variability = "ESTIMATED_STANDARD_ERROR"
+  obs_var = "ESTIMATED_STANDARD_ERROR"
 )
 ```
 
@@ -175,84 +143,93 @@ We note that if you wish to change the engine used in fit(), you may have to spe
 
 ### Zero-inflated models
 
-The bulk of discussion for zero-inflated models is included in the workflow vignette. Here we discuss a few nuances. Briefly, a zero-inflated model is specified as two different models, a "second-stage" logistic model, and a gaussian model. This is shown in the code below.
+The bulk of discussion for zero-inflated models is included in the workflow vignette. Here we discuss a few nuances. Briefly, a zero-inflated model is specified as two different models, a "second-stage" logistic model, and a Gaussian "response" model. A zero-inflated model can be created minimally by adding the argument `model_stage = "zi"`. This specifies the two models to have the same model form (response, covariates, formulae, domain, etc.). 
+
+
 
 ```{r}
-zi_logit <- specify(
+specify(
   biomass ~ evc + ppt,
   domain_name = "evt",
   model = "BHF",
-  specifying_second_stage_model = TRUE
-)
-
-zi_gaussian <- specify(
-  response ~ evc + ppt,
-  model = "BHF", 
-  domain_name = "evt",
-  variable_transform = transform,
-  
-  model_stage = "zi",
-  second_stage_spec = zi_logit
+  model_stage = "zi"
 )
 ```
 
-As we can see, the logistic model `zi_logit` is passed as an argument to the gaussian model `zi_gaussian`. In this way, the specification for the two-stage model is actually a specification for a gaussian response model, with the logistic model inside. The only difference is that a logical flag is set when it is passed to `zi_gaussian` indicating it is a valid specification.
+But if the model form should change, a list of the arguments may be provided to specify (first) how the response model behaves and (second) how the logistic model behaves.
 
 ```{r}
-all.equal(zi_logit, zi_gaussian$second_stage_spec)
+# change the formula
+specify(
+  c(biomass ~ evc + ppt,
+    biomass ~ evc),
+  domain_name = "evt",
+  model = "BHF",
+  model_stage = "zi"
+)
+
+# change the domain name
+specify(
+  biomass ~ evc + ppt,
+  domain_name = c("evt", "county"),
+  model = "BHF",
+  model_stage = "zi"
+)
+
+# change the response as specified
+specify(
+  response_name = c("biomass", "ppt"),
+  domain_name = "evt",
+  auxiliary_variables = "evc",
+  model = "BHF",
+  model_stage = "zi"
+)
+
+# change the auxiliary variables
+specify(
+  response_name = "biomass",
+  domain_name = "evt",
+  auxiliary_variables = list(c("evc", "ppt"), "ppt"),
+  model = "BHF",
+  model_stage = "zi"
+)
 ```
 
-Generally though it's not good practice to specify many arguments in the logistic model, as many can be inherited from the gaussian model. For this reason, we recommend only specifying arguments which are different, and if none are different, then we recommend not specifying a second stage model and only using `model_stage = "zi"` in the gaussian specification.
+Generally though it's not good practice to specify many arguments in the logistic model, as many can be inherited from the response model. For this reason, we recommend only specifying arguments which are different, and if none are different, then we recommend not specifying a second stage model and only using `model_stage = "zi"` in a normal specification.
 
 If the response is provided for the logistic model though, when the two-stage model is fit, the gaussian model will be fit on data where the response for the logistic model is nonzero, and the logistic model will predict the probability of its response being nonzero. The response is therefore quite important.
 
-```{r}
-# a response is not necessary for a logistic second-stage model
-zi_logit <- specify(
-  ~ evc, 
-  model = "BHF",
-  specifying_second_stage_model = TRUE
-)
-
-# or any response may be used
-zi_logit <- specify(
-  anything ~ lfevc + ppt,
-  model = "BHF",
-  specifying_second_stage_model = TRUE
-)
-```
-
-
-<!--
-# Advanced custom models with `brms`.
-
-## Modeling variance
-A common issue with linear regression is heteroscedasticity, or data with different residual variances. Models which try to fix this are possible in the Bayesian context, and quite simple with `brms`, and by extension `basal`.
-
-For example, a simpler fix, is the domain-specific variability, or a model with domain-specific residual variances (DRVs). This is implemented using a custom `brms` formula which models the parameter `sigma`---the variance---as constant with random intercepts for each domain
-
-```{r, results= "hide"}
-drv_spec = specify(
-  brms::brmsformula(biomass ~ lfevc + ppt + (1 | evt_class_cd),
-              sigma ~ (1 | evt_class_cd)),
-  level = "unit",
-  variable_transform = transform
-)
-
-drv_fit = fit(
-  drv_spec, oregon_sample[oregon_sample$biomass != 0,]
-)
-```
-
-Alternatively, one can model variance with explicit covariates. This is not recommended without good reason, as it may be quite difficult to achieve acceptable fitness of mdoels, however such a model which uses covariates is presented (and not fitted) below.
+# Domain-Residual Variances
 
 ```{r}
-vpc_spec = specify(
-  brms::brmsformula(biomass ~ lfevc + ppt + (1 | evt_class_cd),
-              sigma ~ lfevc + (1 | evt_class_cd)),
-  level = "unit",
-  variable_transform = transform
+n = 20
+data = data.frame(
+  y = c(rnorm(n), rnorm(n, 0, 10), rnorm(n, 0, 100)),
+  id = rep(c("A", "B", "C"), each = n)
 )
 ```
 
--->
+Consider the linear regression to predict the response of `y` in the fake data above:
+
+```{r}
+lm = lm(data$y ~ data$id)
+ggplot(mapping = aes(y = lm$residuals, x = data$id)) +
+  geom_boxplot() +
+  geom_hline(aes(color = "Estimated SD", yintercept = c(-1,1) * sd(lm$residuals)))
+```
+
+The residuls have nonequal variance, or heteroschedasticity. A common solution is to estimate a variance parameter for each group. In this case, the model will describe the data better, and therefore predictions on any group will have a more accurate variance estimate.
+
+We allow for the specification of these types of models with the `DRV` argument. This estimates a different variance parameter on the level of `domain_name`
+
+```{r}
+specify(
+  biomass ~ ppt + evc,
+  domain_name = "evt",
+  model = "BHF",
+  DRV = TRUE
+)
+```
+
+
+

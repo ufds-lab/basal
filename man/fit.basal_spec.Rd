@@ -6,7 +6,7 @@
 \title{Fit a Specified Small Area Estimation Model Object}
 \usage{
 \method{fit}{basal_spec}(
-  spec,
+  object,
   data,
   priors = specify_priors(),
   second_stage_priors = NULL,
@@ -23,7 +23,7 @@
 )
 }
 \arguments{
-\item{spec}{An object of class \code{basal_spec} containing initialized metadata states.}
+\item{object}{An object of class \code{basal_spec} containing initialized metadata states.}
 
 \item{data}{A data.frame containing the response variable and all predictor covariates.}
 

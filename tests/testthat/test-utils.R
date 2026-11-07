@@ -1,4 +1,6 @@
-testthat::test_that("aggregate_data handles it's arguments", {
+testthat::test_that("aggregate handles it's arguments", {
+  testthat::skip_on_cran()
+  
   data <- list(
     data.frame(
       biomass = c(10, 12, 14, 9, 11, 13, 8, 10, 20, 11, 16, 19),
@@ -119,7 +121,7 @@ testthat::test_that("aggregate_data handles it's arguments", {
                         }
                       }
                       
-                      t = test(do.call(basal::aggregate_data, args = args)) |> try()
+                      t = test(do.call(basal::aggregate, args = args)) |> try()
                       if (inherits(t, "try-error")) {
                         browser()
                       }
@@ -135,7 +137,7 @@ testthat::test_that("aggregate_data handles it's arguments", {
   }
 })
 
-testthat::test_that("aggregate_data aggregates correctly", {
+testthat::test_that("aggregate aggregates correctly", {
   data = data.frame(
     biomass = c(10, 12, 14, 9, 11, 13, 8, 10, 20, 11, 16, 19),
     ppt = c(1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3),
@@ -152,13 +154,13 @@ testthat::test_that("aggregate_data aggregates correctly", {
     messages = F
   )
   
-  a = aggregate_data(data, "biomass", "county", data, population_size = 1e5)
+  a = aggregate(data, "biomass", "county", data, population_size = 1e5)
   a = a$aggregate_obs[a$aggregate_obs$county == "A",]
   
   testthat::expect_equal(ht$pop_mean, a$biomass)
   testthat::expect_equal(sqrt(ht$pop_mean_var), a$biomass_se)
   
-  a = aggregate_data(data, "biomass", "county", data, population_size = 1e5, estimate = "sum")
+  a = aggregate(data, "biomass", "county", data, population_size = 1e5, estimate = "sum")
   a = a$aggregate_obs[a$aggregate_obs$county == "A",]
   
   testthat::expect_equal(ht$pop_total, a$biomass)
@@ -174,14 +176,14 @@ testthat::test_that("aggregate_data aggregates correctly", {
     N = 1e5, var_est = T, messages = F
   )
   
-  a = aggregate_data(data, "biomass", "strata", data,
+  a = aggregate(data, "biomass", "strata", data,
                      population_size = 1e5, method = "PS", PS_strata = "county")
   a = a$aggregate_obs[a$aggregate_obs$strata == "E",]
   
   expect_equal(a$biomass, ps$pop_mean)
   expect_equal(a$biomass_se, sqrt(ps$pop_mean_var))
   
-  a = aggregate_data(data, "biomass", "strata", data,
+  a = aggregate(data, "biomass", "strata", data,
                      population_size = 1e5, method = "PS", estimate = "sum", PS_strata = "county")
   a = a$aggregate_obs[a$aggregate_obs$strata == "E",]
   

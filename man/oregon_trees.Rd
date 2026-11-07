@@ -13,12 +13,12 @@ An object of class \code{data.frame} with 200000 rows and 5 columns.
 
 The columns in \code{oregon_sample} are:
 \describe{
-\item{biomass}{\link{numeric}, dry biomass of trees within an observed region (tons).}
-\item{county}{\link{factor}, with levels for counties in oregon}
-\item{evt}{\link{factor}, with levels for the \strong{E}xisting \strong{V}egegation \strong{T}ype in the observed region.}
-\item{evc}{\link{numeric}, \strong{E}xisting \strong{V}egetation \strong{C}over; proportion of a region covered by vegetation (units?).}
+\item{biomass}{\link{numeric}, dry biomass of trees within an observed region.}
+\item{county}{\link{factor}, with levels for counties in oregon.}
+\item{evt}{\link{factor}, with levels for the \strong{E}xisting \strong{V}egetion \strong{T}ype in the observed region.}
+\item{evc}{\link{numeric}, \strong{E}xisting \strong{V}egetation \strong{C}over; percent of a region covered by vegetation.}
 \item{elev}{\link{numeric}, elevation of an observed region (units?).}
-\item{ppt}{\link{numeric}, \strong{P}rism-\strong{P}recipi\strong{T}ation within an observed region (units?).}
+\item{ppt}{\link{numeric}, \strong{P}rism-\strong{P}recipi\strong{T}ation; annual precipitation - 30 year normal (mm x 100).}
 }
 All variables aside from \code{biomass} and \code{county} are remotely sensed,
 and all except for \code{biomass} are in \code{oregon_population}.
@@ -32,7 +32,10 @@ oregon_population
 Public data from the US Forest Service's surveys in Oregon state over 10 years.
 
 \code{oregon_sample} represents the results from surveys while
-\code{oregon_population} is a (random) subset of 200,000 of the (2,000,000?)
+\code{oregon_population} is a (random) subset of 200,000 of the roughly 31,000,000
 possible plots in oregon with remotely sensed attributes across.
+}
+\references{
+\url{https://research.fs.usda.gov/products/dataandtools/fia-datamart}
 }
 \keyword{datasets}

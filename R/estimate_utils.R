@@ -43,7 +43,8 @@ validate_estimate_inputs <- function (
   }
   
   validate_estimate_functions(functions = stat, argument = "stat")
-  validate_estimate_functions(functions = aggregation_statistic, argument = "aggregation_statistic")
+  validate_estimate_functions(functions = aggregation_statistic, 
+                              argument = "aggregation_statistic")
   
   if (length(aggregation_statistic) != 1) {
     stop("`aggregation_statistic` must currently contain exactly one function.")
@@ -75,7 +76,7 @@ validate_estimate_functions <- function (
   if (!all(valid_functions)) {
     stop(
       "Every element of `", argument, "` must be a function. Item(s) ",
-      paste0(names(stat)[!valid_functions], collapse = ", "), " are not functions."
+      paste0(names(functions)[!valid_functions], collapse = ", "), " are not functions."
     )
   }
 }
@@ -241,7 +242,7 @@ subset_prediction_data <- function (
     return(newdata)
   }
   return (
-    newdata |> dplyr::slice_sample(n = max_preds)
+    dplyr::slice_sample(newdata, n = max_preds)
   )
 }
 
@@ -404,13 +405,14 @@ summarize_estimate_predictions <- function (
     aggregation_statistic
 ) {
   
+  
   aggregation_name <- names(aggregation_statistic)[1]
   
   if (domain != "BASAL_OVERALL") {
     ret_preds <- preds |>
       dplyr::group_by_at(domain) |>
-      dplyr::mutate(dplyr::across(predicted_stat, stat)) |>
-      dplyr::select(-draw, -predicted_stat) |>
+      dplyr::mutate(dplyr::across(.data$predicted_stat, stat)) |>
+      dplyr::select(-.data$draw, -.data$predicted_stat) |>
       dplyr::ungroup() |>
       unique()
     
