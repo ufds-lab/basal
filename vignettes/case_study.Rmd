@@ -30,11 +30,11 @@ To assist with stability and reduce variability of priors, we will scale the `el
 ```{r}
 # sapply(oregon_sample, sd) # find variables with large variances
 
-oregon_population$elev = oregon_population$elev/sd(oregon_sample$elev)
-oregon_sample$elev = oregon_sample$elev/sd(oregon_sample$elev)
+oregon_population$elev <- oregon_population$elev / sd(oregon_sample$elev)
+oregon_sample$elev <- oregon_sample$elev / sd(oregon_sample$elev)
 
-oregon_population$ppt = oregon_population$ppt/sd(oregon_sample$ppt)
-oregon_sample$ppt = oregon_sample$ppt/sd(oregon_sample$ppt)
+oregon_population$ppt <- oregon_population$ppt / sd(oregon_sample$ppt)
+oregon_sample$ppt <- oregon_sample$ppt / sd(oregon_sample$ppt)
 ```
 
 # Model Specification
@@ -42,19 +42,27 @@ oregon_sample$ppt = oregon_sample$ppt/sd(oregon_sample$ppt)
 We propose three models: A normal BHF, a FH, and a zero-inflated BHF. The two BHFs will have a fourth-root transform to help model fitness
 
 ```{r}
-model_formula = biomass ~ evc + elev + ppt
-trans <- transform(function (y) {y^(1/4)}, function (y) {y^4})
-BHF_spec <- specify(model_formula, domain_name = "evt", 
-                    model = "BHF", transform = trans)
+model_formula <- biomass ~ evc + elev + ppt
+trans <- transform(function(y) {
+  y^(1 / 4)
+}, function(y) {
+  y^4
+})
+BHF_spec <- specify(model_formula,
+  domain_name = "evt",
+  model = "BHF", transform = trans
+)
 FH_spec <- specify(model_formula, domain_name = "evt", model = "FH")
-ZI_spec <- specify(model_formula, domain_name = "evt", model = "BHF",
-                   transform = trans, model_stage = "zi")
+ZI_spec <- specify(model_formula,
+  domain_name = "evt", model = "BHF",
+  transform = trans, model_stage = "zi"
+)
 ```
 
 To facilitate fitting the FH, we will aggregate the data, with the population size as approximately 31 million:
 
 ```{r}
-agg_data = aggregate(
+agg_data <- aggregate(
   oregon_sample, "biomass", "evt", oregon_population,
   population_size = 31000000
 )
@@ -62,9 +70,13 @@ agg_data = aggregate(
 
 
 ```{r}
-BHF_fit = fit(BHF_spec, oregon_sample, engine = engine_rstanarm(), verbose = FALSE)
-FH_fit = fit(FH_spec, agg_data, verbose = FALSE)
-ZI_fit = fit(ZI_spec, oregon_sample, engine = engine_rstanarm(), verbose = FALSE)
+BHF_fit <- fit(
+  BHF_spec, oregon_sample, engine = engine_rstanarm(), verbose = FALSE
+)
+FH_fit <- fit(FH_spec, agg_data, verbose = FALSE)
+ZI_fit <- fit(
+  ZI_spec, oregon_sample, engine = engine_rstanarm(), verbose = FALSE
+)
 ```
 
 ```{r}
@@ -76,40 +88,44 @@ check(ZI_fit)
 The first model has poor fitness but we proceed anyway.
 
 ```{r}
-stats = c(
-  mean = mean, 
-  se = sd, 
-  lower_95_ci = lower_ci_quantile(0.95), 
+stats <- c(
+  mean = mean,
+  se = sd,
+  lower_95_ci = lower_ci_quantile(0.95),
   upper_95_ci = upper_ci_quantile(0.95)
 )
-BHF_preds = estimate(
+BHF_preds <- estimate(
   BHF_fit,
-  newdata = oregon_population, 
-  domain = "county", 
-  ndraws = 500, 
+  newdata = oregon_population,
+  domain = "county",
+  ndraws = 500,
   stat = stats
 )
-FH_preds = estimate(
-  FH_fit, 
-  domain = "county", 
-  ndraws = 500, 
+FH_preds <- estimate(
+  FH_fit,
+  domain = "county",
+  ndraws = 500,
   stat = stats
 )
-ZI_preds = estimate(
-  ZI_fit, 
-  newdata = oregon_population, 
-  domain = "county", 
-  ndraws = 500, 
+ZI_preds <- estimate(
+  ZI_fit,
+  newdata = oregon_population,
+  domain = "county",
+  ndraws = 500,
   stat = stats
 )
 ```
 
 The estimates can be joined and then viewed for any county:
 ```{r}
-comparisons <- left_join(left_join(
-  BHF_preds$preds, FH_preds$preds, suffix =c("_BHF", "_FH"),
-  by = "county"), 
-  ZI_preds$preds, suffix = c("", "_ZI"),
+comparisons <- left_join(
+  left_join(
+    BHF_preds$preds, FH_preds$preds,
+    suffix = c("_BHF", "_FH"),
+    by = "county"
+  ),
+  ZI_preds$preds,
+  suffix = c("", "_ZI"),
   by = "county"
 )
 

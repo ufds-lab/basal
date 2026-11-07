@@ -2,10 +2,10 @@
 #' @noRd
 generics::fit
 
-#' @export 
+#' @export
 brms::prior
 
-#' @export 
+#' @export
 rstanarm::cauchy
 
 #' @export
@@ -20,7 +20,7 @@ rstanarm::default_prior_intercept
 #' @export
 rstanarm::dirichlet
 
-#' @export 
+#' @export
 rstanarm::exponential
 
 #' @export

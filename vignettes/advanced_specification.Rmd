@@ -26,7 +26,7 @@ While a model may be specified quite easily, there can be a good amount of nuanc
 ```{r}
 bhf <- specify(
   biomass ~ evc + ppt,
-  model = "BHF", 
+  model = "BHF",
   domain = "evt"
 )
 ```
@@ -35,8 +35,8 @@ There are also several other ways to specify such a model. Certainly, this can b
 
 ```{r}
 bhf <- specify(
-  biomass ~ evc + ppt + (1 | evt), 
-  level = "unit", 
+  biomass ~ evc + ppt + (1 | evt),
+  level = "unit",
   model = "custom"
 )
 ```
@@ -59,13 +59,17 @@ A variable transformation is often useful for acceptable model fitness. This can
 
 ```{r}
 bhf <- specify(
-  model = "BHF", 
+  model = "BHF",
   auxiliary_variables = c("lfevc", "ppt"),
-  domain = "evt_class_cd", 
+  domain = "evt_class_cd",
   response = "biomass",
   transform = list(
-    transform = function (y) {y^(1/4)},
-    inv_transform = function (y) {y^4}
+    transform = function(y) {
+      y^(1 / 4)
+    },
+    inv_transform = function(y) {
+      y^4
+    }
   )
 )
 ```
@@ -75,16 +79,24 @@ Although sometimes some more flexibility may be required for creating variable t
 ```{r}
 # ignore checks entirely
 # NOT RECOMMENDED
-transform = transform(
-  function (y) {y^(1/4)},
-  function (y) {y^4},
+transform <- transform(
+  function(y) {
+    y^(1 / 4)
+  },
+  function(y) {
+    y^4
+  },
   override = TRUE
 )
 
 # other ranges
-transform = transform(
-  function (y) {y^(1/4)},
-  function (y) {y^4},
+transform <- transform(
+  function(y) {
+    y^(1 / 4)
+  },
+  function(y) {
+    y^4
+  },
   eval_grid = 0:5
 )
 ```
@@ -92,9 +104,13 @@ transform = transform(
 Ignoring checks is not recommended though as typos could create an invalid transformation. For example, the following variable transformation is not valid, as the transformation is equal to `function (y) {(y^1)/4}`, but this is not caught since `override = TRUE`.
 
 ```{r}
-transform_bad = transform(
-  function (y) {y^1/4},
-  function (y) {y^4},
+transform_bad <- transform(
+  function(y) {
+    y^1 / 4
+  },
+  function(y) {
+    y^4
+  },
   override = TRUE
 )
 ```
@@ -104,8 +120,8 @@ Regardless, these may be used in specify in place of an ad-hoc list:
 ```{r}
 bhf <- specify(
   biomass ~ evc + ppt,
-  model = "BHF", 
-  domain_name = "evt", 
+  model = "BHF",
+  domain_name = "evt",
   variable_transform = transform
 )
 ```
@@ -118,9 +134,9 @@ It also places the estimated variance in the column `[response]_se` where `[resp
 If, however, one wishes to compute direct estimates by hand, the estimated variance should be added as a column to both the training and population data, and the name should be passed to the `obs_variability` argument. Likewise, the direct estimates should be set as the response variable:
 
 ```{r}
-fh  <- specify(
+fh <- specify(
   DIRECT_ESTIMATE ~ evc + ppt,
-  model = "FH", 
+  model = "FH",
   domain_name = "evt",
   obs_var = "ESTIMATED_STANDARD_ERROR"
 )
@@ -133,7 +149,7 @@ A few other paramaters are discussed for completeness. First, the `family` funct
 ```{r}
 bhf_exp <- specify(
   biomass ~ evc + ppt,
-  model = "BHF", 
+  model = "BHF",
   domain_name = "evt",
   family = brms::exponential()
 )
@@ -161,8 +177,10 @@ But if the model form should change, a list of the arguments may be provided to 
 ```{r}
 # change the formula
 specify(
-  c(biomass ~ evc + ppt,
-    biomass ~ evc),
+  c(
+    biomass ~ evc + ppt,
+    biomass ~ evc
+  ),
   domain_name = "evt",
   model = "BHF",
   model_stage = "zi"
@@ -202,8 +220,8 @@ If the response is provided for the logistic model though, when the two-stage mo
 # Domain-Residual Variances
 
 ```{r}
-n = 20
-data = data.frame(
+n <- 20
+data <- data.frame(
   y = c(rnorm(n), rnorm(n, 0, 10), rnorm(n, 0, 100)),
   id = rep(c("A", "B", "C"), each = n)
 )
@@ -212,10 +230,12 @@ data = data.frame(
 Consider the linear regression to predict the response of `y` in the fake data above:
 
 ```{r}
-lm = lm(data$y ~ data$id)
+lm <- lm(data$y ~ data$id)
 ggplot(mapping = aes(y = lm$residuals, x = data$id)) +
   geom_boxplot() +
-  geom_hline(aes(color = "Estimated SD", yintercept = c(-1,1) * sd(lm$residuals)))
+  geom_hline(aes(
+    color = "Estimated SD", yintercept = c(-1, 1) * sd(lm$residuals)
+  ))
 ```
 
 The residuls have nonequal variance, or heteroschedasticity. A common solution is to estimate a variance parameter for each group. In this case, the model will describe the data better, and therefore predictions on any group will have a more accurate variance estimate.

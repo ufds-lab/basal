@@ -30,11 +30,11 @@ To assist with stability and reduce variability of priors, we will scale the `el
 ```{r}
 # sapply(oregon_sample, sd) # find variables with large variances
 
-oregon_population$elev = oregon_population$elev/sd(oregon_sample$elev)
-oregon_sample$elev = oregon_sample$elev/sd(oregon_sample$elev)
+oregon_population$elev <- oregon_population$elev / sd(oregon_sample$elev)
+oregon_sample$elev <- oregon_sample$elev / sd(oregon_sample$elev)
 
-oregon_population$ppt = oregon_population$ppt/sd(oregon_sample$ppt)
-oregon_sample$ppt = oregon_sample$ppt/sd(oregon_sample$ppt)
+oregon_population$ppt <- oregon_population$ppt / sd(oregon_sample$ppt)
+oregon_sample$ppt <- oregon_sample$ppt / sd(oregon_sample$ppt)
 ```
 
 
@@ -78,10 +78,10 @@ FH_spec <- specify(
 The astute reader will note that an area-level model must use *direct estimates* of the response, but we have specified this as though it uses the same data. This is not so, and area-level models are accompanied by the `aggregate()` function, which computes the direct estimators on the observed data and adds the estimated variability to the population data. To do this, we use
 
 ```{r}
-agg_data = aggregate(
-  data = oregon_sample, 
-  response = "biomass", 
-  domain_name = "evt", 
+agg_data <- aggregate(
+  data = oregon_sample,
+  response = "biomass",
+  domain_name = "evt",
   population_data = oregon_population,
   population_size = 31000000 # from the documentation ?basal::oregon_population
 )
@@ -133,9 +133,13 @@ In general, it is easier to see if posterior predictives agree with data using t
 Now we will try using (1) a variable transform, and (2) estimate on forested (nonzero) plots. The former is a change to the specification, while the can be acheived by changing the data we fit the model with. We will talk about another specification for estimating on zero-inflated data shortly.
 
 ```{r}
-fourth_root_trans = transform(
-  function (y) {y^(1/4)},
-  function (y) {y^4}
+fourth_root_trans <- transform(
+  function(y) {
+    y^(1 / 4)
+  },
+  function(y) {
+    y^4
+  }
 )
 
 BHF_spec_trans <- specify(
@@ -149,9 +153,9 @@ BHF_spec_trans <- specify(
 And we can then fit a model and check the posterior predictives:
 
 ```{r, cache = TRUE, results = "hide"}
-BHF_fit_trans = fit(
+BHF_fit_trans <- fit(
   BHF_spec_trans,
-  oregon_sample[oregon_sample$biomass != 0,],
+  oregon_sample[oregon_sample$biomass != 0, ],
   engine = engine_rstanarm(),
   verbose = FALSE
 )
@@ -202,9 +206,11 @@ estimate(
   BHF_fit_trans,
   oregon_population,
   domain = NULL,
-  stat = c(mean = mean, se = sd, 
-           lower_80_ci = lower_ci_quantile(0.8),
-           upper_80_ci = upper_ci_quantile(0.8))
+  stat = c(
+    mean = mean, se = sd,
+    lower_80_ci = lower_ci_quantile(0.8),
+    upper_80_ci = upper_ci_quantile(0.8)
+  )
 )
 ```
 
@@ -252,8 +258,10 @@ This will fit a logistic model of the form of a BHF with similar variables (spec
 
 ```{r}
 specify(
-  c(biomass ~ evc + ppt,
-    biomass ~ evc),
+  c(
+    biomass ~ evc + ppt,
+    biomass ~ evc
+  ),
   model = "BHF",
   domain_name = "evt",
   transform = fourth_root_trans,
@@ -304,11 +312,11 @@ zi_BHF <- specify(
 Then this may be estimated as normal.
 
 ```{r, cache = TRUE, results = "hide"}
-zi_fit = fit(
+zi_fit <- fit(
   zi_BHF,
   data = oregon_sample,
   engine = engine_rstanarm(),
-  verbose = F
+  verbose = FALSE
 )
 ```
 

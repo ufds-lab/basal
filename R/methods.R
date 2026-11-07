@@ -1,30 +1,33 @@
 #' @exportS3Method base::print
-print.basal_spec <- function(x, suppress_header = F, ...) {
-  spec = x
-  p = function(...) {writeLines(noquote(paste0(...)))}
+print.basal_spec <- function(x, suppress_header = FALSE, ...) {
+  spec <- x
+  p <- function(...) {
+    writeLines(noquote(paste0(...)))
+  }
   if (!suppress_header) {
     p("**BASAL model specification:**")
   }
   if (spec$model_stage == "single") {
-    addition = ""
+    addition <- ""
   } else if (spec$model_stage == "zi") {
-    addition = "zero-inflated "
+    addition <- "zero-inflated "
   } else {
     stop("unknown ")
   }
   if (spec$model_type == "custom") {
-    p(paste0(addition, spec$model_type, " ", spec$level, "-level model of the form"))
+    p(paste0(addition, spec$model_type, " ", spec$level,
+             "-level model of the form"))
   } else {
     p(addition, spec$model_type, " model of the form")
   }
   if (!is.null(spec$default_model_data$response_name) ||
-      !is.null(spec$domain_name) ||
-      !is.null(spec$default_model_data$auxiliary_variables)) {
-    more_args = T
+        !is.null(spec$domain_name) ||
+        !is.null(spec$default_model_data$auxiliary_variables)) {
+    more_args <- TRUE
   } else {
-    more_args = F
+    more_args <- FALSE
   }
-  
+
   if (!is.null(spec$formula)) {
     print(f)
     if (more_args) {
@@ -38,17 +41,18 @@ print.basal_spec <- function(x, suppress_header = F, ...) {
     p("Response: ", spec$default_model_data$response_name)
   }
   if (!is.null(spec$default_model_data$auxiliary_variables)) {
-    p("Auxiliary variables: ", paste0(spec$default_model_data$auxiliary_variables, collapse = ", "))
+    p("Auxiliary variables: ",
+      paste0(spec$default_model_data$auxiliary_variables, collapse = ", "))
   }
-  
+
   if (!is.null(spec$DRV)) {
     p("and residual variance estimation")
   }
-  
+
   if (spec$model_stage == "zi" && !is.null(spec$second_stage_spec)) {
     p("")
     p("**and second-stage logistic specification:**")
-    print.basal_spec(spec$second_stage_spec, suppress_header = T)
+    print.basal_spec(spec$second_stage_spec, suppress_header = TRUE)
   }
 }
 
@@ -60,8 +64,10 @@ print.basal_fit <- function(x, ...) {
 #' @exportS3Method graphics::pairs
 pairs.basal_fit <- function(x, ...) {
   data <- x$data
-  data <- data[,unique(c(x$params$response, unlist(x$params$predictors)))]
-  data <- data[,sapply(data[1,], function (x) {is.numeric(x) || is.factor(x)})]
+  data <- data[, unique(c(x$params$response, unlist(x$params$predictors)))]
+  data <- data[, sapply(data[1, ], function(x) {
+    is.numeric(x) || is.factor(x)
+  })]
   graphics::pairs(data)
 }
 
@@ -78,7 +84,8 @@ print.basal_check <- function(x, ...) {
 
 #' @exportS3Method graphics::pairs
 pairs.basal_check <- function(x, ...) {
-  stop("No method for basal_check with pairs(). Use pairs() with an object of basal_fit.")
+  stop("No method for basal_check with pairs(). ",
+       "Use pairs() with an object of basal_fit.")
 }
 
 #' @exportS3Method base::summary

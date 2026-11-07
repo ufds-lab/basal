@@ -1,40 +1,40 @@
 #' @title The \code{brms} engine
 #' @description
-#' The \code{brms} model allows for fitting most standard models. This includes unit- 
-#' and area-level models, with most standard families in GLMs. It also permits
-#' Domain-residual-variances.
-#' 
+#' The \code{brms} model allows for fitting most standard models. This includes
+#' unit- and area-level models, with most standard families in GLMs. It also
+#' permits domain-residual-variances (DRVs).
+#'
 #' @return Object of class \code{basal_engine}
 #' @export
 engine_brms <- function() {
   engine <- list()
-  engine$priority = 1
+  engine$priority <- 1
   engine$name <- "brms"
-  
+
   engine$formula_types <- c("formula", "brmsformula")
   engine$level <- c("unit", "area")
   engine$model <- c("custom", "BHF", "FH")
-  engine$model_stage = c("single", "zi")
-  
+  engine$model_stage <- c("single", "zi")
+
   engine$glm_families <- c(
     "gaussian", "bernoulli", "exponential"
   )
-  
+
   engine$DRV <- TRUE
-  
+
   engine$logistic_family <- brms::bernoulli()
-  
+
   class(engine) <- "basal_engine"
-  return (engine)
+  return(engine)
 }
 
 #' Produce a second formula to model DRVs for brms
 #' @noRd
-make_brms_DRV_addition <- function (spec, response) {
+make_brms_DRV_addition <- function(spec, response) {
   if (!is.null(spec$DRV)) {
-    return (formula(paste0("sigma ~ (1 | ", spec$domain_name, ")")))
+    return(formula(paste0("sigma ~ (1 | ", spec$domain_name, ")")))
   } else {
-    return (NULL)
+    return(NULL)
   }
 }
 
@@ -42,29 +42,29 @@ make_brms_DRV_addition <- function (spec, response) {
 #' a copy of bhf for now, but may change as we add more
 #' @exportS3Method basal::build_bhf_formula
 #' @noRd
-build_bhf_formula.brms_spec <- function (spec, response, ...) {
-  formula = build_bhf_formula.default(spec, response, ...)
-  
-  DRV_addition = make_brms_DRV_addition(spec, response)
-  
+build_bhf_formula.brms_spec <- function(spec, response, ...) {
+  formula <- build_bhf_formula.default(spec, response, ...)
+
+  DRV_addition <- make_brms_DRV_addition(spec, response)
+
   if (!is.null(DRV_addition)) {
-    return (brms::brmsformula(formula, DRV_addition))
+    return(brms::brmsformula(formula, DRV_addition))
   } else {
-    return (brms::brmsformula(formula))
+    return(brms::brmsformula(formula))
   }
 }
 
 #' Build a formula for a Fay-Herriot model
 #' @exportS3Method basal::build_fh_formula
 #' @noRd
-build_fh_formula.brms_spec <- function (spec, response, ...) {
+build_fh_formula.brms_spec <- function(spec, response, ...) {
   formula <- build_bhf_formula(spec, response, ...)
   formula$formula <- stats::update(
     formula$formula,
     stats::reformulate(".", ". | se(DIR_MEAN_SE)")
   )
-  
-  return (formula)
+
+  return(formula)
 }
 
 #' Build a formula for a custom model
@@ -80,16 +80,16 @@ build_custom_formula.brms_spec <- function(spec, response, ...) {
   } else {
     formula <- brms::brmsformula(formula)
   }
-  
+
   if (spec$level == "unit") {
-    return (formula)
+    return(formula)
   } else if (spec$level == "area") {
     formula$formula <- stats::update(
       formula$formula,
       stats::reformulate(".", ". | se(DIR_MEAN_SE)")
-    ) 
-    
-    return (formula)
+    )
+
+    return(formula)
   }
 }
 
@@ -97,30 +97,33 @@ build_custom_formula.brms_spec <- function(spec, response, ...) {
 #' @exportS3Method basal::fit_basal_model
 #' @noRd
 fit_basal_model.brms_spec <- function(
-    spec,
-    formula,
-    data,
-    priors,
-    family,
-    chains,
-    iter,
-    burn_in,
-    seed,
-    thin,
-    ncores,
-    nthreads,
-    ...
+  spec,
+  formula,
+  data,
+  priors,
+  family,
+  chains,
+  iter,
+  burn_in,
+  seed,
+  thin,
+  ncores,
+  nthreads,
+  ...
 ) {
   if (!is.null(priors) && length(priors) > 1) {
-    stop("Can't assign multiple prior objects with brms, concatenate them with ",
-         "c(prior(...), prior(...), ..., prior(...))")
+    stop(
+      "Can't assign multiple prior objects with brms, concatenate them with ",
+      "c(prior(...), prior(...), ..., prior(...))"
+    )
   } else if (identical(priors, list())) {
     priors <- brms::default_prior(
-      formula, data, family = family
+      formula, data,
+      family = family
     )
   }
-  
-  
+
+
   brm_args <- list(
     formula = formula,
     data = data,
@@ -133,7 +136,7 @@ fit_basal_model.brms_spec <- function(
     cores = ncores,
     threads = nthreads
   )
-  
+
   if (!is.null(seed)) {
     brm_args$seed <- seed
   }
@@ -146,21 +149,21 @@ fit_basal_model.brms_spec <- function(
       paste(intersect_args, collapse = ", "), "."
     )
   }
-  
+
   brm_args <- c(brm_args, extra_args)
   raw_model <- suppressMessages(
     do.call(brms::brm, brm_args)
   )
-  return (raw_model)
+  return(raw_model)
 }
 
 #' Get posterior predictions
 #' @noRd
-#' @exportS3Method basal::get_posterior_predict 
-get_posterior_predict.brms_fit <- function (
-    fit, model, draws, newdata, ...
+#' @exportS3Method basal::get_posterior_predict
+get_posterior_predict.brms_fit <- function(
+  fit, model, draws, newdata, ...
 ) {
-  return (
+  return(
     rstantools::posterior_predict(
       model,
       ndraws = draws,
@@ -174,13 +177,13 @@ get_posterior_predict.brms_fit <- function (
 #' @noRd
 #' @exportS3Method basal::get_posterior_epred
 get_posterior_epred.brms_fit <- function(
-    fit,
-    newdata,
-    ndraws,
-    allow_new_levels = FALSE,
-    ...
+  fit,
+  newdata,
+  ndraws,
+  allow_new_levels = FALSE,
+  ...
 ) {
-  return (
+  return(
     rstantools::posterior_epred(
       fit$model,
       newdata = newdata,
@@ -191,24 +194,23 @@ get_posterior_epred.brms_fit <- function(
   )
 }
 
-#' Call `pp_check()` 
+#' Call `pp_check()`
 #' @exportS3Method basal::get_model_pp_check
 #' @noRd
-get_model_pp_check.brms_fit <- function (fit, model, nreps, ...) {
-  return (bayesplot::pp_check(model, ndraws = nreps, ...))
+get_model_pp_check.brms_fit <- function(fit, model, nreps, ...) {
+  return(bayesplot::pp_check(model, ndraws = nreps, ...))
 }
 
 #' Get rhat value for model parameters
 #' @noRd
 #' @exportS3Method basal::get_model_rhat
-get_model_rhat.brms_fit <- function (fit, ...) {
-  return (brms::rhat(fit$model, ...))
+get_model_rhat.brms_fit <- function(fit, ...) {
+  return(brms::rhat(fit$model, ...))
 }
 
 #' Get effective sample size ratio for model parameters
 #' @noRd
 #' @exportS3Method basal::get_model_neff_ratio
-get_model_neff_ratio.brms_fit <- function (fit, ...) {
-  return (brms::neff_ratio(fit$model, ...))
+get_model_neff_ratio.brms_fit <- function(fit, ...) {
+  return(brms::neff_ratio(fit$model, ...))
 }
-

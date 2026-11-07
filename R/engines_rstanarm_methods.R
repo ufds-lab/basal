@@ -1,48 +1,47 @@
 #' @title The \code{rstanarm} engine
 #' @description
-#' The \code{rstanarm} engine allows for fitting standard unit-level models. It allows
-#' both custom and BHF models.
-#' 
+#' The \code{rstanarm} engine allows for fitting standard unit-level models.
+#' It allows both custom and BHF models.
+#'
 #' @return Object of class \code{basal_engine}.
 #' @export
 engine_rstanarm <- function() {
   engine <- list()
-  engine$priority = 2
+  engine$priority <- 2
   engine$name <- "rstanarm"
-  
+
   engine$formula_types <- c("formula")
   engine$level <- c("unit")
   engine$model <- c("custom", "BHF")
   engine$model_stage <- c("single", "zi")
-  
+
   engine$glm_families <- c(
     "gaussian", "binomial", "exponential", "poisson", "neg_binomial_2"
   )
   engine$logistic_family <- stats::binomial()
-  
+
   class(engine) <- "basal_engine"
-  return (engine)
+  return(engine)
 }
 
 #' Fit a BASAL model Using `rstanarm`
 #' @exportS3Method basal::fit_basal_model
 #' @noRd
 fit_basal_model.rstanarm_spec <- function(
-    spec,
-    formula,
-    data,
-    priors,
-    family,
-    chains,
-    iter,
-    burn_in,
-    seed,
-    thin,
-    ncores,
-    nthreads,
-    ...
+  spec,
+  formula,
+  data,
+  priors,
+  family,
+  chains,
+  iter,
+  burn_in,
+  seed,
+  thin,
+  ncores,
+  nthreads,
+  ...
 ) {
-  
   model_args <- list(
     formula = formula,
     data = data,
@@ -53,15 +52,14 @@ fit_basal_model.rstanarm_spec <- function(
     warmup = burn_in,
     cores = ncores
   )
-  
+
   names <- names(model_args)
   if (!is.null(priors) && !identical(priors, list())) {
     model_args <- union(model_args, priors)
     names <- c(names, "priors")
     names(model_args) <- names
-    
   }
-  
+
   if (!is.null(seed)) {
     model_args$seed <- seed
     names <- c(names, "seed")
@@ -75,10 +73,10 @@ fit_basal_model.rstanarm_spec <- function(
       paste(intersect_args, collapse = ", "), "."
     )
   }
-  
+
   full_model_args <- c(model_args, extra_args)
   raw_model <- suppressMessages(
     do.call(rstanarm::stan_glmer, full_model_args)
   )
-  return (raw_model)
+  return(raw_model)
 }
