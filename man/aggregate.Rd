@@ -14,7 +14,7 @@ aggregate(
   estimate = "mean",
   method = "HT",
   PS_strata = NULL,
-  mase_messages = F,
+  mase_messages = FALSE,
   ...
 )
 }
@@ -23,19 +23,21 @@ aggregate(
 
 \item{response}{Variable to estimate.}
 
-\item{domain_name}{The name of the domain to compute direct estimators across.}
+\item{domain_name}{The name of the domain to compute direct
+estimators across.}
 
 \item{population_data}{a dataframe of the population data, used for computing
 aggregates of auxiliary variables.}
 
-\item{population_size}{"A numeric value of the population size. If \code{NULL}, it
-is estimated with the sum of the inverse of the [\code{sample_weights}]"
-(\code{\link[mase:horvitzThompson]{mase::horvitzThompson()}}).
+\item{population_size}{"A numeric value of the population size. If
+\code{NULL}, it is estimated with the sum of the inverse of the
+[\code{sample_weights}]" (\code{\link[mase:horvitzThompson]{mase::horvitzThompson()}}).
 If both \code{population_size} and \code{sample_weights} are \code{NULL},
-\code{population_size} is taken to be the number of rows in \code{population_data}.}
+\code{population_size} is taken to be the number of rows in
+\code{population_data}.}
 
-\item{sample_weights}{"A numeric vector of inclusion probabilities for each sampled
-unit in \code{data}." (\code{\link[mase:horvitzThompson]{mase::horvitzThompson()}}).}
+\item{sample_weights}{"A numeric vector of inclusion probabilities for each
+sampled unit in \code{data}." (\code{\link[mase:horvitzThompson]{mase::horvitzThompson()}}).}
 
 \item{estimate}{Type of estimate; supported for values "mean" and "sum".}
 
@@ -45,8 +47,9 @@ Horvitz-Thompson and "PS" for Poast-Stratified.}
 \item{PS_strata}{name of strata used for post-stratification; ignored if
 method isn't "PS".}
 
-\item{mase_messages}{logical. If true, prints all messages from \code{mase}. Disabled
-by default to avoid repeated messages from repeated calls to \code{mase} functions.}
+\item{mase_messages}{logical. If true, prints all messages from \code{mase}.
+Disabled by default to avoid repeated messages from repeated calls to
+\code{mase} functions.}
 
 \item{...}{to pass extra parameters to \code{mase::horvitzThompson} or
 \code{mase::postStrat}. See Details.}
@@ -57,18 +60,18 @@ They each have an additional column response_se, where response is replaced
 with the value for \code{response}.
 
 In addition, in \code{aggregate_obs}, the column for \code{response}
-is replaced with the direct estimate of the response (but using the same name).
-Furthermore, all the other columns are replaced with averages (across \code{domain_name})
-of the columns in the population data when they are numeric or a modal
-response when they are categorical.
+is replaced with the direct estimate of the response (but using the same
+name). Furthermore, all the other columns are replaced with averages
+(across \code{domain_name}) of the columns in the population data when they
+are numeric or a modal response when they are categorical.
 }
 \description{
 Apply direct estimators to different domains using \code{mase} as a backend.
 }
 \details{
-The \code{...} parameter can be used to pass additional arguments to the backend
-used to compute the direct estimates. The arguments being used are, for
-\code{mase::horvitzThompson}:
+The \code{...} parameter can be used to pass additional arguments to the
+backend used to compute the direct estimates. The arguments being used are,
+for \code{mase::horvitzThompson}:
 \itemize{
 \item \code{y},
 \item \code{pi},
@@ -91,22 +94,27 @@ passed to \code{...}.
 }
 \examples{
 # HT estimator
-aggregate(oregon_sample, "biomass",
-          "county", oregon_population)
+aggregate(
+  oregon_sample, "biomass",
+  "county", oregon_population
+)
 
-# PS estimator 
-aggregate(oregon_sample, "biomass", 
-          "county", oregon_population, 
-          PS_strata = "county", method = "PS")
-     
+# PS estimator
+aggregate(oregon_sample, "biomass",
+  "county", oregon_population,
+  PS_strata = "county", method = "PS"
+)
+
 # use population size
-aggregate(oregon_sample, "biomass", "county", 
-          population_size = 1e4, oregon_population)
-               
+aggregate(oregon_sample, "biomass", "county",
+  population_size = 1e4, oregon_population
+)
+
 # use sampling weights
-aggregate(oregon_sample, "biomass", "county", 
-          sample_weights = rbeta(nrow(oregon_sample),1,1), 
-          oregon_population)
+aggregate(oregon_sample, "biomass", "county",
+  sample_weights = rbeta(nrow(oregon_sample), 1, 1),
+  oregon_population
+)
 }
 \seealso{
 \code{\link[mase:horvitzThompson]{mase::horvitzThompson()}}, \code{\link[mase:postStrat]{mase::postStrat()}}

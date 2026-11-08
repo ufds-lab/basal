@@ -8,22 +8,26 @@ Authors@R:
 	    role = c("aut", "cre"),
 	    email = "lrussell6204@gmail.com",
 	    comment = c(ORCID = "0009-0005-6426-6355")),
-	person(given = "Wystan",
+	person(given = "Yanchen",
 	    family = "Wu",
 	    role = "aut"),
 	person(given = "Grayson W.",
 	    family = "White",
-	    role = "aut"),
+	    role = "aut",
+	    comment = c(ORCID = "0000-0003-4993-2792")),
 	person(given = "Kelly S.",
 	    family = "McConville",
 	    role = "aut"),
 	person(given = "George",
 	    family = "Gaines",
-	    role = "aut"))
+	    role = "aut")
+    )
 Description: Provides a flexible but simplified pipeline for creating Bayesian models and estimating posterior point statistics with a focus on small area estimation.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
+URL: https://github.com/ufds-lab/basal
+BugReports: https://github.com/ufds-lab/basal/issues
 Imports: 
     brms,
     dplyr,
@@ -35,7 +39,6 @@ Imports:
     rstanarm,
     rstantools,
     generics,
-    rlang
 Suggests: 
     knitr,
     rmarkdown,

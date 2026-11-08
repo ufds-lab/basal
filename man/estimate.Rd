@@ -7,35 +7,61 @@
 estimate(
   fit,
   newdata = NULL,
-  domain = "BASAL_INHERIT",
+  domain_name = "BASAL_INHERIT",
   stat = c(mean = mean, var = var, lower_95_ci = lower_ci_quantile(), upper_95_ci =
     upper_ci_quantile()),
   aggregation_statistic = c(mean = mean),
   ndraws = 1000,
   max_preds = "default",
-  seed = NULL
+  seed = NULL,
+  ...
 )
 }
 \arguments{
-\item{fit}{object of type \code{basal_fit}.}
+\item{fit}{Object of type \code{basal_fit}.}
 
-\item{newdata}{data to predict data on. If \code{NULL}, fit on training data.}
+\item{newdata}{Data to predict data on. If \code{NULL}, fit on training data.}
 
-\item{domain}{(vector of) names of areas to aggregate estimates on. If \code{NULL},
-aggregate all the data together.}
+\item{domain_name}{(vector of) names of areas to aggregate estimates on.
+If \code{NULL}, aggregate all the data together.}
 
 \item{stat}{Named vector of function(s) to apply to posterior predictions.}
 
-\item{aggregation_statistic}{Statistic to conduct inference on. Statistic will
-be computed over population data, stratifying by \code{domain}}
+\item{aggregation_statistic}{Statistic to conduct inference on. Statistic
+will be computed over population data, stratifying by \code{domain}.}
 
-\item{ndraws}{number of draws from the posterior predictive distribution.}
+\item{ndraws}{Number of draws from the posterior predictive distribution.}
 
-\item{max_preds}{maximum number of points to make predictions on. Capped to
-avoid R session crashing. A value of \code{NULL} or \code{Inf} will predict on all.}
+\item{max_preds}{Maximum number of points to make predictions on. Capped to
+avoid R session crashing. A value of \code{NULL} or \code{Inf} will predict
+on all.}
 
 \item{seed}{The seed for random number generation in posterior prediction.}
+
+\item{...}{For future arguments; ignored for now.}
+}
+\value{
+An object of type \code{basal_estimate}.
 }
 \description{
 Posterior estimation of summary statistics
+}
+\examples{
+\dontrun{
+transform <- transform(
+  function(y) {y^(1/3)},
+  function(y) {y^3}
+)
+
+plot_spec_bhf <- specify(
+  biomass ~ evc + ppt + (1 | evt),
+  level = "unit",
+  transform = transform
+)
+
+fit <- fit(plot_spec_bhf, oregon_sample)
+estimate(fit, oregon_population, domain_name = "county")
+}
+
+
 }

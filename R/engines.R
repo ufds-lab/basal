@@ -67,6 +67,26 @@ validate_engine <- function(engine, spec) {
   return(spec)
 }
 
+select_engine <- function(spec) {
+  best_engine <- NULL
+  best_engine_val <- -Inf
+  for (engine in official_engines) {
+    t <- try(validate_engine(engine, spec), silent = TRUE)
+    if (!inherits(t, "try-error")) {
+      if (engine$priority > best_engine_val) {
+        best_engine <- engine
+        best_engine_val <- engine$priority
+      }
+    }
+  }
+  if (is.null(best_engine)) {
+    stop("No official engine can support this model. ",
+         "You can specify a custom engine with the `engine` argument. ",
+         "Otherwise the model must be re-specified.")
+  }
+  return (best_engine)
+}
+
 #' Build a formula for a Fay-Herriot model
 #' @exportS3Method basal::build_fh_formula
 #' @noRd

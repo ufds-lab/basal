@@ -1,24 +1,29 @@
 ---
-title: "case study"
+title: "Case Study"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{workflow}
+  %\VignetteIndexEntry{Case Study}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 
 ```{r, include = FALSE}
+# from paleo13 on stack overflow
+# https://stackoverflow.com/questions/28961431/computationally-heavy-r-vignettes
+is_check <- ("CheckExEnv" %in% search()) || any(c("_R_CHECK_TIMINGS_",
+             "_R_CHECK_LICENSE_") %in% names(Sys.getenv()))
+
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  cache = TRUE
+  cache = !is_check,
+  eval = !is_check
 )
-```
 
-```{r setup}
 library(basal)
+library(dplyr)
 
-data("oregon_population", "oregon_sample")
+set.seed(1)
 ```
 
 # Data Description
@@ -28,6 +33,7 @@ We use the public oregon population and oregon sample data from the FIA. These h
 To assist with stability and reduce variability of priors, we will scale the `elev` and the `ppt` variables to have a smaller variance.
 
 ```{r}
+data("oregon_population", "oregon_sample")
 # sapply(oregon_sample, sd) # find variables with large variances
 
 oregon_population$elev <- oregon_population$elev / sd(oregon_sample$elev)
@@ -42,14 +48,13 @@ oregon_sample$ppt <- oregon_sample$ppt / sd(oregon_sample$ppt)
 We propose three models: A normal BHF, a FH, and a zero-inflated BHF. The two BHFs will have a fourth-root transform to help model fitness
 
 ```{r}
-model_formula <- biomass ~ evc + elev + ppt
-trans <- transform(function(y) {
-  y^(1 / 4)
-}, function(y) {
-  y^4
-})
-BHF_spec <- specify(model_formula,
-  domain_name = "evt",
+model_formula <- biomass ~ evc + ppt
+trans <- transform(
+  function(y) {y^(1/4)},
+  function(y) {y^4}
+)
+BHF_spec <- specify(
+  model_formula, domain_name = "evt",
   model = "BHF", transform = trans
 )
 FH_spec <- specify(model_formula, domain_name = "evt", model = "FH")
@@ -70,13 +75,9 @@ agg_data <- aggregate(
 
 
 ```{r}
-BHF_fit <- fit(
-  BHF_spec, oregon_sample, engine = engine_rstanarm(), verbose = FALSE
-)
+BHF_fit <- fit(BHF_spec, oregon_sample, verbose = FALSE)
 FH_fit <- fit(FH_spec, agg_data, verbose = FALSE)
-ZI_fit <- fit(
-  ZI_spec, oregon_sample, engine = engine_rstanarm(), verbose = FALSE
-)
+ZI_fit <- fit(ZI_spec, oregon_sample, verbose = FALSE)
 ```
 
 ```{r}
@@ -132,6 +133,5 @@ comparisons <- left_join(
 head(comparisons)
 ```
 
-
-
+We observed some issues with model fitting here, as evidenced by some of the warnings. These may be improved via prior specification, other variable transforms, other model specifications, and other covariates.
 

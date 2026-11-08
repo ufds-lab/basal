@@ -12,13 +12,12 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
 )
-```
 
-```{r setup}
 library(basal)
 library(ggplot2)
-```
 
+set.seed(1)
+```
 
 # Details of `specify()` arguments
 While a model may be specified quite easily, there can be a good amount of nuance in a specification. We will start with a BHF and expand outwards into increasingly complex models. A basic BHF can be specified like below with `model = "BHF"`.
@@ -64,12 +63,8 @@ bhf <- specify(
   domain = "evt_class_cd",
   response = "biomass",
   transform = list(
-    transform = function(y) {
-      y^(1 / 4)
-    },
-    inv_transform = function(y) {
-      y^4
-    }
+    variable_transform = function(y) {y^(1/4)},
+    inv_transform = function(y) {y^4}
   )
 )
 ```
@@ -80,23 +75,15 @@ Although sometimes some more flexibility may be required for creating variable t
 # ignore checks entirely
 # NOT RECOMMENDED
 transform <- transform(
-  function(y) {
-    y^(1 / 4)
-  },
-  function(y) {
-    y^4
-  },
+  function(y) {y^(1/4)},
+  function(y) {y^4},
   override = TRUE
 )
 
 # other ranges
 transform <- transform(
-  function(y) {
-    y^(1 / 4)
-  },
-  function(y) {
-    y^4
-  },
+  function(y) {y^(1/4)},
+  function(y) {y^4},
   eval_grid = 0:5
 )
 ```
@@ -105,12 +92,8 @@ Ignoring checks is not recommended though as typos could create an invalid trans
 
 ```{r}
 transform_bad <- transform(
-  function(y) {
-    y^1 / 4
-  },
-  function(y) {
-    y^4
-  },
+  function(y) {y^1/4},
+  function(y) {y^4},
   override = TRUE
 )
 ```

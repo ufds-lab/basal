@@ -18,33 +18,37 @@ specify(
 )
 }
 \arguments{
-\item{formula}{Formula for a model of type \code{model = "custom"}. This should be
-the standard form of R mixed effect models. e.g., \code{y ~ x1 + (1 | id) + (x2 | county)}.}
+\item{formula}{Formula for a model of type \code{model = "custom"}.
+This should be the standard form of R mixed effect models.
+e.g., \code{y ~ x1 + (1 | id) + (x2 | county)}.}
 
 \item{domain_name}{Character string for stratification, representing
 the areas corresponding to random effects (e.g., \code{"county"}).}
 
 \item{model}{Character string targeting either user-defined structures or
-preset SAE models. Available choices include \code{"custom"}, \code{"FH"} (Fay-Herriot),
-and \code{"BHF"} (Battese-Harter-Fuller).  Defaults to \code{"custom"}. If \code{"FH"} or
-\code{"BHF"} are selected, \code{domain_name}, \code{response_name}, and \code{auxiliary_variable}
-may be provided for the respective parts of the model.}
+preset SAE models. Available choices include \code{"custom"}, \code{"FH"}
+(Fay-Herriot), and \code{"BHF"} (Battese-Harter-Fuller). Defaults to
+\code{"custom"}. If \code{"FH"} or \code{"BHF"} are selected,
+\code{domain_name}, \code{response_name}, and \code{auxiliary_variable} may
+be provided for the respective parts of the model.}
 
 \item{level}{Character string of value \code{"unit"} or \code{"area"}. Value
 \code{"unit"} denotes unit-level. Value \code{"area"} denotes aggregate data.}
 
-\item{response_name}{Character string specifying the column name of the target
-response. Only required for preset framework.}
+\item{response_name}{Character string specifying the column name of the
+target response. Only required for preset framework.}
 
-\item{auxiliary_variables}{Character vector containing names of covariates for
-the response. Defaults to using all other variables if unspecified in preset models.}
+\item{auxiliary_variables}{Character vector containing names of covariates
+for the response. Defaults to using all other variables if unspecified in
+preset models.}
 
-\item{transform}{Either an object of class \code{BASAL_transformation} from
+\item{transform}{Either an object of class \code{basal_transformation} from
 \code{\link[=transform]{transform()}} or a list specifying a variable transformation
-\code{transform} and inverse variable transformation \code{inv_transform}.}
+\code{variable_transform} and inverse variable transformation
+\code{inv_transform}.}
 
 \item{family}{GLM family type, specifying error distributions and links.
-See \link[stats:glm]{stats::glm} or \link[brms:brmsfamily]{brms::brmsfamily}}
+See \link[stats:glm]{stats::glm} or \link[brms:brmsfamily]{brms::brmsfamily}.}
 
 \item{model_stage}{What stage of model to fit. Currently supported for only
 "single" and "zi" stage models.}
@@ -63,19 +67,19 @@ options. These include
 
 \itemize{
 \item \code{obs_var}: Used to fix variance of observations across a
-domain for area-level models. Often used when direct estimators may be pre-computed in an
-area-level model. This must be a name representing a column in the data. If
-specifying an area-level model and this is not set, then this is set to
-\code{response_se} where \code{response} is the response of the model. This
-agrees with the output of \code{\link[=aggregate]{aggregate()}}.
+domain for area-level models. Often used when direct estimators may be
+pre-computed in an area-level model. This must be a name representing a
+column in the data. If specifying an area-level model and this is not set,
+then this is set to \code{response_se} where \code{response} is the response
+of the model. This agrees with the output of \code{\link[=aggregate]{aggregate()}}.
 \item \code{DRV}: A logical indicating whether a model should be specified
-with domain-specific residual variances. May not be supported by all engines.
+with domain residual variances. May not be supported by all engines.
 }
 }
 \examples{
-transform = transform(
-  function (y) {y^(1/3)},
-  function (y) {y^3}
+transform <- transform(
+  function(y) {y^(1/3)},
+  function(y) {y^3}
 )
 
 plot_spec_bhf <- specify(
@@ -87,7 +91,7 @@ plot_spec_bhf <- specify(
 # gives equivalent specification to above
 # this is not the same object though
 plot_spec_bhf <- specify(
-  obs_biomass ~ evc + evt, 
+  obs_biomass ~ evc + evt,
   domain_name = "county",
   model = "BHF",
   transform = transform
@@ -103,13 +107,13 @@ plot_spec_bhf <- specify(
 )
 
 # we can specify area level models with `model = "FH"`, or `level = "area"`
- FH_spec <- specify(
-   obs_biomass ~ evc + evt,
-   model = "FH",
-# level = "area", # can replace `model = "FH"` above
-   domain_name = "county"
- )
- 
+FH_spec <- specify(
+  obs_biomass ~ evc + evt,
+  model = "FH",
+  # level = "area", # can replace `model = "FH"` above
+  domain_name = "county"
+)
+
 # We allow zero-inflated models as well
 response_model <- specify(
   c(biomass ~ tcc, biomass ~ tcc + ppt),

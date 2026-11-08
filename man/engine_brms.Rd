@@ -10,7 +10,7 @@ engine_brms()
 Object of class \code{basal_engine}
 }
 \description{
-The \code{brms} model allows for fitting most standard models. This includes unit-
-and area-level models, with most standard families in GLMs. It also permits
-Domain-residual-variances.
+The \code{brms} model allows for fitting most standard models. This includes
+unit- and area-level models, with most standard families in GLMs. It also
+permits domain-residual-variances (DRVs).
 }

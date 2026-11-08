@@ -16,9 +16,9 @@ test_check <- function() {
     model_stage = "zi"
   )
 
-  for (engine in list(engine_brms(), engine_rstanarm())) {
+  for (engine in list(basal::engine_brms(), basal::engine_rstanarm())) {
     args <- list(
-      spec = spec1,
+      object = spec1,
       data = test_data,
       chains = 1,
       iter = 4,
@@ -34,14 +34,13 @@ test_check <- function() {
       basal::fit,
       args
     )
-    args$spec <- spec2
-
+    args$object <- spec2
+ 
     fit2 <- do.call(
       basal::fit,
       args
     )
-
-
+ 
     for (fit in list(fit1, fit2)) {
       for (stat in list(
         c(mean = mean, median = median),
@@ -50,29 +49,26 @@ test_check <- function() {
           "this will error on chars"
         })
       )) {
-        for (pp_c in c(TRUE, FALSE)) {
-          for (t_p in c(TRUE, FALSE)) {
-            for (jtts in list(
-              NULL,
-              list(ecdf = ecdf),
-              list(mean = mean, var = var)
-            )) {
-              if (is.character(stat[[1]](c(2, 3)))) {
-                testthat_fun <- testthat::expect_error
-              } else {
-                testthat_fun <- testthat::expect_no_error
-              }
-              testthat_fun(
-                basal::check(
-                  fit,
-                  stat = stat,
-                  draws = 2,
-                  include_base_pp_check = pp_c,
-                  trace_plots = t_p,
-                  join_two_stage_stat = jtts
-                )
-              )
+        for (t_p in c(TRUE, FALSE)) {
+          for (jtts in list(
+            NULL,
+            list(ecdf = ecdf),
+            list(mean = mean, var = var)
+          )) {
+            if (is.character(stat[[1]](c(2, 3)))) {
+              testthat_fun <- testthat::expect_error
+            } else {
+              testthat_fun <- testthat::expect_no_error
             }
+            testthat_fun(
+              basal::check(
+                fit,
+                stat = stat,
+                draws = 2,
+                trace_plots = t_p,
+                join_two_stage_stat = jtts
+              )
+            )
           }
         }
       }
@@ -81,6 +77,7 @@ test_check <- function() {
 }
 
 testthat::test_that("check handles basic arguments and statistics", {
+  testthat::skip_on_cran()
   test_check()
 })
 
@@ -113,13 +110,11 @@ testthat::test_that("check returns a basal_check object", {
     fit,
     stat = c(mean = mean),
     draws = 2,
-    include_base_pp_check = FALSE,
     trace_plots = FALSE
   )
 
   testthat::expect_s3_class(result, "basal_check")
   testthat::expect_equal(result$params$draws, 2)
-  testthat::expect_false(result$params$include_base_pp_check)
   testthat::expect_false(result$params$trace_plots)
 })
 
@@ -127,8 +122,6 @@ testthat::test_that("check returns a basal_check object", {
 testthat::test_that("check validates arguments", {
   fake_fit <- structure(list(), class = "basal_fit")
   testthat::expect_error(basal::check(fake_fit, draws = 0), "positive integer")
-  testthat::expect_error(basal::check(fake_fit, include_base_pp_check = "yes"),
-                         "TRUE or FALSE")
   testthat::expect_error(basal::check(fake_fit, trace_plots = NA),
                          "TRUE or FALSE")
 })

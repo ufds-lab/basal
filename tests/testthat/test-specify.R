@@ -1,5 +1,3 @@
-source("utils.R")
-
 test_specify <- function() {
   args <- get_many_specs()
   sapply(args, function(l) {
@@ -8,18 +6,13 @@ test_specify <- function() {
     } else {
       test <- testthat::expect_no_error
     }
-    t <- test(
+    test(
       do.call(basal::specify, l$args)
-    ) |> try()
-    if (inherits(t, "try-error")) {
-      browser()
-    }
+    )
   })
 }
 
 testthat::test_that("specify handles argument combinations", {
-  testthat::skip_on_cran()
-
   test_specify()
 })
 

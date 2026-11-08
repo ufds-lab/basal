@@ -18,6 +18,5 @@
 #' @importFrom stats quantile
 #' @importFrom stats sd
 #' @importFrom stats var
-#' @importFrom rlang .data
 ## usethis namespace: end
 NULL

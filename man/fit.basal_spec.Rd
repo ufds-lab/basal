@@ -15,7 +15,7 @@
   burn_in = 1000,
   seed = NULL,
   thin = 2,
-  engine = engine_brms(),
+  engine = NULL,
   ncores = default_ncores(),
   nthreads = "default",
   verbose = TRUE,
@@ -23,31 +23,38 @@
 )
 }
 \arguments{
-\item{object}{An object of class \code{basal_spec} containing initialized metadata states.}
+\item{object}{An object of class \code{basal_spec} containing initialized
+metadata states.}
 
-\item{data}{A data.frame containing the response variable and all predictor covariates.}
+\item{data}{A data.frame containing the response variable and all predictor
+covariates.}
 
-\item{priors}{Optional prior specification. If \code{NULL}, default priors are supplied.}
+\item{priors}{Optional prior specification. If \code{NULL}, default priors
+are supplied.}
 
 \item{second_stage_priors}{Optional prior specification for the logistic
-second-stage model in a two-stage zero-inflated specification. If \code{NULL},
-default priors are supplied.}
+second-stage model in a two-stage zero-inflated specification. If
+\code{NULL}, default priors are supplied.}
 
 \item{chains}{Numeric integer. Number of MCMC chains.}
 
 \item{iter}{Numeric integer. Total number of iterations per chain.}
 
-\item{burn_in}{Numeric integer. Number of burn-in/warmup iterations per chain.}
+\item{burn_in}{Numeric integer. Number of burn-in/warmup iterations per
+chain.}
 
 \item{seed}{Numeric integer. Seed for random number generation.}
 
-\item{thin}{Thinning for the MCMC. The model keeps every one in every \code{thin} observations}
+\item{thin}{Thinning for the MCMC. The model keeps every one in every
+\code{thin} observations.}
 
-\item{engine}{Engine used for fitting model. Can only use \code{engine = "brms"} right now}
+\item{engine}{Engine used for fitting model. Can only use
+\code{engine = "brms"} right now.}
 
-\item{ncores}{number of cores to use to computed MCMC chains in parallel}
+\item{ncores}{Number of cores to use to computed MCMC chains in parallel.}
 
-\item{nthreads}{number of cores to speed up individual MCMC chains. Chosen by default in conjunction with \code{ncores}.}
+\item{nthreads}{Number of cores to speed up individual MCMC chains.
+Chosen by default in conjunction with \code{ncores}.}
 
 \item{verbose}{Logical. If \code{TRUE}, fitting output is printed.}
 
@@ -58,4 +65,21 @@ An object of class \code{basal_fit} containing the results.
 }
 \description{
 Fit a Specified Small Area Estimation Model Object
+}
+\examples{
+\dontrun{
+transform <- transform(
+  function(y) {y^(1/3)},
+  function(y) {y^3}
+)
+
+plot_spec_bhf <- specify(
+  biomass ~ evc + ppt + (1 | evt),
+  level = "unit",
+  transform = transform
+)
+
+fit <- fit(plot_spec_bhf, oregon_sample)
+}
+
 }

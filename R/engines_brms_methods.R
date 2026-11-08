@@ -109,6 +109,7 @@ fit_basal_model.brms_spec <- function(
   thin,
   ncores,
   nthreads,
+  verbose,
   ...
 ) {
   if (!is.null(priors) && length(priors) > 1) {
@@ -137,6 +138,10 @@ fit_basal_model.brms_spec <- function(
     threads = nthreads
   )
 
+  if (!verbose) {
+    brm_args$refresh <- 0
+  }
+
   if (!is.null(seed)) {
     brm_args$seed <- seed
   }
@@ -145,8 +150,9 @@ fit_basal_model.brms_spec <- function(
   intersect_args <- intersect(names(extra_args), names(brm_args))
   if (length(intersect_args) > 0) {
     stop(
-      "The following arguments must be supplied through `fit.basal_spec()` ",
-      paste(intersect_args, collapse = ", "), "."
+      "Overspecified arguments in fit(); extra arguments: ",
+      paste(intersect_args, collapse = ", "),
+      ". These should be supplied through ?fit()."
     )
   }
 

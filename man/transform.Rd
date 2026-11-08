@@ -9,23 +9,27 @@ transform(
   inv_transform,
   eval_grid = 0:512,
   override = FALSE,
-  tol = 1e-10
+  tol = 1e-10,
+  ...
 )
 }
 \arguments{
-\item{variable_transform}{Function to transform the response}
+\item{variable_transform}{Function to transform the response.}
 
 \item{inv_transform}{Left-inverse of \code{variable_transform} i.e.,
-\code{inv_transform(transform(x)) == x}}
+\code{inv_transform(transform(x)) == x}.}
 
 \item{eval_grid}{Grid of values to ensure that the \code{transform} and
-\code{inv_transform} are consistent with each other}
+\code{inv_transform} are consistent with each other.}
 
-\item{override}{logical flag to indicate that the check on \code{eval_grid} should be ignored.}
+\item{override}{Logical flag to indicate that the check on \code{eval_grid}
+should be ignored.}
 
-\item{tol}{tolerance for testing equality. If
-\code{abs(variable_transform(inv_transform(eval_grid)) - eval_grid < tol)},
-then there will be no error.}
+\item{tol}{Tolerance for testing equality under numerical imprecision. If any
+of \code{variable_transform(inv_transform(eval_grid)}, are more than
+\code{tol} from \code{eval_grid}, then there will be no error.}
+
+\item{...}{Not used currently.}
 }
 \value{
 Object of type \code{basal_transformation}.
@@ -33,46 +37,48 @@ Object of type \code{basal_transformation}.
 \description{
 Specify a variable transformation to map the response values through.
 Can help improve model fitness with highly skewed (for example) distributions
-of responses. Predictions are transformed back for point statistic estimation.
+of responses. Predictions are transformed back for point statistic estimates.
 }
 \details{
-Variable transformations can be a good way to improve a model, by transforming the response.
-Common transformations include log and root-type transformations.
+Variable transformations can be a good way to improve a model by
+transforming the response. Common transformations include log and root-type
+transformations.
 
-Before model fitting, the data will be transformed via \code{variable_transform}. Then,
-after posterior estimation but before aggregation and computing summaries,
-predictions will be back-transformed via \code{inv_transform}.
+Before model fitting, the data will be transformed via
+\code{variable_transform}. Then, after posterior estimation but before
+aggregation and computing summaries, predictions will be back-transformed
+via \code{inv_transform}.
 
 By default, \code{transform} will ensure that \code{inv_transform}
 is a (one-sided) inverse of \code{variable_transform} by ensuring that
-\code{inv_transform(variable_transform(eval_grid))} is the same as \code{eval_grid},
-however this behavior can be circumvented with the \code{override} flag.
+\code{inv_transform(variable_transform(eval_grid))} is the same as
+\code{eval_grid}, however this behavior can be circumvented with the
+\code{override} flag.
 }
 \examples{
 # here are two common transformations
-root_trans = transform(
+root_trans <- transform(
   sqrt,
-  function (y) {y^2}
+  function(y) {y^2}
 )
 
-log_trans = transform(
+log_trans <- transform(
   log,
   exp
 )
 
 # we can also use a different grid
-grid_trans = transform(
+grid_trans <- transform(
   sin,
   asin,
   eval_grid = seq(-pi/2, pi/2, 0.1),
 )
 
 # the eval_grid can be ignored (this is not recommended)
-bad_trans = transform(
-  function (y) {0},
-  function (y) {0},
+bad_trans <- transform(
+  function(y) {0},
+  function(y) {0},
   override = TRUE
 )
-
 
 }

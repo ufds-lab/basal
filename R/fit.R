@@ -23,14 +23,14 @@
 #' @param seed Numeric integer. Seed for random number generation.
 #'
 #' @param thin Thinning for the MCMC. The model keeps every one in every
-#' \code{thin} observations
+#' \code{thin} observations.
 #'
 #' @param engine Engine used for fitting model. Can only use
-#' \code{engine = "brms"} right now
+#' \code{engine = "brms"} right now.
 #'
-#' @param ncores number of cores to use to computed MCMC chains in parallel
+#' @param ncores Number of cores to use to computed MCMC chains in parallel.
 #'
-#' @param nthreads number of cores to speed up individual MCMC chains.
+#' @param nthreads Number of cores to speed up individual MCMC chains.
 #' Chosen by default in conjunction with `ncores`.
 #'
 #' @param verbose Logical. If \code{TRUE}, fitting output is printed.
@@ -42,6 +42,22 @@
 #' @exportS3Method generics::fit
 #' @aliases fit
 #'
+#' @examples
+#' \dontrun{
+#' transform <- transform(
+#'   function(y) {y^(1/3)},
+#'   function(y) {y^3}
+#' )
+#'
+#' plot_spec_bhf <- specify(
+#'   biomass ~ evc + ppt + (1 | evt),
+#'   level = "unit",
+#'   transform = transform
+#' )
+#'
+#' fit <- fit(plot_spec_bhf, oregon_sample)
+#' }
+#'
 fit.basal_spec <- function(
   object,
   data,
@@ -52,7 +68,7 @@ fit.basal_spec <- function(
   burn_in = 1000,
   seed = NULL,
   thin = 2,
-  engine = engine_brms(),
+  engine = NULL,
   ncores = default_ncores(),
   nthreads = "default",
   verbose = TRUE,
@@ -74,11 +90,16 @@ fit.basal_spec <- function(
     ncores = ncores
   )
 
+  if (is.null(engine)) {
+    engine <- select_engine(spec)
+    spec <- validate_engine(engine, spec)
+  } else {
+    spec <- validate_engine(engine, spec)
+  }
+
   if (!is.null(spec$second_stage_spec)) {
     spec <- add_engine_logit_family(spec, engine)
   }
-
-  spec <- validate_engine(engine, spec)
 
   vars <- all_model_vars(spec)
   res <- get_fit_response(spec)
@@ -134,14 +155,6 @@ fit.basal_spec <- function(
          "specification but no ZI model.")
   }
 
-  if (spec$level == "area" && !is.null(spec$variable_transform)) {
-    stop(
-      "variable_transform is not currently supported for area-level models, ",
-      "because transforming direct estimates also requires transforming their ",
-      "sampling standard errors."
-    )
-  }
-
   if (!is.null(spec$variable_transform)) {
     trans <- spec$variable_transform$transform
     data[[res]] <- trans(data[[res]])
@@ -186,6 +199,7 @@ fit.basal_spec <- function(
     thin = thin,
     ncores = ncores,
     nthreads = nthreads,
+    verbose = verbose,
     ...
   )
 

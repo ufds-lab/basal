@@ -20,19 +20,20 @@ check_inherits <- function(what, ...) {
 #' Can help improve model fitness with highly skewed (for example) distributions
 #' of responses. Predictions are transformed back for point statistic estimates.
 #'
-#' @param variable_transform Function to transform the response
+#' @param variable_transform Function to transform the response.
 #' @param inv_transform Left-inverse of \code{variable_transform} i.e.,
-#' \code{inv_transform(transform(x)) == x}
+#' \code{inv_transform(transform(x)) == x}.
 #' @param eval_grid Grid of values to ensure that the \code{transform} and
-#' \code{inv_transform} are consistent with each other
-#' @param override logical flag to indicate that the check on \code{eval_grid}
+#' \code{inv_transform} are consistent with each other.
+#' @param override Logical flag to indicate that the check on \code{eval_grid}
 #' should be ignored.
-#' @param tol tolerance for testing equality. If
-#' \code{abs(variable_transform(inv_transform(eval_grid)) - eval_grid < tol)},
-#' then there will be no error.
+#' @param tol Tolerance for testing equality under numerical imprecision. If any
+#' of \code{variable_transform(inv_transform(eval_grid)}, are more than
+#' \code{tol} from \code{eval_grid}, then there will be no error.
+#' @param ... Not used currently.
 #'
 #' @details
-#' Variable transformations can be a good way to improve a model, by
+#' Variable transformations can be a good way to improve a model by
 #' transforming the response. Common transformations include log and root-type
 #' transformations.
 #'
@@ -51,9 +52,7 @@ check_inherits <- function(what, ...) {
 #' # here are two common transformations
 #' root_trans <- transform(
 #'   sqrt,
-#'   function(y) {
-#'     y^2
-#'   }
+#'   function(y) {y^2}
 #' )
 #'
 #' log_trans <- transform(
@@ -65,17 +64,13 @@ check_inherits <- function(what, ...) {
 #' grid_trans <- transform(
 #'   sin,
 #'   asin,
-#'   eval_grid = seq(-pi / 2, pi / 2, 0.1),
+#'   eval_grid = seq(-pi/2, pi/2, 0.1),
 #' )
 #'
 #' # the eval_grid can be ignored (this is not recommended)
 #' bad_trans <- transform(
-#'   function(y) {
-#'     0
-#'   },
-#'   function(y) {
-#'     0
-#'   },
+#'   function(y) {0},
+#'   function(y) {0},
 #'   override = TRUE
 #' )
 #'
@@ -86,7 +81,8 @@ transform <- function(
   inv_transform,
   eval_grid = 0:512,
   override = FALSE,
-  tol = 1e-10
+  tol = 1e-10,
+  ...
 ) {
   transformation <- list(
     transform = variable_transform,
@@ -270,16 +266,16 @@ aggregate <- function(
     }
     if (estimate == "mean") {
       est_val <- est$pop_mean
-      if (is.nan(est$pop_mean_var)) {
-        stop("Error: Undefined variance estimate: ", est$pop_mean_var)
+      if (is.null(est$pop_mean_var) || is.nan(est$pop_mean_var)) {
+        stop("Error: Undefined variance estimate.")
       } else if (est$pop_mean_var < 0) {
         warning("Observed negative estimated variance")
       }
       est_se <- sqrt(est$pop_mean_var)
     } else {
       est_val <- est$pop_total
-      if (is.nan(est$total_var)) {
-        stop("Error: Undefined variance estimate: ", est$pop_total_var)
+      if (is.null(est$pop_total_var) || is.nan(est$pop_total_var)) {
+        stop("Error: Undefined variance estimate.")
       } else if (est$pop_total_var < 0) {
         warning("Observed negative estimated variance")
       }
@@ -392,14 +388,14 @@ check_agg_data_args <- function(
     stop("Must provide PS_strata if using post-stratified estimators.")
   }
 
-  if (!is.null(population_size) && population_size < 0) {
+  if (!is.null(population_size) && population_size <= 0) {
     stop("Population size must be a non-negative value.")
   }
   if (!is.null(sample_weights) &&
-        (any((sample_weights < 0) | (sample_weights > 1)) ||
+        (any((sample_weights <= 0) | (sample_weights > 1)) ||
            length(sample_weights) != nrow(data))) {
-    if (any(sample_weights < 0)) {
-      stop("sample_weights must be non-negative.")
+    if (any(sample_weights <= 0)) {
+      stop("sample_weights must be positive")
     } else if (any(sample_weights > 1)) {
       stop("sample_weights must be at most 1.")
     } else {
@@ -464,16 +460,10 @@ prepare_agg_data <- function(
 #' @description
 #' Number of CPU cores we may use
 #' copied (with slight modifications) from \{eulerr\},
-#' https://github.com/jolars/eulerr
+#' https://github.com/jolars/eulerr. If not "R CMD check --as-cran", then the
+#' number of available cores divided by two, otherwise at most two cores.
 #'
-#' Collects the core-count limits we trust and returns the smallest, never less
-#' than one. This mirrors the (much more elaborate) min-of-signals design of
-#' \code{parallelly::availableCores()}, but only the durable,
-#' non-platform-specific signals: the detected core count, \code{R CMD check}'s
-#' \code{_R_CHECK_LIMIT_CORES_} (capped at two), and \code{OMP_THREAD_LIMIT}.
-#' We deliberately do not parse cgroup quotas or HPC scheduler variables.
-#'
-#' @return A positive integer scalar.
+#' @return An integer indicating the number of cores.
 #' @keywords internal
 default_ncores <- function() {
   n_cores <- parallel::detectCores(logical = TRUE)
@@ -509,15 +499,22 @@ prop_positive <- function(x, success = 1) {
 
 #' @title Entropy
 #' @description
-#' Compute entropy of a bernoulli trial with estimated probability computed from
-#' binomial trials with realizations \code{x}.
+#' Compute entropy of a sequence of bernoulli trials, with estimated probability
+#' computed from binomial trials \code{x}.
 #'
 #' @param x Realization of binomial trials.
 #'
-#' @param success The value which is considered a success
+#' @param success The value which is considered a success.
 #'
 #' @returns A positive integer scalar, indicating the entropy of the
 #' bernoulli trial.
+#'
+#' @examples
+#'
+#' x = rbinom(20, 1, 0.5)
+#' entropy(x)
+#'
+#' @export
 entropy <- function(x, success = 1) {
   p <- prop_positive(x, success)
   H <- -p * log(p) - (1 - p) * log(1 - p)
@@ -551,10 +548,11 @@ upper_ci_quantile <- function(alpha = 0.95, q = NULL, ...) {
 #' @description
 #' Provides functions to compute the lower or upper quantile for an
 #' (100 * alpha)% credible interval.
-#' @param alpha level of the CI (i.e., \code{alpha = 0.95} => 95% CI).
+#' @param alpha Level of the CI (i.e., \code{alpha = 0.95} => 95% CI).
 #' Only used when \code{q} is not provided.
-#' @param q quantile
-#' @param ... further arguments passed to [quantile()]
+#' @param q Alternative to \code{alpha}; compute the \code{q}-th lower/upper
+#' quantile.
+#' @param ... further arguments to be passed to [quantile()].
 #' @details If \code{q} is not provided, then the functions return the
 #' ((1-\code{alpha})/2)-th quantile (lower) or (1-(1-\code{alpha})/2)-th
 #' quantile (upper) so that this provides a central \code{alpha}-level CI.
@@ -562,8 +560,7 @@ upper_ci_quantile <- function(alpha = 0.95, q = NULL, ...) {
 #' If \code{q} is provided, then the returned functions return the \code{q}-th
 #' or (1-\code{q})-th quantile.
 #' @returns a function \code{function(x, ...)} which returns the lower or
-#' upper quantile of an alpha-level CI given values \code{x}
-#' @aliases ci_quantile_wrappers
+#' upper quantile of an alpha-level CI given values \code{x}.
 #'
 #' @examples
 #' l95 <- lower_ci_quantile()

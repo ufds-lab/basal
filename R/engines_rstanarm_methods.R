@@ -40,6 +40,7 @@ fit_basal_model.rstanarm_spec <- function(
   thin,
   ncores,
   nthreads,
+  verbose,
   ...
 ) {
   model_args <- list(
@@ -62,15 +63,19 @@ fit_basal_model.rstanarm_spec <- function(
 
   if (!is.null(seed)) {
     model_args$seed <- seed
-    names <- c(names, "seed")
+  }
+
+  if (!verbose) {
+    model_args$refresh <- 0
   }
 
   extra_args <- list(...)
   intersect_args <- intersect(names(extra_args), names(model_args))
   if (length(intersect_args) > 0) {
     stop(
-      "The following arguments must be supplied through `fit.basal_spec()` ",
-      paste(intersect_args, collapse = ", "), "."
+      "Overspecified arguments in fit(); extra arguments: ",
+      paste(intersect_args, collapse = ", "),
+      ". These should be supplied through ?fit()."
     )
   }
 

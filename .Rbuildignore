@@ -5,3 +5,5 @@
 ^data-raw$
 ^R/engines_stLMM.R$
 ^figs$
+^README.Rmd$
+^basal_*.tar.gz$

@@ -1,23 +1,31 @@
 ---
-title: "workflow"
+title: "Basal Workflow"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{workflow}
+  %\VignetteIndexEntry{Workflow}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 
 ```{r, include = FALSE}
+# from paleo13 on stack overflow
+# https://stackoverflow.com/questions/28961431/computationally-heavy-r-vignettes
+is_check <- ("CheckExEnv" %in% search()) || any(c("_R_CHECK_TIMINGS_",
+             "_R_CHECK_LICENSE_") %in% names(Sys.getenv()))
+
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  cache = TRUE
+  cache = !is_check,
+  eval = !is_check
 )
+
+set.seed(1)
+
+library(basal)
 ```
 
 ```{r setup}
-library(basal)
-
 data("oregon_population", "oregon_sample")
 ```
 
@@ -99,18 +107,17 @@ There is one row per value of `evt`. Furthermore, the values `evc`, `elev`, `ppt
 
 Once a model has been specified, its parameters can be estimated through the `fit()` function. While there are many options for `fit()`, the only necessary ones are a previously specified model and a dataset. The columns in the dataset must correspond to the variables in the formula or various variable names listed in `specify()`, although aside from area-level models, where data must be aggregated, not much is needed.
 
-```{r, cache = TRUE, results = "hide"}
+```{r}
 BHF_fit <- fit(
   BHF_spec,
   oregon_sample,
-  engine = engine_rstanarm(),
   verbose = FALSE
 )
 ```
 
 For area level models, if the `aggregate()` function is used, then the user need not specify any more information, and can just use that object. The engine will understand where the observed data is and use it:
 
-```{r, cache = TRUE, results = "hide"}
+```{r}
 FH_fit <- fit(
   FH_spec,
   agg_data,
@@ -134,12 +141,8 @@ Now we will try using (1) a variable transform, and (2) estimate on forested (no
 
 ```{r}
 fourth_root_trans <- transform(
-  function(y) {
-    y^(1 / 4)
-  },
-  function(y) {
-    y^4
-  }
+  function(y) {y^(1/4)},
+  function(y) {y^4}
 )
 
 BHF_spec_trans <- specify(
@@ -152,11 +155,10 @@ BHF_spec_trans <- specify(
 
 And we can then fit a model and check the posterior predictives:
 
-```{r, cache = TRUE, results = "hide"}
+```{r}
 BHF_fit_trans <- fit(
   BHF_spec_trans,
   oregon_sample[oregon_sample$biomass != 0, ],
-  engine = engine_rstanarm(),
   verbose = FALSE
 )
 ```
@@ -194,7 +196,7 @@ This gives the summary statistics about the predicted average value, the `predic
 estimate(
   BHF_fit_trans,
   oregon_population,
-  domain = "county"
+  domain_name = "county"
 )$preds |>
   head(5)
 ```
@@ -205,7 +207,7 @@ By default, `estimate()` provides estimates of the mean and variance, however th
 estimate(
   BHF_fit_trans,
   oregon_population,
-  domain = NULL,
+  domain_name = NULL,
   stat = c(
     mean = mean, se = sd,
     lower_80_ci = lower_ci_quantile(0.8),
@@ -311,11 +313,10 @@ zi_BHF <- specify(
 
 Then this may be estimated as normal.
 
-```{r, cache = TRUE, results = "hide"}
+```{r}
 zi_fit <- fit(
   zi_BHF,
   data = oregon_sample,
-  engine = engine_rstanarm(),
   verbose = FALSE
 )
 ```
@@ -332,8 +333,11 @@ and finally, posterior estimation is just as before:
 estimate(
   zi_fit,
   oregon_population,
-  domain = "county",
+  domain_name = "county",
   ndraws = 800,
   max_preds = 1e4
 )
 ```
+
+There are various other options which can be changed in specifications, and likewise in estimate(). These are detailed in the documentation, and we are actively working on adding more. As is, many of these models had issues with model fitting as evidenced by warnings, and could be re-specified, or fit with different priors.
+

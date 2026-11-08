@@ -1,5 +1,3 @@
-source("utils.R")
-
 # stolen from specify check, just going to make sure
 # it works with fitting as well
 get_many_fit_args <- function() {
@@ -12,8 +10,9 @@ get_many_fit_args <- function() {
     spec <- do.call(basal::specify, l$args)
 
     for (engine in list(
-      engine_rstanarm(),
-      engine_brms()
+      basal::engine_rstanarm(),
+      basal::engine_brms(),
+      NULL
     )) {
       expecting_error <- FALSE
       if (!((spec$level %in% engine$level) &&
@@ -25,7 +24,8 @@ get_many_fit_args <- function() {
                    spec$level == "area" &&
                    spec$obs_variability != "biomass_se") {
         expecting_error <- TRUE
-      } else if (!is.null(spec$DRV) && engine$name != "brms") {
+      } else if (!is.null(spec$DRV) && !is.null(engine) &&
+                   engine$name != "brms") {
         expecting_error <- TRUE
       }
       return(list(
@@ -46,7 +46,7 @@ big_test_fit <- function() {
     county = factor(rep(c("A", "B", "C", "D"), each = 4))
   )
 
-  test_agg_data <- aggregate(
+  test_agg_data <- basal::aggregate(
     test_data, "biomass", "county", test_data,
     population_size = 1e3
   )
@@ -66,7 +66,7 @@ big_test_fit <- function() {
       thedata <- test_data
     }
 
-    t <- test(
+    test(
       suppressWarnings(basal::fit(
         l$spec,
         thedata,
@@ -79,18 +79,13 @@ big_test_fit <- function() {
         engine = l$engine,
         refresh = 0
       ))
-    ) |> try()
-    if (inherits(t, "try-error")) {
-      browser()
-    }
+    )
   })
 }
 
-test_many_specs <-
-  testthat::test_that("fit handles basic model specifications", {
-    testthat::skip_on_cran()
-    big_test_fit()
-  })
+testthat::test_that("fit handles basic model specifications", {
+  big_test_fit()
+})
 
 test_fit <- function() {
   test_data <- data.frame(
@@ -166,7 +161,7 @@ test_fit <- function() {
       fit_list <- list()
 
       for (spec in names(specs)) {
-        t <- testthat::expect_no_error(
+        testthat::expect_no_error(
           fit_list[[spec]] <- basal::fit(
             specs[[spec]],
             data = thedata,
@@ -180,10 +175,6 @@ test_fit <- function() {
             engine = engine,
             refresh = 0
           )
-        ) |> try(
-          if (inherits(t, "try-error")) {
-            browser()
-          }
         )
       }
 
@@ -208,10 +199,7 @@ test_fit <- function() {
           same_models <- FALSE
         }
       }
-      t <- testthat::expect_true(same_models) |> try()
-      if (inherits(t, "try-error")) {
-        browser()
-      }
+      testthat::expect_true(same_models)
     }
   }
 }
@@ -219,7 +207,6 @@ test_fit <- function() {
 
 testthat::test_that("fit handles basic model specifications", {
   testthat::skip_on_cran()
-
   test_fit()
 })
 

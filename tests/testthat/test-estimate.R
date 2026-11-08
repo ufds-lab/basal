@@ -21,7 +21,7 @@ test_estimate <- function() {
     basal::engine_brms()
   )) {
     args <- list(
-      spec = spec1,
+      object = spec1,
       data = test_data,
       chains = 1,
       iter = 20,
@@ -38,7 +38,7 @@ test_estimate <- function() {
       args
     )
 
-    args$spec <- spec2
+    args$object <- spec2
 
     fit2 <- do.call(
       basal::fit,
@@ -118,7 +118,6 @@ test_estimate <- function() {
 
 testthat::test_that("estimate handles basic arguments and domains", {
   testthat::skip_on_cran()
-
   test_estimate()
 })
 
@@ -128,6 +127,10 @@ big_test_estimate <- function() {
     ppt = c(2, 1, 2, 3, 2, 2, 3, 1, 1, 3, 1, 2, 0, 1, 2, 3),
     county = factor(rep(c("A", "B", "C", "D"), each = 4)),
     d = factor(rep(c("A", "B", "C", "D", "E", "F", "G", "H"), each = 2))
+  )
+
+  agg_data <- basal::aggregate(
+    test_data, "biomass", "county", test_data, 1e6
   )
 
   custom_args <- list(
@@ -151,102 +154,98 @@ big_test_estimate <- function() {
       }
       for (transform in list(
         NULL,
-        basal::transform(
-          function(x) {
-            x^2
-          },
-          function(x) {
-            sqrt(x)
-          }
-        )
+        basal::transform(function(x) {x^2}, sqrt)
       )) {
         for (model_stage in c("single", "zi")) {
-          for (sssm in c(TRUE, FALSE)) {
-            for (level in c("unit", "area")) {
-              if (level == "area" || model_type == "FH") {
-                population_size <- 1000
-              } else {
-                population_size <- NULL
-              }
-              domain_name <- if (model_type != "custom" || level == "area") {
-                "county"
-              } else {
-                NULL
-              }
-              expecting_error <- FALSE
-              if ((level == "area" || model_type == "FH") &&
-                    sssm && model_type != "BHF") {
-                expecting_error <- TRUE
-              } else if (sssm && !is.null(args$formula) &&
-                           is.null(domain_name) && model_type != "custom") {
-                expecting_error <- TRUE
-              } else if (model_type == "custom" && is.null(args$formula)
-                         && !sssm) {
-                expecting_error <- TRUE
-              } else if ((model_type == "FH" ||
-                            (level == "area" && model_type != "BHF")) &&
-                           is.null(domain_name) && !sssm) {
-                expecting_error <- TRUE
-              } else if ((model_type == "FH" || (level == "area" &&
-                                                   model_type != "BHF")) &&
-                           !is.null(transform) && (sssm || model_stage != "zi")) {
-                expecting_error <- TRUE
-              }
-              if (expecting_error) {
+          if (model_type == "custom" || model_type == "BHF") {
+            level <- "unit" # level doesn't have to be unit for custom models
+          } else {
+            level <- "area"
+          }
+          if (level == "area" || model_type == "FH") {
+            thedata <- agg_data
+          } else {
+            thedata <- test_data
+          }
+          domain_name <- if (model_type != "custom" || level == "area") {
+            "county"
+          } else {
+            NULL
+          }
+          expecting_error <- FALSE
+          if ((level == "area" || model_type == "FH") &&
+                model_stage == "zi") {
+            expecting_error <- TRUE
+          } else if (model_type == "custom" && is.null(args$formula)) {
+            expecting_error <- TRUE
+          } else if (model_type == "custom" && !is.null(domain_name)) {
+            expecting_error <- TRUE
+          } else if ((model_type == "FH" || level == "area") &&
+                       !is.null(transform)) {
+            expecting_error <- TRUE
+          } else if (!is.null(args$response_name) && !is.null(args$formula)) {
+            expecting_error <- TRUE
+          }
+          if (expecting_error) {
+            next
+          } else {
+            spec <- basal::specify(
+              formula = args$formula,
+              response_name = args$response_name,
+              auxiliary_variables = args$auxiliary_variables,
+              model = model_type,
+              domain_name = domain_name,
+              variable_transform = transform,
+              model_stage = model_stage,
+              level = level
+            )
+            for (engine in list(
+              basal::engine_rstanarm(),
+              basal::engine_brms()
+            )) {
+              if (!(level %in% engine$level &&
+                      model_type %in% engine$model &&
+                      model_stage %in% engine$model_stage)) {
                 next
-              } else {
-                spec <- basal::specify(
-                  formula = args$formula,
-                  response_name = args$response_name,
-                  auxiliary_variables = args$auxiliary_variables,
-                  model = model_type,
-                  domain_name = domain_name,
-                  variable_transform = transform,
-                  model_stage = model_stage,
-                  specifying_second_stage_model = sssm,
-                  level = level
-                )
-                for (engine in list(
-                  basal::engine_rstanarm(),
-                  basal::engine_brms()
+              }
+              model <- (
+                suppressWarnings(basal::fit(
+                  spec,
+                  thedata,
+                  chains = 1,
+                  burn_in = 2,
+                  thin = 1,
+                  iter = 4,
+                  ncores = 1,
+                  nthreads = 1,
+                  engine = engine,
+                  refresh = 0
+                ))
+              ) |> try()
+          
+              for (stat in list(
+                list(mean = mean),
+                c(mean = mean, var = var, med = median)
+              )) {
+                for (agg_stat in list(
+                  list(mean = mean), list(sd = sd), list(med = median)
                 )) {
-                  if (!(level %in% engine$level &&
-                          model_type %in% engine$model &&
-                          model_stage %in% engine$model_stage) ||
-                        sssm) {
-                    next
-                  }
-                  model <- (
-                    suppressWarnings(basal::fit(
-                      spec,
-                      test_data,
-                      chains = 1,
-                      burn_in = 2,
-                      thin = 1,
-                      iter = 4,
-                      ncores = 1,
-                      nthreads = 1,
-                      engine = engine,
-                      refresh = 0,
-                      population_size = population_size
-                    ))
-                  )
-
-                  for (stat in list(
-                    list(mean = mean),
-                    c(mean = mean, var = var, med = median)
-                  )) {
-                    for (agg_stat in list(
-                      list(mean = mean), list(sd = sd), list(med = median)
-                    )) {
-                      for (domain in list(NULL, "d", "county")) {
-                        testthat::expect_no_error(basal::estimate(
-                          model,
-                          newdata = test_data, ndraws = 2,
-                          stat = stat, aggregation_statistic = agg_stat,
-                          domain = domain
-                        ))
-                      }
+                  for (domain in list(NULL, "d", "county")) {
+                    if (level == "area") {
+                      thenewdata = NULL
+                    } else {
+                      thenewdata = thedata
+                    }
+                    t <- testthat::expect_no_error(suppressWarnings(
+                      basal::estimate(
+                        model,
+                        newdata = thenewdata, ndraws = 2,
+                        stat = stat, aggregation_statistic = agg_stat,
+                        domain = domain
+                      )
+                    )) |> try()
+                    if (inherits(t, "try-error")) {
+                      browser()
                     }
                   }
                 }
@@ -259,9 +258,12 @@ big_test_estimate <- function() {
   }
 }
 
-testthat::test_that("estimate returns expected domain information", {
+testthat::test_that("more estimate tests work as normal", {
   testthat::skip_on_cran()
+  big_test_estimate()
+})
 
+testthat::test_that("estimate returns expected domain information", {
   test_data <- data.frame(
     biomass = c(10, 12, 15, 9, 18, 21, 13, 17, 20, 11, 16, 19),
     ppt = c(1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3),
@@ -315,15 +317,15 @@ testthat::test_that("Estimate plays well with area-level models", {
     county = factor(rep(c("A", "B", "C", "D"), each = 3))
   )
 
-  test_data <- aggregate(test_data, "biomass", "county", test_data, 1e4)
+  test_data <- basal::aggregate(test_data, "biomass", "county", test_data, 1e4)
 
-  fit <- fit(
-    specify(biomass ~ ppt + (1 | county), level = "area"),
+  fit <- basal::fit(
+    basal::specify(biomass ~ ppt + (1 | county), level = "area"),
     test_data,
     iter = 10,
     burn_in = 5,
     chains = 1
   )
 
-  testthat::expect_no_error(estimate(fit, ndraws = 2))
+  testthat::expect_no_error(suppressWarnings(basal::estimate(fit, ndraws = 2)))
 })

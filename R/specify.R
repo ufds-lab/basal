@@ -26,12 +26,13 @@
 #' for the response. Defaults to using all other variables if unspecified in
 #' preset models.
 #'
-#' @param transform Either an object of class \code{BASAL_transformation} from
+#' @param transform Either an object of class \code{basal_transformation} from
 #' [transform()] or a list specifying a variable transformation
-#' \code{transform} and inverse variable transformation \code{inv_transform}.
+#' \code{variable_transform} and inverse variable transformation
+#' \code{inv_transform}.
 #'
 #' @param family GLM family type, specifying error distributions and links.
-#' See [stats::glm] or [brms::brmsfamily]
+#' See [stats::glm] or [brms::brmsfamily].
 #'
 #' @param model_stage What stage of model to fit. Currently supported for only
 #' "single" and "zi" stage models.
@@ -57,12 +58,8 @@
 #'
 #' @examples
 #' transform <- transform(
-#'   function(y) {
-#'     y^(1 / 3)
-#'   },
-#'   function(y) {
-#'     y^3
-#'   }
+#'   function(y) {y^(1/3)},
+#'   function(y) {y^3}
 #' )
 #'
 #' plot_spec_bhf <- specify(
@@ -220,9 +217,9 @@ specify <- function(
 
   # validate the variable transformation --- make sure we have a left-inverse
   if (!is.null(spec$variable_transform) &&
-        !inherits(spec$variable_transform, "BASAL_transformation")) {
+        !inherits(spec$variable_transform, "basal_transformation")) {
     spec$variable_transform <- transform(
-      spec$variable_transform$transform,
+      spec$variable_transform$variable_transform,
       spec$variable_transform$inv_transform
     )
   }

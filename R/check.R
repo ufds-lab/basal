@@ -1,40 +1,58 @@
 #' Posterior Predictive and Regression checks from fit \code{basal} model.
 #'
-#' @param fit object of class \code{fit} from \code{fit()}.
+#' @param fit Object of class \code{fit} from \code{fit()}.
 #'
-#' @param stat extra functions to plot for posterior checks. Multiple can be
+#' @param stat Extra functions to plot for posterior checks. Multiple can be
 #' specified if included in a list (i.e.,
 #' \code{stat = c(mean = mean, ecdf = ecdf)}) functions should be named.
 #'
-#' @param include_base_pp_check Logical determining whether or not to include
-#' the empirial density funciton as a posterior predictive check. Defaults to
-#' \code{TRUE}
-#'
-#' @param draws number of draws for posterior prediction
+#' @param draws Number of draws for posterior prediction.
 #'
 #' @param trace_plots Logical flag to include trace plots of parameter
 #' estimates. Defaults to \code{FALSE} so that large number of plots
 #' (if including many random effects) are not included in the object.
 #'
 #' @param two_stage_stat Like \code{stat}, but used for the second stage of
-#' a second-stage model
+#' a second-stage model.
 #'
 #' @param join_two_stage_stat Like \code{stat} but used for the
-#' response aggregated
-#' from the multi-stage model.
+#' response aggregated from the multi-stage model.
+#'
+#' @param ... Unused currently.
 #'
 #' @return An object of class \code{basal_check}.
+#'
+#' @examples
+#' \dontrun{
+#' transform <- transform(
+#'   function(y) {y^(1/3)},
+#'   function(y) {y^3}
+#' )
+#'
+#' plot_spec_bhf <- specify(
+#'   biomass ~ evc + ppt + (1 | evt),
+#'   level = "unit",
+#'   transform = transform
+#' )
+#'
+#' fit <- fit(plot_spec_bhf, oregon_sample)
+#' check(fit)
+#' }
 #'
 #' @export
 check <- function(
   fit,
   stat = c(ecdf = ecdf),
-  include_base_pp_check = TRUE,
   draws = 50,
   trace_plots = FALSE,
   two_stage_stat = c(proportion_positive = prop_positive),
-  join_two_stage_stat = c(joined_ecdf = ecdf)
+  join_two_stage_stat = c(joined_ecdf = ecdf),
+  ...
 ) {
+
+  # was an argument, removed for now because it seems unnecessary
+  include_base_pp_check <- TRUE
+
   validate_check_inputs(
     fit = fit,
     draws = draws,

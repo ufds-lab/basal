@@ -162,7 +162,9 @@ check_spec_integrity <- function(spec, auxiliary_variables, response_name) {
   } else if (!is.null(model_level_lookup[[spec$model_type]]) &&
                !is.null(spec$level) &&
                model_level_lookup[[spec$model_type]] != spec$level) {
-    stop("level corresponding to specified model type does not match.")
+    stop("level corresponding to specified model type does not match. Model ",
+         spec$model_type, " is a(n) ", model_level_lookup[[spec$model_type]],
+         "-level model, but observed level ", spec$level, ".")
   }
   if (!is.null(spec$domain_name) && !inherits(spec$domain_name, "character") &&
         length(spec$domain_name) > 1) {
@@ -245,6 +247,14 @@ validate_single_stage_spec <- function(
       spec$obs_variability <- paste0(all.vars(spec$formula)[1], "_se")
     }
   }
+  if (spec$level == "area" && !is.null(spec$variable_transform)) {
+    stop(
+      "variable_transform is not currently supported for area-level models, ",
+      "because transforming direct estimates also requires transforming their ",
+      "sampling standard errors."
+    )
+  }
+
 
   spec$valid_spec <- TRUE
   if (!is.null(spec$second_stage_spec)) {

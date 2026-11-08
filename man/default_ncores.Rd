@@ -7,17 +7,12 @@
 default_ncores()
 }
 \value{
-A positive integer scalar.
+An integer indicating the number of cores.
 }
 \description{
 Number of CPU cores we may use
-copied (with slight modifications) from \{eulerr\}, https://github.com/jolars/eulerr
-
-Collects the core-count limits we trust and returns the smallest, never less
-than one. This mirrors the (much more elaborate) min-of-signals design of
-\code{parallelly::availableCores()}, but only the durable, non-platform-specific
-signals: the detected core count, \code{R CMD check}'s \code{_R_CHECK_LIMIT_CORES_}
-(capped at two), and \code{OMP_THREAD_LIMIT}. We deliberately do not parse cgroup
-quotas or HPC scheduler variables.
+copied (with slight modifications) from \{eulerr\},
+https://github.com/jolars/eulerr. If not "R CMD check --as-cran", then the
+number of available cores divided by two, otherwise at most two cores.
 }
 \keyword{internal}

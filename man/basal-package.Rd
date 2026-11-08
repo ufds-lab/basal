@@ -6,7 +6,17 @@
 \alias{basal-package}
 \title{basal: Bayesian Small Area Estimation Library}
 \description{
+\if{html}{\figure{logo.png}{options: style='float: right' alt='logo' width='120'}}
+
 Provides a flexible but simplified pipeline for creating Bayesian models and estimating posterior point statistics with a focus on small area estimation.
+}
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/ufds-lab/basal}
+  \item Report bugs at \url{https://github.com/ufds-lab/basal/issues}
+}
+
 }
 \author{
 \strong{Maintainer}: Leland Russell \email{lrussell6204@gmail.com} (\href{https://orcid.org/0009-0005-6426-6355}{ORCID})
@@ -14,8 +24,8 @@ Provides a flexible but simplified pipeline for creating Bayesian models and est
 Authors:
 \itemize{
   \item Leland Russell \email{lrussell6204@gmail.com} (\href{https://orcid.org/0009-0005-6426-6355}{ORCID})
-  \item Wystan Wu
-  \item Grayson W. White
+  \item Yanchen Wu
+  \item Grayson W. White (\href{https://orcid.org/0000-0003-4993-2792}{ORCID})
   \item Kelly S. McConville
   \item George Gaines
 }

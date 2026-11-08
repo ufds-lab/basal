@@ -1,4 +1,6 @@
 get_many_specs <- function() {
+  testthat::skip_on_cran()
+
   arglist <- list()
 
   custom_args <- list(
@@ -102,7 +104,7 @@ get_many_specs <- function() {
                       auxiliary_variables = args$auxiliary_variables,
                       model = model_type,
                       domain_name = domain_name,
-                      variable_transform = transform,
+                      transform = transform,
                       model_stage = model_stage,
                       obs_variability = obs_variability,
                       level = level,

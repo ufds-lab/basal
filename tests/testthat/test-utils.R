@@ -74,6 +74,7 @@ testthat::test_that("aggregate handles it's arguments", {
                 for (method in method_list) {
                   for (PS_strata in PS_strata_list) {
                     for (extra_args in extra_arg_list) {
+                      expecting_error <- FALSE
                       if (is.null(domain_name) || !is.character(domain_name)) {
                         expecting_error <- TRUE
                       } else if (is.null(thedata) || !is.data.frame(thedata)) {
@@ -88,33 +89,36 @@ testthat::test_that("aggregate handles it's arguments", {
                                    !(domain_name %in%
                                        colnames(population_data))) {
                         expecting_error <- TRUE
-                      } else if (is.null(population_size) ||
-                                   !is.numeric(population_size) ||
-                                   population_size <= 0) {
+                      } else if (!is.null(population_size) &&
+                                   (!is.numeric(population_size) ||
+                                      population_size <= 0)) {
                         expecting_error <- TRUE
-                      } else if (is.null(population_size) ||
-                                   !is.numeric(population_size) ||
-                                   population_size < 0 || population_size > 1 ||
-                                   length(population_size) != N) {
+                      } else if (!is.null(sample_weights) &&
+                                   (!is.numeric(sample_weights) ||
+                                      any(sample_weights <= 0) ||
+                                      any(sample_weights > 1) ||
+                                      length(sample_weights) != N)) {
                         expecting_error <- TRUE
                       } else if (!is.character(estimate) ||
-                                   !match.arg(estimate, c("mean", "sum"))) {
+                                   (!is.null(estimate) &&
+                                      !(estimate %in% c("mean", "sum")))) {
                         expecting_error <- TRUE
                       } else if (!is.character(method) ||
-                                   !match.arg(method, c("HT", "PS"))) {
+                                   !(method %in% c("HT", "PS"))) {
                         expecting_error <- TRUE
-                      } else if (!is.character(PS_strata) ||
-                                   !match.arg(
-                                     PS_strata,
-                                     intersect(colnames(thedata),
-                                               colnames(population_data))
-                                     )) {
+                      } else if (!is.null(PS_strata) &&
+                                   (!is.character(PS_strata) ||
+                                       !(PS_strata %in%
+                                           intersect(colnames(thedata),
+                                                     colnames(population_data)))
+                                    )) {
                         expecting_error <- TRUE
                       } else if (!is.null(extra_args) &&
-                                   intersect(
-                                     names(extra_args),
-                                     c("y", "pi", "N", "var_est", "messages")
-                                    )) {
+                                   length(
+                                     intersect(
+                                       names(extra_args),
+                                       c("y", "pi", "N", "var_est", "messages")
+                                    ) > 0)) {
                         # not including the extra for PS estimator because
                         # none of those are in the extra_args list
                         expecting_error <- TRUE
@@ -144,10 +148,7 @@ testthat::test_that("aggregate handles it's arguments", {
                         }
                       }
 
-                      t <- test(do.call(basal::aggregate, args = args)) |> try()
-                      if (inherits(t, "try-error")) {
-                        browser()
-                      }
+                      test(do.call(basal::aggregate, args = args))
                     }
                   }
                 }
@@ -177,13 +178,13 @@ testthat::test_that("aggregate aggregates correctly", {
     messages = FALSE
   )
 
-  a <- aggregate(data, "biomass", "county", data, population_size = 1e5)
+  a <- basal::aggregate(data, "biomass", "county", data, population_size = 1e5)
   a <- a$aggregate_obs[a$aggregate_obs$county == "A", ]
 
   testthat::expect_equal(ht$pop_mean, a$biomass)
   testthat::expect_equal(sqrt(ht$pop_mean_var), a$biomass_se)
 
-  a <- aggregate(
+  a <- basal::aggregate(
     data, "biomass", "county",
     data, population_size = 1e5, estimate = "sum"
   )
@@ -202,19 +203,19 @@ testthat::test_that("aggregate aggregates correctly", {
     N = 1e5, var_est = TRUE, messages = FALSE
   )
 
-  a <- aggregate(data, "biomass", "strata", data,
+  a <- basal::aggregate(data, "biomass", "strata", data,
     population_size = 1e5, method = "PS", PS_strata = "county"
   )
   a <- a$aggregate_obs[a$aggregate_obs$strata == "E", ]
 
-  expect_equal(a$biomass, ps$pop_mean)
-  expect_equal(a$biomass_se, sqrt(ps$pop_mean_var))
+  testthat::expect_equal(a$biomass, ps$pop_mean)
+  testthat::expect_equal(a$biomass_se, sqrt(ps$pop_mean_var))
 
-  a <- aggregate(data, "biomass", "strata", data,
+  a <- basal::aggregate(data, "biomass", "strata", data,
     population_size = 1e5, method = "PS", estimate = "sum", PS_strata = "county"
   )
   a <- a$aggregate_obs[a$aggregate_obs$strata == "E", ]
 
-  expect_equal(a$biomass, ps$pop_total)
-  expect_equal(a$biomass_se, sqrt(ps$pop_total_var))
+  testthat::expect_equal(a$biomass, ps$pop_total)
+  testthat::expect_equal(a$biomass_se, sqrt(ps$pop_total_var))
 })

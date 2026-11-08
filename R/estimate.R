@@ -1,31 +1,53 @@
 #' Posterior estimation of summary statistics
 #'
-#' @param fit object of type \code{basal_fit}.
+#' @param fit Object of type \code{basal_fit}.
 #'
-#' @param newdata data to predict data on. If \code{NULL}, fit on training data.
+#' @param newdata Data to predict data on. If \code{NULL}, fit on training data.
 #'
-#' @param domain (vector of) names of areas to aggregate estimates on.
+#' @param domain_name (vector of) names of areas to aggregate estimates on.
 #' If \code{NULL}, aggregate all the data together.
 #'
 #' @param stat Named vector of function(s) to apply to posterior predictions.
 #'
 #' @param aggregation_statistic Statistic to conduct inference on. Statistic
-#' will be computed over population data, stratifying by \code{domain}
+#' will be computed over population data, stratifying by \code{domain}.
 #'
-#' @param ndraws number of draws from the posterior predictive distribution.
+#' @param ndraws Number of draws from the posterior predictive distribution.
 #'
-#' @param max_preds maximum number of points to make predictions on. Capped to
+#' @param max_preds Maximum number of points to make predictions on. Capped to
 #' avoid R session crashing. A value of \code{NULL} or \code{Inf} will predict
 #' on all.
 #'
 #' @param seed The seed for random number generation in posterior prediction.
+#'
+#' @param ... For future arguments; ignored for now.
+#'
+#' @return An object of type \code{basal_estimate}.
+#'
+#' @examples
+#' \dontrun{
+#' transform <- transform(
+#'   function(y) {y^(1/3)},
+#'   function(y) {y^3}
+#' )
+#'
+#' plot_spec_bhf <- specify(
+#'   biomass ~ evc + ppt + (1 | evt),
+#'   level = "unit",
+#'   transform = transform
+#' )
+#'
+#' fit <- fit(plot_spec_bhf, oregon_sample)
+#' estimate(fit, oregon_population, domain_name = "county")
+#' }
+#'
 #'
 #' @export
 #'
 estimate <- function(
   fit,
   newdata = NULL,
-  domain = "BASAL_INHERIT",
+  domain_name = "BASAL_INHERIT",
   stat = c(
     mean = mean,
     var = var,
@@ -35,8 +57,11 @@ estimate <- function(
   aggregation_statistic = c(mean = mean),
   ndraws = 1000,
   max_preds = "default",
-  seed = NULL
+  seed = NULL,
+  ...
 ) {
+
+  domain <- domain_name
   if (!is.null(fit$pop_data)) {
     if (!is.null(newdata)) {
       message(

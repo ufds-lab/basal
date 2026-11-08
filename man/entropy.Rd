@@ -9,12 +9,19 @@ entropy(x, success = 1)
 \arguments{
 \item{x}{Realization of binomial trials.}
 
-\item{success}{The value which is considered a success}
+\item{success}{The value which is considered a success.}
 }
 \value{
-A positive integer scalar, indicating the entropy of the bernoulli trial.
+A positive integer scalar, indicating the entropy of the
+bernoulli trial.
 }
 \description{
-Compute entropy of a bernoulli trial with estimated probability computed from
-binomial trials with realizations \code{x}.
+Compute entropy of a sequence of bernoulli trials, with estimated probability
+computed from binomial trials \code{x}.
+}
+\examples{
+
+x = rbinom(20, 1, 0.5)
+entropy(x)
+
 }

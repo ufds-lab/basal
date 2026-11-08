@@ -39,6 +39,7 @@ export(default_prior_intercept)
 export(dirichlet)
 export(engine_brms)
 export(engine_rstanarm)
+export(entropy)
 export(estimate)
 export(exponential)
 export(fit)
@@ -53,7 +54,6 @@ export(transform)
 export(upper_ci_quantile)
 importFrom(brms,prior)
 importFrom(generics,fit)
-importFrom(rlang,.data)
 importFrom(rstanarm,
   cauchy,
   decov,

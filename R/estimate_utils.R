@@ -399,7 +399,7 @@ prepare_estimate_stats <- function(stat) {
     # later if part of this changes, then the first time they are run they will
     # access this variable at runtime, not define-time. We are evaluating the
     # functions here so they work as hoped
-    tmp <- stat[[i]](1:3)
+    stat[[i]](1:3)
   }
 
   return(stat)
@@ -414,6 +414,9 @@ summarize_estimate_predictions <- function(
   stat,
   aggregation_statistic
 ) {
+  .data <- NULL # workaround to avoid R CMD check complaints
+#  utils::globalVariables(".data")
+
   aggregation_name <- names(aggregation_statistic)[1]
 
   if (domain != "BASAL_OVERALL") {

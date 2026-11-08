@@ -29,7 +29,7 @@ print.basal_spec <- function(x, suppress_header = FALSE, ...) {
   }
 
   if (!is.null(spec$formula)) {
-    print(f)
+    print(spec$formula)
     if (more_args) {
       p("with additional arguments:")
     }

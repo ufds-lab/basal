@@ -15,6 +15,7 @@ prop_positive(x, success = 1)
 A positive integer scalar, the proportionof successes in \code{x}.
 }
 \description{
-Computes the proportion of positive observations in a. binomial trial \code{x}.
+Computes the proportion of positive (successful) observations in a
+binomial trial \code{x}.
 }
 \keyword{internal}
