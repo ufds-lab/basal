@@ -2,7 +2,7 @@
 title: "Advanced Specification"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{workflow}
+  %\VignetteIndexEntry{Advanced Specification}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---

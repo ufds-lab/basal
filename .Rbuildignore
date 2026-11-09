@@ -7,3 +7,9 @@
 ^figs$
 ^README.Rmd$
 ^basal_*.tar.gz$
+^.github$
+^basal.Rcheck$
+^vignettes/case_study_cache$
+^vignettes/workflow_cache$
+^man/cache$
+^cran-comments.md$

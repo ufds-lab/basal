@@ -5,3 +5,5 @@
 *.Rproj
 inst/doc
 basal_*.tar.gz
+basal.Rcheck
+cran-comments.md
