@@ -13,3 +13,4 @@
 ^vignettes/workflow_cache$
 ^man/cache$
 ^cran-comments.md$
+^paper$
