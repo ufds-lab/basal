@@ -22,32 +22,27 @@ Authors@R:
 	    family = "Gaines",
 	    role = "aut")
     )
-Description: Provides a flexible but simplified pipeline for creating Bayesian models and estimating posterior point statistics with a focus on small area estimation.
+Description: Provides a flexible but simplified pipeline for Bayesian small area estimation inspired by 'parsnip' and 'infer'. Includes many models from White et al. (2026) <doi:10.1139/cjfr-2025-0175>.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 URL: https://github.com/ufds-lab/basal
 BugReports: https://github.com/ufds-lab/basal/issues
-Imports: 
-    brms,
-    dplyr,
-    ggplot2,
-    mase,
-    tidyr,
-    bayesplot,
-    base,
-    rstanarm,
-    rstantools,
-    generics,
-Suggests: 
-    knitr,
-    rmarkdown,
-    testthat (>= 3.0.0),
-    tidycensus
+Imports: brms, dplyr, ggplot2, mase, tidyr, bayesplot, base, rstanarm,
+        rstantools, generics,
+Suggests: knitr, rmarkdown, testthat (>= 3.0.0), tidycensus
 VignetteBuilder: knitr
-Depends: 
-    R (>= 3.5)
+Depends: R (>= 4.1.0)
 LazyData: true
 LazyDataCompression: xz
 Config/testthat/edition: 3
 Config/roxygen2/version: 8.1.1
+NeedsCompilation: no
+Packaged: 2026-11-09 04:13:08 UTC; leland
+Author: Leland Russell [aut, cre] (ORCID:
+    <https://orcid.org/0009-0005-6426-6355>),
+  Yanchen Wu [aut],
+  Grayson W. White [aut] (ORCID: <https://orcid.org/0000-0003-4993-2792>),
+  Kelly S. McConville [aut],
+  George Gaines [aut]
+Maintainer: Leland Russell <lrussell6204@gmail.com>

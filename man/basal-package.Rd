@@ -8,7 +8,7 @@
 \description{
 \if{html}{\figure{logo.png}{options: style='float: right' alt='logo' width='120'}}
 
-Provides a flexible but simplified pipeline for creating Bayesian models and estimating posterior point statistics with a focus on small area estimation.
+Provides a flexible but simplified pipeline for Bayesian small area estimation inspired by 'parsnip' and 'infer'. Includes many models from White et al. (2026) \doi{10.1139/cjfr-2025-0175}.
 }
 \seealso{
 Useful links:

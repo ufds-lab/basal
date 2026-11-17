@@ -1,0 +1,9 @@
+1. Add LM (1)
+1. Better code examples for fit, check, and estimate (1)
+1. CI interpretation in quantile wrappers (1)
+2. implement generics for posterior_predict() so people can get posterior predictions as well (2)
+2. Tests for different GLMs (2-3)
+3. add lasso (3)
+4. add GPs (4)
+4. Engine vignette (4)
+    * Add another engine
